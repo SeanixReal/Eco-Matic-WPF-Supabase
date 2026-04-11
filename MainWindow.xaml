@@ -1,0 +1,301 @@
+﻿<Window x:Class="Eco_Matic.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Eco-Matic"
+        Height="620"
+        Width="980"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+
+    <Window.Resources>
+        <Style x:Key="PrimaryActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Height" Value="52" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Background" Value="#2E77E6" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#2E77E6" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style x:Key="CustomerActionButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}">
+            <Setter Property="Background" Value="#2FA66A" />
+            <Setter Property="BorderBrush" Value="#2FA66A" />
+        </Style>
+
+        <Style x:Key="ExitActionButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}">
+            <Setter Property="Background" Value="#D65A5A" />
+            <Setter Property="BorderBrush" Value="#D65A5A" />
+        </Style>
+
+        <Style x:Key="TopActionTab" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="16,7" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="MinWidth" Value="86" />
+            <Setter Property="Background" Value="#EEF4FF" />
+            <Setter Property="BorderBrush" Value="#C9D9F1" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#506684" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10,10,0,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#E4EEFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#D8E7FF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TopActionTabActive" TargetType="Button" BasedOn="{StaticResource TopActionTab}">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#BFD1EF" />
+            <Setter Property="Foreground" Value="#2E77E6" />
+        </Style>
+
+        <Style x:Key="WindowControlTab" TargetType="Button" BasedOn="{StaticResource TopActionTab}">
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="MinWidth" Value="42" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="Foreground" Value="#4B5D79" />
+        </Style>
+
+        <Style x:Key="WindowCloseTab" TargetType="Button" BasedOn="{StaticResource WindowControlTab}">
+            <Setter Property="Background" Value="#FFF2F2" />
+            <Setter Property="BorderBrush" Value="#E5C7C7" />
+            <Setter Property="Foreground" Value="#C25555" />
+        </Style>
+    </Window.Resources>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <ThicknessAnimation Storyboard.TargetName="TitleContainer" 
+                                        Storyboard.TargetProperty="Margin" 
+                                        From="-40,0,40,0" To="0,0,20,0" 
+                                        Duration="0:0:0.7">
+                        <ThicknessAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut" />
+                        </ThicknessAnimation.EasingFunction>
+                    </ThicknessAnimation>
+                    <DoubleAnimation Storyboard.TargetName="TitleContainer" 
+                                     Storyboard.TargetProperty="Opacity" 
+                                     From="0" To="1" 
+                                     Duration="0:0:0.7" />
+
+                    <ThicknessAnimation Storyboard.TargetName="MenuContainer" 
+                                        Storyboard.TargetProperty="Margin" 
+                                        From="40,0,-40,0" To="0,0,0,0" 
+                                        Duration="0:0:0.7" BeginTime="0:0:0.15">
+                        <ThicknessAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut" />
+                        </ThicknessAnimation.EasingFunction>
+                    </ThicknessAnimation>
+                    <DoubleAnimation Storyboard.TargetName="MenuContainer" 
+                                     Storyboard.TargetProperty="Opacity" 
+                                     From="0" To="1" 
+                                     Duration="0:0:0.7" BeginTime="0:0:0.15" />
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid Margin="20,10,20,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0"
+              Margin="16,0,16,-1"
+              Panel.ZIndex="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="README"
+                        Style="{StaticResource TopActionTabActive}"
+                        Click="OpenReadmeMenuItem_Click" />
+                <Button Content="ABOUT ME"
+                        Style="{StaticResource TopActionTab}"
+                        Margin="0"
+                        Click="AboutMenuItem_Click" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnMinimizeWindow"
+                        Content="-"
+                        Style="{StaticResource WindowControlTab}"
+                        Click="BtnMinimizeWindow_Click" />
+                <Button x:Name="btnMaxRestoreWindow"
+                        Content="o"
+                        Style="{StaticResource WindowControlTab}"
+                        Click="BtnMaxRestoreWindow_Click" />
+                <Button x:Name="btnCloseWindow"
+                        Content="x"
+                        Style="{StaticResource WindowCloseTab}"
+                        Margin="6,0,0,0"
+                        Click="BtnCloseWindow_Click" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="White"
+                BorderBrush="#C5D3EB"
+                BorderThickness="1"
+                CornerRadius="16"
+                MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">
+            <Border.Effect>
+                <DropShadowEffect Color="#2F0C264A" BlurRadius="45" ShadowDepth="12" />
+            </Border.Effect>
+
+            <Border CornerRadius="15" ClipToBounds="True">
+                <Grid>
+                    <!-- Background Design inside Card -->
+                    <Grid.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#FFFFFF" Offset="0" />
+                            <GradientStop Color="#F8FBFF" Offset="0.8" />
+                            <GradientStop Color="#EDF4FF" Offset="1" />
+                        </LinearGradientBrush>
+                    </Grid.Background>
+                    
+                    <Ellipse Width="340" Height="340" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-120,-120,0,0" Fill="#F2F7FF" Opacity="0.5" />
+                    <Ellipse Width="240" Height="240" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-80,-80" Fill="#F0FAFC" Opacity="0.6" />
+
+                    <Grid Margin="40">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.5*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left Side: Title -->
+                        <StackPanel x:Name="TitleContainer" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <Rectangle Width="4" Height="28" Fill="#2FA66A" RadiusX="2" RadiusY="2" Margin="0,0,12,0" />
+                                <TextBlock Text="ECO-MATIC VENDING"
+                                           FontSize="26"
+                                           FontWeight="SemiBold"
+                                           Foreground="#859AB5"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <TextBlock Text="Smart Retail."
+                                       FontSize="52"
+                                       FontWeight="Black"
+                                       Foreground="#193359"
+                                       Margin="0,0,0,4" />
+                            <TextBlock Text="Simplified."
+                                       FontSize="52"
+                                       FontWeight="Black"
+                                       Foreground="#2E77E6"
+                                       Margin="0,0,0,24" />
+
+                            <TextBlock Text="Effortlessly handle customer purchases, process recycle credits, and manage real-time inventory from a single, unified interface."
+                                       TextWrapping="Wrap"
+                                       FontSize="16"
+                                       LineHeight="26"
+                                       Foreground="#647B9E"
+                                       MaxWidth="520" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,35,0,0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                                    <Ellipse Width="8" Height="8" Fill="#2FA66A" Margin="0,0,8,0" />
+                                    <TextBlock Text="Always Synced" Foreground="#4E6585" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                                    <Ellipse Width="8" Height="8" Fill="#2FA66A" Margin="0,0,8,0" />
+                                    <TextBlock Text="Secure Admin" Foreground="#4E6585" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="8" Height="8" Fill="#2FA66A" Margin="0,0,8,0" />
+                                    <TextBlock Text="CSV Backup" Foreground="#4E6585" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Right Side: Menu Buttons -->
+                        <Border x:Name="MenuContainer" Grid.Row="0" Grid.Column="1" 
+                                Background="#FFFFFF" 
+                                BorderBrush="#E1EAF7" 
+                                BorderThickness="1" 
+                                CornerRadius="20" 
+                                Padding="28" 
+                                VerticalAlignment="Center">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#15002040" BlurRadius="24" ShadowDepth="4" />
+                            </Border.Effect>
+                            <StackPanel>
+                                <TextBlock Text="Get Started"
+                                           FontSize="26"
+                                           FontWeight="Bold"
+                                           Foreground="#1F3960"
+                                           Margin="0,0,0,8" />
+                                <TextBlock Text="Select your operating mode."
+                                           Foreground="#6D84A3"
+                                           FontSize="15"
+                                           Margin="0,0,0,26" />
+
+                                <Button x:Name="btnCustomer"
+                                        Margin="0,0,0,16"
+                                        Content="Customer Mode"
+                                        Style="{StaticResource CustomerActionButton}"
+                                        Click="BtnCustomer_Click" />
+
+                                <Button x:Name="btnAdmin"
+                                        Margin="0,0,0,16"
+                                        Content="Admin Console"
+                                        Style="{StaticResource PrimaryActionButton}"
+                                        Click="BtnAdmin_Click" />
+
+                                <Separator Background="#E1EAF7" Margin="0,10,0,26" />
+
+                                <Button x:Name="btnExit"
+                                        Content="Exit Station"
+                                        Style="{StaticResource ExitActionButton}"
+                                        Height="48"
+                                        Background="#FFF4F4"
+                                        BorderBrush="#F2D8D8"
+                                        BorderThickness="1"
+                                        Foreground="#D65A5A"
+                                        Click="BtnExit_Click" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Grid.Row="1"
+                                   Grid.ColumnSpan="2"
+                                   Margin="0,24,0,0"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#A3B4CC"
+                                   Text="Copyright 2026 Seanix" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</Window>
