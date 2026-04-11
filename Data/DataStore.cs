@@ -13,23 +13,23 @@ public static class DataStore
             [RecycleMaterial.Aluminum] = 3.00m
         };
 
-    private static readonly List<Product> DefaultProducts =
+    private static readonly List<VendingItem> DefaultProducts =
     [
-        Product.Create(ProductType.Snack, 1, "Mr Chips", 30.5m, 10, "Crunchy salted potato chips.", 160),
-        Product.Create(ProductType.Snack, 2, "Nova", 40m, 10, "Cheesy square crackers.", 170),
-        Product.Create(ProductType.Drink, 3, "Coca Cola", 30.5m, 10, "Classic cola refreshment.", 140, 330),
-        Product.Create(ProductType.Drink, 4, "Pepsi", 30m, 10, "Bold cola flavor.", 150, 330),
-        Product.Create(ProductType.Misc, 5, "Bandaid Box", 20m, 10, "Compact first-aid strips."),
-        Product.Create(ProductType.Misc, 6, "Eco Bag", 30.75m, 10, "Reusable eco-friendly carry bag."),
-        Product.Create(ProductType.Snack, 7, "Piattos", 35m, 10, "Sour cream and onion chips.", 180),
-        Product.Create(ProductType.Snack, 8, "Chippy", 32m, 10, "Light and crispy chips.", 175),
-        Product.Create(ProductType.Snack, 9, "Roller Coaster", 28.5m, 10, "Ridged chips with barbecue taste.", 165),
-        Product.Create(ProductType.Snack, 10, "Fudge Bar", 25m, 10, "Chocolate coated wafer bar.", 150),
-        Product.Create(ProductType.Snack, 11, "Cheese Ring", 30m, 10, "Cheesy ring-shaped corn snack.", 170),
-        Product.Create(ProductType.Drink, 12, "RC Cola", 25m, 10, "Refreshing RC cola.", 135, 330)
+        new SnackItem { Id = 1, Name = "Mr Chips", Price = 30.5m, Stock = 10, FlavorText = "Crunchy salted potato chips.", Calories = 160 },
+        new SnackItem { Id = 2, Name = "Nova", Price = 40m, Stock = 10, FlavorText = "Cheesy square crackers.", Calories = 170 },
+        new DrinkItem { Id = 3, Name = "Coca Cola", Price = 30.5m, Stock = 10, FlavorText = "Classic cola refreshment.", Calories = 140, VolumeMl = 330 },
+        new DrinkItem { Id = 4, Name = "Pepsi", Price = 30m, Stock = 10, FlavorText = "Bold cola flavor.", Calories = 150, VolumeMl = 330 },
+        new MiscItem { Id = 5, Name = "Bandaid Box", Price = 20m, Stock = 10, FlavorText = "Compact first-aid strips." },
+        new MiscItem { Id = 6, Name = "Eco Bag", Price = 30.75m, Stock = 10, FlavorText = "Reusable eco-friendly carry bag." },
+        new SnackItem { Id = 7, Name = "Piattos", Price = 35m, Stock = 10, FlavorText = "Sour cream and onion chips.", Calories = 180 },
+        new SnackItem { Id = 8, Name = "Chippy", Price = 32m, Stock = 10, FlavorText = "Light and crispy chips.", Calories = 175 },
+        new SnackItem { Id = 9, Name = "Roller Coaster", Price = 28.5m, Stock = 10, FlavorText = "Ridged chips with barbecue taste.", Calories = 165 },
+        new SnackItem { Id = 10, Name = "Fudge Bar", Price = 25m, Stock = 10, FlavorText = "Chocolate coated wafer bar.", Calories = 150 },
+        new SnackItem { Id = 11, Name = "Cheese Ring", Price = 30m, Stock = 10, FlavorText = "Cheesy ring-shaped corn snack.", Calories = 170 },
+        new DrinkItem { Id = 12, Name = "RC Cola", Price = 25m, Stock = 10, FlavorText = "Refreshing RC cola.", Calories = 135, VolumeMl = 330 }
     ];
 
-    public static List<Product> Products { get; } = new();
+    public static List<VendingItem> Products { get; } = new();
     public static List<Transaction> Transactions { get; } = new();
     public static int NextTransactionId { get; set; } = 1;
     public static Transaction? LastTransaction { get; set; }

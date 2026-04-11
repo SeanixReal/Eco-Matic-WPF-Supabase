@@ -30,7 +30,7 @@ public partial class AdminWindow : Window
 
     private void RefreshGrid()
     {
-        int? selectedId = (inventoryGrid.SelectedItem as Product)?.Id;
+        int? selectedId = (inventoryGrid.SelectedItem as VendingItem)?.Id;
         var products = DataStore.Products.OrderBy(p => p.Id).ToList();
 
         inventoryGrid.ItemsSource = products;
@@ -53,10 +53,9 @@ public partial class AdminWindow : Window
     private void LoadAddTypeSelector()
     {
         cboAddType.Items.Clear();
-        foreach (var value in Enum.GetValues<ProductType>())
-        {
-            cboAddType.Items.Add(value);
-        }
+        cboAddType.Items.Add("Snack");
+        cboAddType.Items.Add("Drink");
+        cboAddType.Items.Add("Misc");
 
         if (cboAddType.Items.Count > 0)
         {
@@ -117,7 +116,7 @@ public partial class AdminWindow : Window
 
     private void SyncSelectorsFromGridSelection()
     {
-        if (inventoryGrid.SelectedItem is Product product)
+        if (inventoryGrid.SelectedItem is VendingItem product)
         {
             SelectFromGrid(product.Id);
         }
@@ -219,7 +218,7 @@ public partial class AdminWindow : Window
             return;
         }
 
-        if (cboAddType.SelectedItem is not ProductType type)
+        if (cboAddType.SelectedItem is not string type)
         {
             MessageBox.Show(this, "Select a product type.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
@@ -246,13 +245,13 @@ public partial class AdminWindow : Window
         int calories = 0;
         int volumeMl = 0;
 
-        if (type == ProductType.Snack && !TryParseOptionalNonNegativeInt(txtAddCalories.Text, out calories))
+        if (type == "Snack" && !TryParseOptionalNonNegativeInt(txtAddCalories.Text, out calories))
         {
             MessageBox.Show(this, "Calories must be 0 or a positive whole number.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        if (type == ProductType.Drink && !TryParseOptionalNonNegativeInt(txtAddVolume.Text, out volumeMl))
+        if (type == "Drink" && !TryParseOptionalNonNegativeInt(txtAddVolume.Text, out volumeMl))
         {
             MessageBox.Show(this, "Volume must be 0 or a positive whole number.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
@@ -260,7 +259,12 @@ public partial class AdminWindow : Window
 
         int newId = DataStore.Products.Count == 0 ? 1 : DataStore.Products.Max(p => p.Id) + 1;
 
-        var newProduct = Product.Create(type, newId, name, price, stock, flavor, calories, volumeMl);
+        VendingItem newProduct = type switch
+        {
+            "Snack" => new SnackItem { Id = newId, Name = name, Price = price, Stock = stock, FlavorText = flavor, Calories = calories },
+            "Drink" => new DrinkItem { Id = newId, Name = name, Price = price, Stock = stock, FlavorText = flavor, VolumeMl = volumeMl },
+            _ => new MiscItem { Id = newId, Name = name, Price = price, Stock = stock, FlavorText = flavor }
+        };
 
         if (!string.IsNullOrWhiteSpace(_selectedImagePath) && File.Exists(_selectedImagePath))
         {
@@ -410,13 +414,13 @@ public partial class AdminWindow : Window
 
     private void UpdateTypeSpecificFields()
     {
-        if (cboAddType.SelectedItem is not ProductType type)
+        if (cboAddType.SelectedItem is not string type)
         {
             return;
         }
 
-        bool showCalories = type == ProductType.Snack;
-        bool showVolume = type == ProductType.Drink;
+        bool showCalories = type == "Snack";
+        bool showVolume = type == "Drink";
 
         lblAddCalories.Visibility = showCalories ? Visibility.Visible : Visibility.Collapsed;
         txtAddCalories.Visibility = showCalories ? Visibility.Visible : Visibility.Collapsed;
@@ -460,7 +464,7 @@ public partial class AdminWindow : Window
 
     private void InventoryGrid_LoadingRow(object sender, DataGridRowEventArgs e)
     {
-        if (e.Row.Item is Product product && product.Stock <= 2)
+        if (e.Row.Item is VendingItem product && product.Stock <= 2)
         {
             e.Row.Foreground = Brushes.OrangeRed;
             e.Row.FontWeight = FontWeights.SemiBold;

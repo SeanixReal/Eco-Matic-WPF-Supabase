@@ -33,12 +33,12 @@ public partial class CustomerWindow : Window
 
     private readonly record struct SlotControls(
         Border Panel,
-        Image ProductImage,
+        Image VendingItemImage,
         TextBlock NameLabel,
         TextBlock PriceLabel,
         Button SelectButton);
 
-    private sealed class ProductOption
+    private sealed class VendingItemOption
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -137,11 +137,11 @@ public partial class CustomerWindow : Window
                 slot.SelectButton.Foreground = TextDim;
                 slot.SelectButton.BorderBrush = CreateBrush(201, 216, 239);
 
-                slot.ProductImage.Source = null;
+                slot.VendingItemImage.Source = null;
                 continue;
             }
 
-            slot.ProductImage.Source = ImageLoader.LoadProductImage(product.ImagePath);
+            slot.VendingItemImage.Source = ImageLoader.LoadProductImage(product.ImagePath);
 
             if (product.Stock > 0)
             {
@@ -186,7 +186,7 @@ public partial class CustomerWindow : Window
         }
     }
 
-    private void UpdateButtonBuyability(SlotControls slot, Product product)
+    private void UpdateButtonBuyability(SlotControls slot, VendingItem product)
     {
         if (_insertedMoney >= product.Price)
         {
@@ -204,12 +204,12 @@ public partial class CustomerWindow : Window
 
     private void RefreshExamineOptions()
     {
-        int? selectedId = (cboExamineItem.SelectedItem as ProductOption)?.Id;
+        int? selectedId = (cboExamineItem.SelectedItem as VendingItemOption)?.Id;
 
         cboExamineItem.Items.Clear();
         foreach (var p in DataStore.Products.OrderBy(p => p.Id))
         {
-            cboExamineItem.Items.Add(new ProductOption
+            cboExamineItem.Items.Add(new VendingItemOption
             {
                 Id = p.Id,
                 Name = p.Name
@@ -218,7 +218,7 @@ public partial class CustomerWindow : Window
 
         if (selectedId.HasValue)
         {
-            var same = cboExamineItem.Items.OfType<ProductOption>().FirstOrDefault(x => x.Id == selectedId.Value);
+            var same = cboExamineItem.Items.OfType<VendingItemOption>().FirstOrDefault(x => x.Id == selectedId.Value);
             if (same != null)
             {
                 cboExamineItem.SelectedItem = same;
@@ -322,7 +322,7 @@ public partial class CustomerWindow : Window
 
     private void BtnExamine_Click(object sender, RoutedEventArgs e)
     {
-        if (cboExamineItem.SelectedItem is not ProductOption option)
+        if (cboExamineItem.SelectedItem is not VendingItemOption option)
         {
             return;
         }
@@ -390,7 +390,7 @@ public partial class CustomerWindow : Window
         RefreshProducts();
     }
 
-    private Transaction CreateTransaction(Product product)
+    private Transaction CreateTransaction(VendingItem product)
     {
         var transaction = new Transaction
         {
@@ -422,7 +422,7 @@ public partial class CustomerWindow : Window
         return transaction;
     }
 
-    private void StartDispenseFeedback(Product product)
+    private void StartDispenseFeedback(VendingItem product)
     {
         _isDispensing = true;
         imgDispense.Source = ImageLoader.LoadProductImage(product.ImagePath);

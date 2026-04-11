@@ -11,6 +11,60 @@
         Background="Transparent">
 
     <Window.Resources>
+        <ControlTemplate x:Key="AnimatedButtonTemplate" TargetType="Button">
+            <Border x:Name="border"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="8"
+                    RenderTransformOrigin="0.5,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="1" ScaleY="1" />
+                </Border.RenderTransform>
+                <Grid>
+                    <Border x:Name="hoverOverlay" Background="White" Opacity="0" CornerRadius="8" />
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="hoverOverlay" Storyboard.TargetProperty="Opacity" To="0.25" Duration="0:0:0.15" />
+                                <DoubleAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.15">
+                                    <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="hoverOverlay" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15" />
+                                <DoubleAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.15" />
+                                <DoubleAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.15" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="hoverOverlay" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.05" />
+                                <DoubleAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="0.97" Duration="0:0:0.05" />
+                                <DoubleAnimation Storyboard.TargetName="border" Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="0.97" Duration="0:0:0.05" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
         <Style x:Key="PrimaryActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Height" Value="52" />
             <Setter Property="FontSize" Value="16" />
@@ -19,6 +73,7 @@
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderBrush" Value="#2E77E6" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template" Value="{StaticResource AnimatedButtonTemplate}" />
         </Style>
 
         <Style x:Key="CustomerActionButton" TargetType="Button" BasedOn="{StaticResource PrimaryActionButton}">
@@ -112,6 +167,17 @@
                                      Storyboard.TargetProperty="Opacity" 
                                      From="0" To="1" 
                                      Duration="0:0:0.7" BeginTime="0:0:0.15" />
+
+                    <DoubleAnimation Storyboard.TargetName="LeafLogoTransform" 
+                                     Storyboard.TargetProperty="Angle" 
+                                     From="-12" To="12" 
+                                     Duration="0:0:4" 
+                                     RepeatBehavior="Forever"
+                                     AutoReverse="True">
+                        <DoubleAnimation.EasingFunction>
+                            <SineEase EasingMode="EaseInOut" />
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
                 </Storyboard>
             </BeginStoryboard>
         </EventTrigger>
@@ -194,49 +260,49 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Left Side: Title -->
-                        <StackPanel x:Name="TitleContainer" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                        <StackPanel x:Name="TitleContainer" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,20,0">
                             
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                <Rectangle Width="4" Height="28" Fill="#2FA66A" RadiusX="2" RadiusY="2" Margin="0,0,12,0" />
-                                <TextBlock Text="ECO-MATIC VENDING"
-                                           FontSize="26"
-                                           FontWeight="SemiBold"
-                                           Foreground="#859AB5"
-                                           VerticalAlignment="Center" />
-                            </StackPanel>
+                            <Grid Margin="0,0,0,24" Width="95" Height="95" RenderTransformOrigin="0.5,0.9">
+                                <Grid.RenderTransform>
+                                    <RotateTransform x:Name="LeafLogoTransform" Angle="0"/>
+                                </Grid.RenderTransform>
+                                
+                                <Path Data="M 48 95 C 45 65 52 35 70 15 
+                                            M 48 78 C 30 85 10 70 18 55 C 25 40 42 55 49 68
+                                            M 50 63 C 70 70 90 55 82 40 C 75 25 58 40 50 50
+                                            M 54 45 C 36 43 28 20 38 7 C 48 -5 62 10 59 28
+                                            M 64 26 C 85 24 95 0 85 -12 C 75 -25 58 -10 60 8
+                                            M 68 18 C 55 5 60 -15 75 -22 C 90 -30 96 -10 82 2"
+                                      Stroke="#181D1A"
+                                      StrokeThickness="5"
+                                      StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Fill="Transparent"
+                                      Stretch="Uniform" />
+                            </Grid>
 
-                            <TextBlock Text="Smart Retail."
-                                       FontSize="52"
-                                       FontWeight="Black"
-                                       Foreground="#193359"
-                                       Margin="0,0,0,4" />
-                            <TextBlock Text="Simplified."
-                                       FontSize="52"
-                                       FontWeight="Black"
-                                       Foreground="#2E77E6"
-                                       Margin="0,0,0,24" />
+                            <TextBlock Text="Eco Matic"
+                                       FontFamily="Georgia"
+                                       FontSize="56"
+                                       FontStyle="Italic"
+                                       FontWeight="Bold"
+                                       Foreground="#1E821F"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,6" />
 
-                            <TextBlock Text="Effortlessly handle customer purchases, process recycle credits, and manage real-time inventory from a single, unified interface."
-                                       TextWrapping="Wrap"
+                            <TextBlock Text="VENDING MACHINE"
+                                       FontFamily="Segoe UI"
+                                       FontSize="17"
+                                       Foreground="#6C7E93"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,40" />
+
+                            <TextBlock Text="Fresh • Fast • Eco-Friendly"
+                                       FontStyle="Italic"
                                        FontSize="16"
-                                       LineHeight="26"
-                                       Foreground="#647B9E"
-                                       MaxWidth="520" />
-
-                            <StackPanel Orientation="Horizontal" Margin="0,35,0,0">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
-                                    <Ellipse Width="8" Height="8" Fill="#2FA66A" Margin="0,0,8,0" />
-                                    <TextBlock Text="Always Synced" Foreground="#4E6585" FontWeight="SemiBold" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
-                                    <Ellipse Width="8" Height="8" Fill="#2FA66A" Margin="0,0,8,0" />
-                                    <TextBlock Text="Secure Admin" Foreground="#4E6585" FontWeight="SemiBold" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="8" Height="8" Fill="#2FA66A" Margin="0,0,8,0" />
-                                    <TextBlock Text="CSV Backup" Foreground="#4E6585" FontWeight="SemiBold" />
-                                </StackPanel>
-                            </StackPanel>
+                                       Foreground="#71A086"
+                                       HorizontalAlignment="Center" />
                         </StackPanel>
 
                         <!-- Right Side: Menu Buttons -->
