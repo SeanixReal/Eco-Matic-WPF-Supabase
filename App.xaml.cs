@@ -1,4 +1,12 @@
-﻿using System.Windows;
+﻿/*
+ * Project Title: Eco-Matic Vending Machine Simulator (GUI Edition)
+ * Date: 03/20/2026
+ * Version: 1.0
+ * Description: Promotes SDG 12 (Responsible Consumption) by integrating a standard
+ *              vending machine with a unique "trash-to-credit" recycling system.
+ *              WPF architecture chosen over WinForms for modern data binding.
+ */
+using System.Windows;
 
 namespace Eco_Matic
 {
