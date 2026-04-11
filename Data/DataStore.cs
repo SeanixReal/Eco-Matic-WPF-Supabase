@@ -1,9 +1,3 @@
-/*
- * Module: Business Logic & Data Access (DataStore)
- * Description: Manages CRUD (Create, Read, Update, Delete) operations and transaction auditing.
- * Note: Temporarily tied to CsvStorage. Implementation of MySQL database persistence
- *       (ADO.NET) is scheduled for Phase 2.
- */
 namespace Eco_Matic;
 
 public static class DataStore

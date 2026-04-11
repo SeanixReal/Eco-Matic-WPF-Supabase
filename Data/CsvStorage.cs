@@ -1,8 +1,3 @@
-/*
- * Module: Data Access Layer (CsvStorage)
- * Description: Flat-file persistence module mapping directly to `Inventory` and `Transaction` tables.
- *              Acts as a mock for the proposed MySQL integration (planned for development next week).
- */
 using System;
 using System.Collections.Generic;
 using System.Globalization;

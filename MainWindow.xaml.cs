@@ -1,9 +1,4 @@
-﻿/*
- * Module: Presentation Layer (MainWindow)
- * Description: Intuitive GUI for customer and admin interactions.
- *              Enforces role-based security via authenticated administrator dashboard.
- */
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 
 namespace Eco_Matic

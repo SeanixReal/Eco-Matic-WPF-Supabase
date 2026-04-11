@@ -1,0 +1,130 @@
+Software Project Proposal
+
+Project Title: Eco-Matic Vending Machine Simulator (WinForms Edition) 
+Author:
+Date: 03/20/2026
+Version: 1.0
+
+1. Introduction
+
+    1.1 Project Overview
+
+The "Eco-Matic" Simulator is a WinForms application built with C#. It promotes SDG 12
+(Responsible Consumption) by integrating a standard vending machine with a unique
+"trash-to-credit" recycling system, moving beyond the previous console version to a professional
+GUI with persistent database connectivity.
+
+    1.2 Objectives
+
+     Develop an intuitive WinForms GUI for customer and admin interactions.
+     Implement MySQL database persistence to replace csv.
+     Simulate a "Recycle for Credit" module for sustainable waste management.
+     Enforce role-based security via an authenticated administrator dashboard.
+
+    1.3 Scope
+
+The system includes a Customer UI for purchasing, recycling, and balance management, and
+an Administrator UI for inventory CRUD (Create, Read, Update, Delete) and transaction
+auditing.
+
+2. System Analysis
+
+    2.1 Problem Statement
+
+The previous CLI version lacked user-friendly interaction and used prone-to-error CSV storage,
+making data management and complex reporting difficult.
+
+    2.2 Proposed Solution
+
+A WinForms C#.NET application connected to MySQL will provide visual feedback, ensure data
+integrity, and allow for efficient inventory and log management.
+    2.3 Feasibility Study
+
+     Technical: Reuses core OOP logic from OOP1 with new ADO.NET database handling.
+     Operational: GUI significantly improves usability over command-line inputs.
+     Financial: Uses free tools (Visual Studio Community, MySQL).
+
+3. System Design
+
+    3.1 System Architecture
+
+A Presentation, Business Logic, and Data Access, ensures a clean separation between the
+WinForms UI and the MySQL database.
+
+    3.2 Use Case Diagram
+3.3 Class Diagram
+3.4 ER Diagram
+4. Implementation Plan
+
+4.1 Development Tools & Technologies
+
+ C#, WinForms, .NET Core
+ MySQL
+ Visual Studio 2022
+
+4.2 Modules
+
+ Auth: Secure Admin login.
+ CRUD: Inventory management.
+ Transactions: Customer balance and recycling logic.
+
+5. Database Design
+
+5.1 Tables
+
+Inventory
+
+Column Name             Data Type
+ItemID                  INT
+ItemName                VARCHAR(50)
+ItemType                VARCHAR(20)
+Price                   DECIMAL(10,2)
+StockLevel              INT
+
+Transaction             Data Type
+                        INT
+Column Name             DATETIME
+LogID                   VARCHAR(30)
+LogDate                 INT
+ActionType
+ItemID
+Admin        Data Type
+             INT
+Column Name  VARCHAR(50)
+AdminID      VARCHAR(50)
+Username
+Password
+
+    5.2 Sample Queries
+
+     Restock: UPDATE Inventory SET StockLevel = StockLevel + 10 WHERE
+         ItemID = 1;
+
+     Log: INSERT INTO Transactions (ActionType, ItemID) VALUES
+         ('Purchase', 1);
+
+6. Testing & Quality Assurance
+
+     Unit/Integration: Testing change logic and database connectivity.
+     User Acceptance Testing: Verifying intuitive UI flow and error handling.
+     Outcome: A stable, secure desktop app with zero data loss.
+
+   7. Conclusion
+
+Eco-Matic WinForms Edition improves usability and reliability by transitioning to a GUI and
+MySQL database, showcasing advanced OOP and professional data management.
+
+8. References
+
+ Microsoft. (2024). Windows Forms Documentation.
+    https://learn.microsoft.com/en-us/dotnet/desktop/winforms/
+
+ Oracle. (2024). MySQL Connector/NET Guide.
+    https://dev.mysql.com/doc/connector-net/en/
+
+ SeanixReal. (2023). Eco-Matic OOP1 Terminal Project. GitHub.
+    https://github.com/SeanixReal/Eco-Matic
+
+ United Nations. (n.d.). Sustainable Development Goal 12.
+    https://sdgs.un.org/goals/goal12
+
