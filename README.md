@@ -1,115 +1,101 @@
-# Eco-Matic: Eco Vending Machine WPF Application
+# Eco-Matic Vending Machine Simulator (GUI Edition) 
 
-## I. Project Title
+## 1. Introduction
 
-**Eco-Matic** (Eco vending machine using WPF Application in C#)
+### 1.1 Project Overview
+The "Eco-Matic" Simulator is a graphical application built with C# WPF (migrated from the originally proposed WinForms architecture for better modern UI capabilities). It promotes **SDG 12 (Responsible Consumption)** by integrating a standard vending machine with a unique "trash-to-credit" recycling system. This project moves beyond previous console constraints into a professional GUI with persistent data integration.
 
-## II. Introduction
+### 1.2 Objectives
+- Develop an intuitive and modern WPF GUI for customer and admin interactions.
+- Implement robust data persistence (via CSV structured schemas) to maintain inventory and states securely.
+- Simulate a "Recycle for Credit" module for sustainable waste management.
+- Enforce role-based security via an authenticated administrator dashboard.
 
-This project aims to develop a fully-featured **"Eco-Matic" Vending Machine Simulator** with a Graphical User Interface (GUI) in C# WPF. 
-It represents an evolution from the original console-based application, fully integrating modern Object-Oriented Programming (OOP) principles, multi-file architecture, and robust file handling.
+### 1.3 Scope
+The system includes a Customer UI for purchasing, recycling, and balance management, and an Administrator UI for inventory CRUD (Create, Read, Update, Delete) operations and transaction auditing.
 
-The idea came from not just for commercial purposes but also to integrate a "trash to credit" recycling system, promoting awareness of Sustainable Development Goals (SDGs) like responsible consumption (SDG 12). 
-This project can potentially be a great idea in the future to be put on the streets of Cebu to help clean the trashes. The program will be **data-driven**, with a **dynamic inventory** managed through a CSV file and a transaction log, updating instantly in the modern UI.
+## 2. System Analysis
 
-## III. Objectives
+### 2.1 Problem Statement
+The previous CLI (Command Line Interface) version lacked user-friendly interaction and relied on linear script flows, making data management and visual presentation difficult.
 
-- **Develop a modern and interactive WPF GUI application** with clear, separated UI windows for customers and administrators.
-- **Demonstrate inheritance and polymorphism** by creating an abstract `VendingItem` class with specialized child classes (`DrinkItem`, `SnackItem`, `MiscItem`) that provide unique behaviors.
-- **Implement a data-driven inventory** that loads and saves its polymorphic state from a CSV file via a centralized `DataStore` pattern.
-- **Create an admin panel**, protected by a login, for managing the machine's inventory tracking dynamically.
-- **Integrate a "Recycle for Credit" feature**, allowing users to convert simulated trash (plastic, glass, aluminum) into usable machine credit.
-- **Enforce realistic constraints**, combined with dynamic data binding to update the UI visuals (like stock warnings or error messages) automatically.
+### 2.2 Proposed Solution
+A GUI C#.NET application provides visual feedback, ensures data integrity, and allows for efficient inventory and log management using strict Object-Oriented Programming (OOP) principles.
 
-## IV. Scope
+### 2.3 Feasibility Study
+- **Technical:** Reuses core OOP logic from OOP1 while introducing advanced Data-Binding and separated UI layouts with XAML.
+- **Operational:** GUI significantly improves usability over command-line inputs.
+- **Financial:** Uses free and open-source tools (Visual Studio Community, .NET SDK).
 
-### What's Included:
-- **Customer Transactions**: Simulates customer interactions (purchasing, recycling) seamlessly through button clicks and visual interactions.
-- **Dynamic Inventory Management**: Real-time inventory updates with CSV persistence mapped directly to domain models.
-- **Administrative Functions**: Managing inventory via dedicated grid layouts and forms.
-- **WPF-based UI**: Modern, borderless window styling, custom vector graphics, drop shadows, and animated transitions.
+## 3. System Design
 
-## V. Project Requirements
+### 3.1 System Architecture
+The program operates on a **Presentation, Business Logic, and Data Access** tiered structure. This ensures a clean separation between the WPF UI (XAML/Code-Behind) and the underlying data storage logic (`DataStore.cs` and `CsvStorage.cs`).
 
-### Software Requirements:
-- **IDE**: Visual Studio 2022 or Visual Studio Code
-- **Language**: C# 10+
-- **Framework**: .NET 10.0 (WPF `net10.0-windows`)
-- **Tools/Libraries**: 
-  - Standard .NET WPF presentation frameworks (XAML)
-  - `System.IO` for file handling and `CsvStorage` mechanisms
-  - `System.Linq` for data manipulation
+- **Inheritance & Polymorphism:** Specific products are concrete subclasses (`SnackItem`, `DrinkItem`, `MiscItem`) inheriting from an abstract `VendingItem`, making the business logic heavily robust.
 
-### Hardware Requirements:
-- Any modern Windows computer capable of running the .NET runtime and WPF Desktop Framework.
+### 3.2 Modules
+- **Auth:** Secure Admin login handling.
+- **CRUD:** Full Inventory management allowing Admins to Add, Restock, or Remove `VendingItem` nodes.
+- **Transactions:** Customer balance processing and recycling credit logic.
+
+## 4. Implementation Plan
+
+### 4.1 Development Tools & Technologies
+- C#, WPF (Windows Presentation Foundation), .NET 10.0
+- Visual Studio 2022 / Visual Studio Code
+- Integrated Csv Data File Handling (Replacing initially proposed MySQL for zero-setup portability)
 
 ### Setup & Execution
 
 1. Clone this repository:
-
   ```bash
   git clone https://github.com/SeanixReal/Eco-Matic-WPF.git
   cd Eco-Matic-WPF/Eco-Matic
   ```
 
-2. Install the .NET 10 SDK
-
-3. Restore dependencies and build:
-
+2. Restore dependencies and build:
   ```bash
   dotnet restore
   dotnet build Eco-Matic.csproj
   ```
 
-4. Run the WPF app:
-
+3. Run the app:
   ```bash
   dotnet run --project Eco-Matic.csproj
   ```
 
-All data and output files are handled automatically. The sample inventory (`data/inventory.csv`) is preserved and parsed automatically.
+## 5. Storage & Database Design
 
-## VI. Functional Requirements
+While adapted to use a zero-configuration flat-file (CSV) system for extreme portability, it strictly mimics relational table logic:
 
-### Customer Functions:
-- **Insert Money**: Add balance using visual inputs.
-- **Select Item**: Click physical representation of items to purchase.
-- **Examine Item**: See detailed visual flavor text and specific properties (like Calories or Volume) depending on if it's a Snack or Drink.
-- **Recycle for Credit**: Click to recycle specific materials to instantly boost the simulated balance.
-- **Get Change**: Print a visual receipt and return to the main hub.
+### 5.1 Tables (CSV Structures)
 
-### Administrator Functions:
-- **Password-protected Login**: Secure gateway to the management backend.
-- **Restock Items**: Quickly refill stock capacities dynamically updating the UI limits.
-- **Add Item**: Define completely new items, selecting subclasses (Snack, Drink, Misc) which dictates what data fields are required.
-- **Remove Item**: Delete a product permanently from the data model and visual grid.
-- **Event Logging**: View all systemic transactions loaded from the background log.
+**Inventory Table (`inventory.csv`)**
+- `ProductId` (INT)
+- `Type` (VARCHAR/ENUM - Snack, Drink, Misc)
+- `Name` (VARCHAR)
+- `Price` (DECIMAL)
+- `Stock` (INT)
+- `Extended Attributes` (Calories, Volume, etc.)
 
-### System Functions:
-- **Data Persistence**: Automatically load, pattern match, and save the polymorphic inventory from/to a CSV file.
-- **Event Logging**: Automatically log all purchases, recycling activities, and admin actions with localized timestamps mapping cleanly to domain `ProductType` enums.
-- **Architecture**: Complete separation between Models, Data logic, and XAML/Code-Behind UI boundaries. 
+**Transaction Table (`eventLog.csv`)**
+- `LogDate` (DATETIME)
+- `ActionType` (VARCHAR)
+- `Details` (TEXT)
 
-## VII. OOP Concepts Demonstrated (Major Upgrade from Console)
+## 6. Testing & Quality Assurance
 
-- **Abstract Classes**: Replaced single monolithic structs with an abstract `VendingItem` core.
-- **Inheritance**: `VendingItem` → `SnackItem`, `DrinkItem`, `MiscItem`. Each holds unique footprints (e.g., Drinks carry `VolumeML`).
-- **Polymorphism**: The `DataStore` manages a master `List<VendingItem>`, casting up/down during UI mapping or CSV serialization based on type (`item is IHasCalories`).
-- **Interfaces**: Established `IHasCalories` and `IHasVolume` strictly defining property contracts on the items.
-- **Enums**: Utilized `ProductType` for strict typing over raw strings.
+- **Unit/Integration:** Testing OOP polymorphic state changes (e.g., verifying a `DrinkItem` registers its volume correctly).
+- **User Acceptance Testing:** Verifying intuitive UI flow, error handling (e.g., purchasing without enough balance), and ensuring clean XAML layouts.
+- **Outcome:** A stable, secure desktop app with resilient data tracking.
 
-## VIII. Sustainable Development Goal (SDG) Connection
+## 7. Conclusion
 
-This project promotes **SDG 12: Responsible Consumption and Production** by:
-- Integrating a "trash to credit" recycling system.
-- Encouraging sustainable habits through gamification.
-- Raising awareness about proper waste management.
-- Creating a practical interactive representation of incentivized trash collection.
+The Eco-Matic GUI Edition improves usability and reliability by transitioning from a console prompt to an event-driven WPF application. By properly storing states and applying advanced OOP architecture, it showcases professional data management and software development practices.
 
-## IX. Author Notes
+## 8. References
 
-This serves as a major evolution of the original Eco-Matic Console program. By migrating to WPF, we replaced massive switch statements and monolithic code files with a properly factored Object-Oriented Architecture, making the system incredibly extensible and presentation-ready.
-
-## License
-
-This project is licensed under the **MIT License** - see the [LICENSE.txt](LICENSE.txt) file for details.
+- Microsoft. (2024). WPF Documentation. https://learn.microsoft.com/en-us/dotnet/desktop/wpf/
+- SeanixReal. (2023). Eco-Matic OOP1 Terminal Project. GitHub. https://github.com/SeanixReal/Eco-Matic
+- United Nations. (n.d.). Sustainable Development Goal 12. https://sdgs.un.org/goals/goal12
