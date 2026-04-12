@@ -449,7 +449,7 @@ public partial class CustomerWindow : Window
             _dispenseTimer?.Stop();
             _dispenseTimer = null;
             _isDispensing = false;
-            SetDispenseStatus("TAKE YOUR ITEM", Brushes.MediumSeaGreen);
+            SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
         };
         _dispenseTimer.Start();
     }

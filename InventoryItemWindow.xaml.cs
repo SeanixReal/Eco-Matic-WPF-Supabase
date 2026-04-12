@@ -12,7 +12,7 @@ namespace Eco_Matic
             InitializeComponent();
         }
 
-        public InventoryItemWindow(string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath) : this()
+        public InventoryItemWindow(string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath, string dispenseMessage = "Enjoy your item!", string examineMessage = "A standard vending item.") : this()
         {
             TitleContent.Text = "Modify Inventory Item";
             txtName.Text = name;
@@ -20,6 +20,8 @@ namespace Eco_Matic
             txtCalories.Text = calories.ToString();
             txtStock.Text = stock.ToString();
             txtImagePath.Text = string.IsNullOrWhiteSpace(imagePath) ? "/Assets/Placeholder.png" : imagePath;
+            txtDispenseMessage.Text = string.IsNullOrWhiteSpace(dispenseMessage) ? "Enjoy your item!" : dispenseMessage;
+            txtExamineMessage.Text = string.IsNullOrWhiteSpace(examineMessage) ? "A standard vending item." : examineMessage;
 
             foreach (ComboBoxItem item in cboType.Items)
             {
@@ -74,5 +76,7 @@ namespace Eco_Matic
         public int Calories => int.TryParse(txtCalories.Text, out int cal) ? cal : 0;
         public int InitialStock => int.Parse(txtStock.Text);
         public int MaxCapacity => 15;
+        public string DispenseMessage => txtDispenseMessage.Text;
+        public string ExamineMessage => txtExamineMessage.Text;
     }
 }

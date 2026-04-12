@@ -26,18 +26,21 @@ public static class DataStore
         ActiveMachineId = machineId;
         Products.Clear();
         var store = new Eco_Matic.Data.MySqlStore();
+        
         var dt = store.GetMachineInventory(machineId);
 
         int slotIndex = 1;
         foreach (System.Data.DataRow row in dt.Rows)
         {
-            int inventoryId = Convert.ToInt32(row["ID"]);
+            int inventoryId = Convert.ToInt32(row["_InventoryID"]);
             string name = row["Item"].ToString() ?? "Unknown";
             string typeStr = row["Type"].ToString() ?? "Misc";
             decimal price = Convert.ToDecimal(row["Price"]);
             int stock = Convert.ToInt32(row["Stock"]);
             int calories = row["Calories"] != DBNull.Value ? Convert.ToInt32(row["Calories"]) : 0;
             string imagePath = row["Image"].ToString() ?? "";
+            string dispenseMessage = row["Dispense Message"]?.ToString() ?? "Enjoy your item!";
+            string examineMessage = row["Examine Message"]?.ToString() ?? "A standard vending item.";
 
             ProductType pType = ProductType.Misc;
             if (Enum.TryParse<ProductType>(typeStr, out var parsedType))
@@ -45,7 +48,7 @@ public static class DataStore
                 pType = parsedType;
             }
 
-            var p = Product.Create(pType, slotIndex++, name, price, stock, "Fresh from Eco-Matic.", calories, 0, imagePath);
+            var p = Product.Create(pType, slotIndex++, name, price, stock, examineMessage, calories, 0, imagePath, dispenseMessage, examineMessage);
             p.DbInventoryId = inventoryId; // Use DbInventoryId for SQL ops if tracking ID. But UI uses slotIndex.
             Products.Add(p);
         }

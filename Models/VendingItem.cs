@@ -26,6 +26,8 @@ public abstract class VendingItem
     public int Stock { get; set; }
     public string FlavorText { get; set; } = "No description available.";
     public string ImagePath { get; set; } = string.Empty;
+    public string DispenseMessage { get; set; } = "Enjoy your item!";
+    public string ExamineMessage { get; set; } = "A standard vending item.";
     public abstract ProductType Type { get; }
 
     public virtual string Examine() => FlavorText;

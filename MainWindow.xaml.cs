@@ -6,31 +6,56 @@ namespace Eco_Matic
     public partial class MainWindow : Window
     {
         private const string AdminPassword = "admin123";
+        private Data.ArduinoService _arduino;
+        private Data.MySqlStore _db;
 
         public MainWindow()
         {
             InitializeComponent();
-            UpdateExitButton();
+            _db = new Data.MySqlStore();
+            _db.EnsureCustomerTableExists(); // Ensure DB is updated on boot
+            
+            // Connect to Arduino on COM5
+            _arduino = new Data.ArduinoService("COM5", 9600);
+            _arduino.OnCardScanned += Arduino_OnCardScanned;
+            _arduino.Start();
         }
 
-        protected override void OnActivated(EventArgs e)
+        private void Arduino_OnCardScanned(object sender, string rfid)
         {
-            base.OnActivated(e);
-            UpdateExitButton();
+            // The SerialPort event fires on a background thread.
+            // We must use Dispatcher.Invoke to do anything visual in WPF.
+            Dispatcher.Invoke(() =>
+            {
+                if (_db.CustomerExists(rfid))
+                {
+                    _arduino.SendResponse(true); // Turns Green LED on, says "Access Granted"
+                    
+                    var dashboard = new CustomerDashboardWindow(rfid);
+                    dashboard.Owner = this;
+                    dashboard.ShowDialog();
+                }
+                else
+                {
+                    _arduino.SendResponse(false); // Turns Red LED on, says "Unknown Card"
+                    
+                    var registerWindow = new CustomerRegistrationWindow(rfid);
+                    registerWindow.Owner = this;
+                    if (registerWindow.ShowDialog() == true)
+                    {
+                        // Registration successful, open their dashboard right away
+                        var dashboard = new CustomerDashboardWindow(rfid);
+                        dashboard.Owner = this;
+                        dashboard.ShowDialog();
+                    }
+                }
+            });
         }
 
-        private void UpdateExitButton()
+        protected override void OnClosed(System.EventArgs e)
         {
-            if (DataStore.LastTransaction != null)
-            {
-                btnExit.Content = "Print Receipt & Finish";
-                btnExit.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(46, 119, 230));
-            }
-            else
-            {
-                btnExit.Content = "Exit Station";
-                btnExit.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(214, 90, 90));
-            }
+            _arduino?.Stop();
+            base.OnClosed(e);
         }
 
         private void WindowFrame_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -78,7 +103,6 @@ namespace Eco_Matic
                 {
                     Show();
                     Activate();
-                    UpdateExitButton();
                 };
                 customerWindow.Show();
             }
@@ -109,7 +133,6 @@ namespace Eco_Matic
                     {
                         Show();
                         Activate();
-                        UpdateExitButton();
                     };
                     adminWindow.Show();
                 }
@@ -126,18 +149,6 @@ namespace Eco_Matic
 
         private void BtnExit_Click(object sender, RoutedEventArgs e)
         {
-            if (DataStore.LastTransaction != null)
-            {
-                var receipt = new ReceiptWindow(DataStore.LastTransaction)
-                {
-                    Owner = this
-                };
-                receipt.ShowDialog();
-                DataStore.LastTransaction = null;
-                UpdateExitButton();
-                return;
-            }
-
             var result = MessageBox.Show(this,
                 "Are you sure you want to exit the application?",
                 "Exit",

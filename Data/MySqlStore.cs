@@ -152,6 +152,21 @@ public partial class MySqlStore
         catch { return false; }
     }
 
+    public bool UpdateMachine(int machineId, string locationName, string status)
+    {
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            using var cmd = new MySqlCommand("UPDATE vending_machines SET location_name = @loc, status = @sts WHERE machine_id = @id", conn);
+            cmd.Parameters.AddWithValue("@id", machineId);
+            cmd.Parameters.AddWithValue("@loc", locationName);
+            cmd.Parameters.AddWithValue("@sts", status);
+            return cmd.ExecuteNonQuery() > 0;
+        }
+        catch { return false; }
+    }
+
     public System.Data.DataTable GetRoles()
     {
         var dt = new System.Data.DataTable();
@@ -224,12 +239,15 @@ public partial class MySqlStore
             conn.Open();
             string query = @"
                 SELECT 
-                    mi.inventory_id AS 'ID',
+                    ROW_NUMBER() OVER(ORDER BY mi.inventory_id) AS 'ID',
+                    mi.inventory_id AS '_InventoryID',
                     i.image_path AS 'Image',
                     i.name AS 'Item',
                     i.type AS 'Type',
                     i.price AS 'Price',
                     i.calories AS 'Calories',
+                    i.dispense_message AS 'Dispense Message',
+                    i.examine_message AS 'Examine Message',
                     mi.stock_level AS 'Stock',
                     mi.max_capacity AS 'Max Capacity'
                 FROM machine_inventory mi
@@ -246,19 +264,34 @@ public partial class MySqlStore
         }
         return dt;
     }
-    public bool AddNewItemToMachine(int machineId, string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath = "/Assets/Placeholder.png")
+    public bool AddNewItemToMachine(int machineId, string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath = "/Assets/Placeholder.png", string dispenseMessage = "Enjoy your item!", string examineMessage = "A standard vending item.")
     {
         try
         {
             using var conn = GetConnection();
             conn.Open();
-            string q1 = "INSERT INTO items (name, type, price, calories, image_path) VALUES (@name, @type, @price, @calories, @img)";
+
+            // Enforce max 12 items limit per machine
+            string checkQuery = "SELECT COUNT(*) FROM machine_inventory WHERE machine_id = @mid";
+            using var checkCmd = new MySqlCommand(checkQuery, conn);
+            checkCmd.Parameters.AddWithValue("@mid", machineId);
+            int count = Convert.ToInt32(checkCmd.ExecuteScalar());
+            if (count >= 12)
+            {
+                System.Windows.MessageBox.Show("Maximum of 12 items allowed per vending machine.", "Capacity Reached", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
+            string q1 = "INSERT INTO items (name, type, price, calories, image_path, dispense_message, examine_message) VALUES (@name, @type, @price, @calories, @img, @dispenseMessage, @examineMessage)";
             using var cmd1 = new MySqlCommand(q1, conn);
             cmd1.Parameters.AddWithValue("@name", name);
             cmd1.Parameters.AddWithValue("@type", type);
             cmd1.Parameters.AddWithValue("@price", price);
             cmd1.Parameters.AddWithValue("@calories", calories);
             cmd1.Parameters.AddWithValue("@img", imagePath);
+            cmd1.Parameters.AddWithValue("@dispenseMessage", dispenseMessage);
+            cmd1.Parameters.AddWithValue("@examineMessage", examineMessage);
+            cmd1.Parameters.AddWithValue("@examineMessage", examineMessage);
             cmd1.ExecuteNonQuery();
             
             long itemId = cmd1.LastInsertedId;
@@ -326,7 +359,17 @@ public partial class MySqlStore
         cmd.ExecuteNonQuery();
     }
 
-    public bool UpdateInventoryItem(int inventoryId, string name, string type, decimal price, int calories, string imagePath, int stock, int maxCap)
+    public void RandomizeAllStocks()
+    {
+        using var conn = GetConnection();
+        conn.Open();
+        // Sets random stock between 1 and 15 for all inventory items
+        string query = "UPDATE machine_inventory SET stock_level = FLOOR(1 + (RAND() * 15))";
+        using var cmd = new MySqlCommand(query, conn);
+        cmd.ExecuteNonQuery();
+    }
+
+    public bool UpdateInventoryItem(int inventoryId, string name, string type, decimal price, int calories, string imagePath, int stock, int maxCap, string dispenseMessage, string examineMessage)
     {
         try
         {
@@ -340,13 +383,15 @@ public partial class MySqlStore
             if (itemIdObj == null) return false;
             int itemId = Convert.ToInt32(itemIdObj);
 
-            string q1 = "UPDATE items SET name = @n, type = @t, price = @p, calories = @cal, image_path = @img WHERE item_id = @iid";
+            string q1 = "UPDATE items SET name = @n, type = @t, price = @p, calories = @cal, image_path = @img, dispense_message = @dispenseMessage, examine_message = @examineMessage WHERE item_id = @iid";
             using var cmd1 = new MySqlCommand(q1, conn);
             cmd1.Parameters.AddWithValue("@n", name);
             cmd1.Parameters.AddWithValue("@t", type);
             cmd1.Parameters.AddWithValue("@p", price);
             cmd1.Parameters.AddWithValue("@cal", calories);
             cmd1.Parameters.AddWithValue("@img", imagePath);
+            cmd1.Parameters.AddWithValue("@dispenseMessage", dispenseMessage);
+            cmd1.Parameters.AddWithValue("@examineMessage", examineMessage);
             cmd1.Parameters.AddWithValue("@iid", itemId);
             cmd1.ExecuteNonQuery();
 
@@ -405,7 +450,50 @@ public partial class MySqlStore
         {
             using var conn = GetConnection();
             conn.Open();
-            using var cmd = new MySqlCommand("SELECT log_id AS 'Log ID', log_date AS 'Timestamp', event_type AS 'Event', description AS 'Notes' FROM event_logs ORDER BY log_date DESC", conn);
+            using var cmd = new MySqlCommand("SELECT log_id AS 'Log ID', log_date AS 'Timestamp', event_type AS 'Event', description AS 'Notes' FROM event_logs ORDER BY log_date DESC LIMIT 100", conn);
+            using var adapter = new MySqlDataAdapter(cmd);
+            adapter.Fill(dt);
+        }
+        catch {}
+        return dt;
+    }
+
+    public System.Data.DataTable GetFilteredEventLogs(DateTime date, string filterType)
+    {
+        var dt = new System.Data.DataTable();
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+
+            string condition;
+            switch (filterType)
+            {
+                case "Week":
+                    condition = "YEARWEEK(log_date, 1) = YEARWEEK(@date, 1)";
+                    break;
+                case "Month":
+                    condition = "YEAR(log_date) = YEAR(@date) AND MONTH(log_date) = MONTH(@date)";
+                    break;
+                case "Year":
+                    condition = "YEAR(log_date) = YEAR(@date)";
+                    break;
+                case "All Time":
+                    condition = "1=1";
+                    break;
+                case "Day":
+                default:
+                    condition = "DATE(log_date) = DATE(@date)";
+                    break;
+            }
+
+            string q = $@"SELECT log_id AS 'Log ID', log_date AS 'Timestamp', event_type AS 'Event', description AS 'Notes' 
+                          FROM event_logs 
+                          WHERE {condition} 
+                          ORDER BY log_date DESC";
+            
+            using var cmd = new MySqlCommand(q, conn);
+            cmd.Parameters.AddWithValue("@date", date);
             using var adapter = new MySqlDataAdapter(cmd);
             adapter.Fill(dt);
         }
@@ -532,8 +620,7 @@ public partial class MySqlStore
                             i.name AS 'Item', 
                             1 AS 'Quantity', 
                             i.price AS 'Price', 
-                            s.amount_paid AS 'Total Paid',
-                            CONCAT('Qty: 1 | Price: ₱', FORMAT(i.price, 2), ' | Total: ₱', FORMAT(s.amount_paid, 2)) AS 'Notes'
+                            s.amount_paid AS 'Total Paid'
                          FROM sales_transactions s
                          JOIN vending_machines m ON s.machine_id = m.machine_id
                          JOIN items i ON s.item_id = i.item_id

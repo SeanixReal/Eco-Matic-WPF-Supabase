@@ -43,7 +43,7 @@ public partial class MachineSelectionWindow : Window
                 machines.Add(new VendingMachineModel
                 {
                     MachineId = mId,
-                    DisplayName = $"Machine {mId} - {mLoc}"
+                    DisplayName = mLoc
                 });
             }
 

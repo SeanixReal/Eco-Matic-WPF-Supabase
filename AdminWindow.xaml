@@ -130,7 +130,8 @@
                             <Button x:Name="navLogs" Content="Event Logs" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Logs" />
                             <Button x:Name="navSales" Content="Sales Report" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Sales" />
                             <Button x:Name="navMachines" Content="Vending Machines" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Machines" />
-                            <Button x:Name="navUsers" Content="User Manager" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Users" />
+                            <Button x:Name="navUsers" Content="System Admin Users" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Users" />
+                            <Button x:Name="navCustomers" Content="Customers CRM" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Customers" />
                         </StackPanel>
 
                         <!-- Bottom Meta -->
@@ -195,10 +196,20 @@
                             </UniformGrid>
 
                             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="Recent Activity" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15" />
-                                    <TextBlock Text="Feature coming soon..." Foreground="#94A3B8" />
-                                </StackPanel>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="Recent Activity" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15" />
+                                    <DataGrid x:Name="dgRecentActivity" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Date" Binding="{Binding Path='Timestamp', StringFormat='{}{0:MM/dd/yyyy HH:mm:ss}'}" Width="150"/>
+                                            <DataGridTextColumn Header="Type" Binding="{Binding Path='Event'}" Width="120"/>
+                                            <DataGridTextColumn Header="Details" Binding="{Binding Path='Notes'}" Width="*"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
                             </Border>
                         </Grid>
 
@@ -217,9 +228,9 @@
                             
                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
                                 <Button Content="Add New Item" Width="140" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddItem_Click"/>
-                                <Button Content="Restock Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnRestock_Click"/>
-                                <Button Content="Edit Item" Width="130" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditItem_Click"/>
-                                <Button Content="Delete Item" Width="140" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteItem_Click"/>
+                                <Button Content="Restock Item" Width="130" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnRestock_Click"/>
+                                <Button Content="Edit Item" Width="120" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditItem_Click"/>
+                                <Button Content="Delete Item" Width="120" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteItem_Click"/>
                             </StackPanel>
 
                             <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="Transparent">
@@ -235,9 +246,36 @@
                                         </DataGridTemplateColumn>
                                         <DataGridTextColumn Header="Item Name" Binding="{Binding Item}" Width="*"/>
                                         <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
-                                        <DataGridTextColumn Header="Price (₱)" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="100"/>
-                                        <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="80"/>
-                                        <DataGridTextColumn Header="Max Cap" Binding="{Binding Max Capacity}" Width="100"/>
+                                        <DataGridTextColumn Header="Price (₱)" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="80"/>
+                                        <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="60">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="Margin" Value="5,0"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Stock}" Value="0">
+                                                            <Setter Property="Foreground" Value="#D65A5A"/>
+                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Stock}" Value="1">
+                                                            <Setter Property="Foreground" Value="#D65A5A"/>
+                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Stock}" Value="2">
+                                                            <Setter Property="Foreground" Value="#D65A5A"/>
+                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Stock}" Value="3">
+                                                            <Setter Property="Foreground" Value="#D65A5A"/>
+                                                            <Setter Property="FontWeight" Value="Bold"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="Max Cap" Binding="{Binding Max Capacity}" Width="80"/>
+                                        <DataGridTextColumn Header="Dispense Message" Binding="{Binding Path='Dispense Message'}" Width="*"/>
+                                        <DataGridTextColumn Header="Examine Message" Binding="{Binding Path='Examine Message'}" Width="*"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Border>
@@ -249,9 +287,39 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-                            <Button Content="Clear Logs" Width="120" HorizontalAlignment="Left" Margin="0,0,0,15" Style="{StaticResource SidebarButtonStyle}" Background="#FCE7E7" Foreground="#D65A5A" Click="BtnClearLogs_Click"/>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="250"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button Content="Clear Logs" Width="120" HorizontalAlignment="Left" Style="{StaticResource SidebarButtonStyle}" Background="#FCE7E7" Foreground="#D65A5A" Click="BtnClearLogs_Click"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="Filter By:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
+                                    <ComboBox x:Name="cboLogsFilter" Width="100" Margin="0,0,10,0" SelectedIndex="0" SelectionChanged="LogsFilter_Changed" VerticalContentAlignment="Center">
+                                        <ComboBoxItem Content="Day"/>
+                                        <ComboBoxItem Content="Week"/>
+                                        <ComboBoxItem Content="Month"/>
+                                        <ComboBoxItem Content="Year"/>
+                                        <ComboBoxItem Content="All Time"/>
+                                    </ComboBox>
+                                    <DatePicker x:Name="dpLogsDate" Width="130" SelectedDateChanged="LogsFilter_Changed" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
                             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
-                                <DataGrid x:Name="dgLogs" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                                <DataGrid x:Name="dgLogs" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Log ID" Binding="{Binding Path='Log ID'}" Width="80"/>
+                                        <DataGridTextColumn Header="Timestamp" Binding="{Binding Path='Timestamp'}" Width="180"/>
+                                        <DataGridTextColumn Header="Event" Binding="{Binding Path='Event'}" Width="100"/>
+                                        <DataGridTextColumn Header="Notes" Binding="{Binding Path='Notes'}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </Border>
                         </Grid>
 
@@ -288,7 +356,17 @@
                             </Grid>
 
                             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
-                                <DataGrid x:Name="dgSales" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                                <DataGrid x:Name="dgSales" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="TX ID" Binding="{Binding Path='TX ID'}" Width="60"/>
+                                        <DataGridTextColumn Header="Date" Binding="{Binding Path='Date'}" Width="150"/>
+                                        <DataGridTextColumn Header="Machine" Binding="{Binding Path='Machine'}" Width="150"/>
+                                        <DataGridTextColumn Header="Item" Binding="{Binding Path='Item'}" Width="100"/>
+                                        <DataGridTextColumn Header="Qty" Binding="{Binding Path='Quantity'}" Width="40"/>
+                                        <DataGridTextColumn Header="Price" Binding="{Binding Path='Price', StringFormat='₱{0:N2}'}" Width="80"/>
+                                        <DataGridTextColumn Header="Total Paid" Binding="{Binding Path='Total Paid', StringFormat='₱{0:N2}'}" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </Border>
                         </Grid>
 
@@ -301,6 +379,7 @@
                             
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
                                 <Button Content="Register Machine" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddMachine_Click"/>
+                                <Button Content="Edit Machine" Width="160" Margin="0,0,10,0" Background="#F2F5FB" Foreground="#2E77E6" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditMachine_Click"/>
                                 <Button Content="Remove Machine" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteMachine_Click"/>
                             </StackPanel>
 
@@ -323,6 +402,23 @@
 
                             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
                                 <DataGrid x:Name="dgUsers" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- Customers View -->
+                        <Grid x:Name="viewCustomers" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                <Button Content="Modify Credit Balance" Width="200" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnEditCustomerCredits_Click"/>
+                                <Button Content="Delete Customer" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteCustomer_Click"/>
+                            </StackPanel>
+
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                <DataGrid x:Name="dgCustomers" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
                             </Border>
                         </Grid>
                     </Grid>

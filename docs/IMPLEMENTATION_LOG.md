@@ -28,3 +28,13 @@ Located in `docs/database_setup.sql`. The core entities are:
 - The RBAC logic assumes the DB dictates the truth. Depending on the `role_id` resolving upon a successful login event, the C# logic determines which UI elements become visible.
 
 Prepared on April 12, 2026.
+## 6. Hardware & RFID Loyalty System Integration
+- **Trash-to-Credit Program**: We implemented an RFID-based loyalty program where users scan an RFID tag to link purchases to an e-wallet balance (`eco_credits`).
+- **Arduino Hardware Interface**:
+  - Utilizing the `System.IO.Ports.SerialPort` in C# to establish a persistent physical connection on `COM5` at 9600 baud rate.
+  - The PC acts as the master, listening asynchronously to RFID signals and invoking UI updates on the main WPF `Dispatcher`.
+- **Bidirectional Communication Framework**:
+  - The C# application sends commands like `STATE:AFK` or `STATE:ACTIVE` to control the Arduino's behavior.
+  - When the machine is idle, the Arduino displays screensaver statistics ("Fun Facts") respecting the 16x2 I2C LCD character bounds, bypassing the RFID scanner to save power.
+  - Upon an RFID scan, the UID is sent to the PC, checked against the `customers` database, and either replies with `VALID` (Access Granted) or `INVALID` (Registration Flow Trigger).
+- **Admin CRM Module**: The Admin Control Panel includes a "Customers" tab with full CRUD capability for the `customers` table to manually adjust loyalty points.

@@ -18,7 +18,9 @@ public class Product : VendingItem
         string flavorText,
         int calories = 0,
         int volumeMl = 0,
-        string imagePath = "")
+        string imagePath = "",
+        string dispenseMessage = "Enjoy your item!",
+        string examineMessage = "A standard vending item.")
     {
         return type switch
         {
@@ -31,7 +33,9 @@ public class Product : VendingItem
                 FlavorText = flavorText,
                 Calories = calories,
                 VolumeMl = volumeMl,
-                ImagePath = imagePath
+                ImagePath = imagePath,
+                DispenseMessage = dispenseMessage,
+                ExamineMessage = examineMessage
             },
             ProductType.Snack => new SnackItem
             {
@@ -41,7 +45,9 @@ public class Product : VendingItem
                 Stock = stock,
                 FlavorText = flavorText,
                 Calories = calories,
-                ImagePath = imagePath
+                ImagePath = imagePath,
+                DispenseMessage = dispenseMessage,
+                ExamineMessage = examineMessage
             },
             _ => new MiscItem
             {
@@ -50,7 +56,9 @@ public class Product : VendingItem
                 Price = price,
                 Stock = stock,
                 FlavorText = flavorText,
-                ImagePath = imagePath
+                ImagePath = imagePath,
+                DispenseMessage = dispenseMessage,
+                ExamineMessage = examineMessage
             }
         };
     }
