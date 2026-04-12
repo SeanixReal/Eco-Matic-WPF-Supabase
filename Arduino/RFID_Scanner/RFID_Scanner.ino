@@ -137,6 +137,8 @@ void resetDisplay() {
     lcd.print("Please Tap Card");
   } else {
     lcd.print("Eco-Matic Sleeping");
+    lcd.setCursor(0, 1);
+    lcd.print("Please Tap Card");
   }
   digitalWrite(GREEN_LED, LOW);
   digitalWrite(RED_LED, LOW);
