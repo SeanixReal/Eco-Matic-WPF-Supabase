@@ -380,7 +380,7 @@
                                             <TextBlock Text="RECYCLE FOR CREDIT" FontWeight="Bold" Foreground="#2F9C63" />
                                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,0">
                                                 <ComboBox x:Name="cboRecycleType" Width="105" />
-                                                <TextBox x:Name="txtRecycleQty" Width="62" Margin="6,0,0,0" Text="1.00" />
+                                                <TextBox x:Name="txtRecycleQty" Width="62" Margin="6,0,0,0" Text="1" />
                                                 <Button Width="78"
                                                         Margin="6,0,0,0"
                                                         Content="ADD"

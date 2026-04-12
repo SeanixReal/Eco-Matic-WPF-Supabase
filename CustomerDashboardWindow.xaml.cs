@@ -14,11 +14,23 @@ namespace Eco_Matic
         {
             var db = new Data.MySqlStore();
             var info = db.GetCustomerInfo(rfid);
+
+            int finalBalance = info.EcoCredits;
+            if (DataStore.PendingPoints > 0)
+            {
+                finalBalance += DataStore.PendingPoints;
+                db.UpdateCustomerCredits(rfid, finalBalance);
+                MessageBox.Show(this, $"You successfully saved {DataStore.PendingPoints} recycled points to your RFID account!", "Points Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+                DataStore.LogEvent("POINTS_SAVED", $"{DataStore.PendingPoints} points saved via RFID ({rfid})");
+                
+                // Clear so they don't get saved twice
+                DataStore.PendingPoints = 0;
+            }
             
             if (!string.IsNullOrEmpty(info.Email))
             {
                 txtWelcome.Text = $"Welcome, {info.Email}";
-                txtBalance.Text = info.EcoCredits.ToString();
+                txtBalance.Text = finalBalance.ToString();
             }
             else
             {

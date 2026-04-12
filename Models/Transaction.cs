@@ -10,9 +10,9 @@ public enum RecycleMaterial
 public class RecycleEntry
 {
     public RecycleMaterial Material { get; set; }
-    public decimal WeightKg { get; set; }
-    public decimal CreditPerKg { get; set; }
-    public decimal TotalCredit => WeightKg * CreditPerKg;
+    public int Pieces { get; set; }
+    public int PointsPerPiece { get; set; }
+    public int TotalPoints => Pieces * PointsPerPiece;
 }
 
 public class EventLogEntry

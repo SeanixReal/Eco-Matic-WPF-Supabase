@@ -8,10 +8,10 @@ namespace Eco_Matic
     /// <summary>
     /// AdminWindow acts as the central administrative controller for the Eco-Matic project.
     /// 
-    /// [For the Professor]: Highlights core OOP concepts (Encapsulation, UI vs Data layer separation) 
+    ///  : Highlights core OOP concepts (Encapsulation, UI vs Data layer separation) 
     /// and Event-Driven architecture in WPF. Uses Role-Based Access Control (RBAC) to restrict features.
-    /// [For Developers/AI]: This is the View logic. Do not put raw SQL here; always call MySqlStore.cs.
-    /// [For You (Presentation)]: Explain that this single window morphs dynamically based on who logs in!
+    ///  : This is the View logic. Do not put raw SQL here; always call MySqlStore.cs.
+    ///  : Explain that this single window morphs dynamically based on who logs in!
     /// </summary>
     public partial class AdminWindow : Window
     {
@@ -41,7 +41,7 @@ namespace Eco_Matic
 
         /// <summary>
         /// Configures the Sidebar and available features based on user privileges (RBAC).
-        /// [For You (Presentation)]: If your professor asks how you keep normal managers from peering into financials or deleting machines, point to this method!
+        ///  : If your professor asks how you keep normal managers from peering into financials or deleting machines, point to this method!
         /// </summary>
         private void SetupUIForRole()
         {
@@ -80,9 +80,9 @@ namespace Eco_Matic
 
         /// <summary>
         /// A primitive View-Router that switches the main content area between different "pages" (Grids).
-        /// [For Developers/AI]: Instead of creating separate WPF Windows for every page, we use UI Visibility toggling.
+        ///  : Instead of creating separate WPF Windows for every page, we use UI Visibility toggling.
         /// This keeps performance fast and maintains a modern Single-Page Application (SPA) feel in a Desktop Client.
-        /// [For Professor]: Demonstrates efficient memory usage by reusing the single shell framework.
+        ///  : Demonstrates efficient memory usage by reusing the single shell framework.
         /// </summary>
         private void SetActiveView(string viewName)
         {
@@ -170,7 +170,7 @@ namespace Eco_Matic
 
         /// <summary>
         /// Fires when an Admin creates a new Inventory slot item for their machine.
-        /// [For Professor]: Note the proper usage of `Owner = this` attached to the pop-up (InventoryItemWindow) to ensure 
+        ///  : Note the proper usage of `Owner = this` attached to the pop-up (InventoryItemWindow) to ensure 
         /// modal focus, avoiding multi-window 'z-fighting' logic issues on the user's OS.
         /// </summary>
         private void BtnAddItem_Click(object sender, RoutedEventArgs e)
@@ -282,7 +282,7 @@ namespace Eco_Matic
         /// <summary>
         /// Retrieves vending machines from the MySqlStore dependency and assigns them to the Inventory Machine Switcher Dropdown. 
         /// Crucially enforces RBAC constraints dynamically by filtering the resulting DataView.
-        /// [For Professor]: Demonstrates slicing DB datasets directly in RAM via `System.Data.DataView` 
+        ///  : Demonstrates slicing DB datasets directly in RAM via `System.Data.DataView` 
         /// to avoid performing multiple distinct, round-trip SQL queries to the DB Layer.
         /// </summary>        
         private void LoadInventoryMachines()
@@ -352,7 +352,7 @@ namespace Eco_Matic
 
         /// <summary>
         /// Gathers multiple core KPI (Key Performance Indicator) metrics at once to populate UI cards.
-        /// [For Developers/AI]: Note the `out` parameters used to return multiple values from a single 
+        ///  : Note the `out` parameters used to return multiple values from a single 
         /// database request in `GetDashboardMetrics()`. This minimizes open query transactions.
         /// </summary>
         private void LoadDashboardMetrics()

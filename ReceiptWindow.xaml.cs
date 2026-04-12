@@ -30,7 +30,7 @@ public partial class ReceiptWindow : Window
 
         foreach (var recycle in transaction.RecycledItems)
         {
-            string line = $"Recycle {recycle.Material,-8} {recycle.WeightKg,5:F2}kg +PHP {recycle.TotalCredit:F2}";
+            string line = $"Recycle {recycle.Material,-8} {recycle.Pieces,5}pcs +{recycle.TotalPoints} Pts";
             itemsList.Items.Add(line);
         }
 

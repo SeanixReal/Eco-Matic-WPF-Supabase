@@ -7,12 +7,12 @@ public static class DataStore
     public const int MaxItemSlots = 12;
     public const int MaxStockPerItem = 15;
 
-    public static readonly IReadOnlyDictionary<RecycleMaterial, decimal> RecycleRates =
-        new Dictionary<RecycleMaterial, decimal>
+    public static readonly IReadOnlyDictionary<RecycleMaterial, int> RecycleRates =
+        new Dictionary<RecycleMaterial, int>
         {
-            [RecycleMaterial.Plastic] = 1.00m,
-            [RecycleMaterial.Glass] = 2.00m,
-            [RecycleMaterial.Aluminum] = 3.00m
+            [RecycleMaterial.Plastic] = 1,
+            [RecycleMaterial.Glass] = 2,
+            [RecycleMaterial.Aluminum] = 3
         };
 
     public static List<Product> Products { get; } = new();
@@ -20,10 +20,12 @@ public static class DataStore
     public static int NextTransactionId { get; set; } = 1;
     public static Transaction? LastTransaction { get; set; }
     public static int ActiveMachineId { get; set; } = 1;
+    public static int PendingPoints { get; set; } = 0;
 
     public static void Initialize(int machineId = 1)
     {
         ActiveMachineId = machineId;
+        PendingPoints = 0;
         Products.Clear();
         var store = new Eco_Matic.Data.MySqlStore();
         

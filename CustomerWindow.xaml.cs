@@ -105,7 +105,7 @@ public partial class CustomerWindow : Window
         cboRecycleType.Items.Clear();
         foreach (var material in Enum.GetValues<RecycleMaterial>())
         {
-            cboRecycleType.Items.Add(material);
+            cboRecycleType.Items.Add($"{material} ({DataStore.RecycleRates[material]} pts/pc)");
         }
 
         if (cboRecycleType.Items.Count > 0)
@@ -235,7 +235,7 @@ public partial class CustomerWindow : Window
 
     private void UpdateMoneyDisplay()
     {
-        lblMoneyAmount.Text = $"P {_insertedMoney:F2}";
+        lblMoneyAmount.Text = $"P {_insertedMoney:F2} | Pts: {DataStore.PendingPoints}";
     }
 
     private void BtnMoney_Click(object sender, RoutedEventArgs e)
@@ -281,24 +281,26 @@ public partial class CustomerWindow : Window
 
     private void BtnRecycle_Click(object sender, RoutedEventArgs e)
     {
-        if (cboRecycleType.SelectedItem is not RecycleMaterial material)
+        if (cboRecycleType.SelectedIndex < 0)
         {
             return;
         }
 
-        if (!TryParseWeight(txtRecycleQty.Text, out decimal weightKg) || weightKg <= 0)
+        var material = (RecycleMaterial)cboRecycleType.SelectedIndex;
+
+        if (!int.TryParse(txtRecycleQty.Text, out int pieces) || pieces <= 0)
         {
             MessageBox.Show(this,
-                "Enter a valid recycle weight greater than zero.",
+                "Enter a valid number of items (pieces) greater than zero.",
                 "Recycle Credit",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return;
         }
 
-        decimal rate = DataStore.RecycleRates[material];
-        decimal credit = rate * weightKg;
-        _insertedMoney += credit;
+        int ratePerPiece = DataStore.RecycleRates[material];
+        int points = ratePerPiece * pieces;
+        DataStore.PendingPoints += points;
 
         var existing = _recycleEntries.FirstOrDefault(x => x.Material == material);
         if (existing == null)
@@ -306,17 +308,17 @@ public partial class CustomerWindow : Window
             _recycleEntries.Add(new RecycleEntry
             {
                 Material = material,
-                WeightKg = weightKg,
-                CreditPerKg = rate
+                Pieces = pieces,
+                PointsPerPiece = ratePerPiece
             });
         }
         else
         {
-            existing.WeightKg += weightKg;
+            existing.Pieces += pieces;
         }
 
-        DataStore.LogEvent("RECYCLE", $"{weightKg:F2} kg {material}", credit);
-        lblRecycleStatus.Text = $"+P{credit:F2}";
+        DataStore.LogEvent("RECYCLE", $"{pieces} pc(s) {material}", points);
+        lblRecycleStatus.Text = $"+{points} Pts";
         UpdateMoneyDisplay();
         UpdateAllButtonStates();
     }
@@ -421,8 +423,8 @@ public partial class CustomerWindow : Window
             transaction.RecycledItems.Add(new RecycleEntry
             {
                 Material = entry.Material,
-                WeightKg = entry.WeightKg,
-                CreditPerKg = entry.CreditPerKg
+                Pieces = entry.Pieces,
+                PointsPerPiece = entry.PointsPerPiece
             });
         }
 
@@ -523,16 +525,6 @@ public partial class CustomerWindow : Window
         }
 
         Close();
-    }
-
-    private static bool TryParseWeight(string value, out decimal weightKg)
-    {
-        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out weightKg))
-        {
-            return true;
-        }
-
-        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out weightKg);
     }
 
     private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
