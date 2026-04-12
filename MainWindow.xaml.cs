@@ -21,7 +21,7 @@ namespace Eco_Matic
             _arduino.Start();
         }
 
-        private void Arduino_OnCardScanned(object sender, string rfid)
+        private void Arduino_OnCardScanned(object? sender, string rfid)
         {
             // The SerialPort event fires on a background thread.
             // We must use Dispatcher.Invoke to do anything visual in WPF.
@@ -99,8 +99,11 @@ namespace Eco_Matic
                     Owner = this
                 };
                 
+                _arduino.SendStateCommand("STATE:ACTIVE");
+
                 customerWindow.Closed += (_, _) =>
                 {
+                    _arduino.SendStateCommand("STATE:AFK");
                     Show();
                     Activate();
                 };

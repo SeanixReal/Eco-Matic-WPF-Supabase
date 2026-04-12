@@ -70,7 +70,7 @@ namespace Eco_Matic
         {
             if (sender is Button clickedBtn)
             {
-                string target = clickedBtn.Tag?.ToString();
+                string? target = clickedBtn.Tag?.ToString();
                 if (target != null)
                 {
                     SetActiveView(target);
@@ -228,8 +228,8 @@ namespace Eco_Matic
                 string imagePath = row["Image"].ToString() ?? "";
                 int stock = Convert.ToInt32(row["Stock"]);
                 int maxCap = Convert.ToInt32(row["Max Capacity"]);
-                string dispenseMsg = row.Row.Table.Columns.Contains("Dispense Message") && row["Dispense Message"] != DBNull.Value ? row["Dispense Message"].ToString() : "Enjoy your item!";
-                string examineMsg = row.Row.Table.Columns.Contains("Examine Message") && row["Examine Message"] != DBNull.Value ? row["Examine Message"].ToString() : "A standard vending item.";
+                string dispenseMsg = row.Row.Table.Columns.Contains("Dispense Message") && row["Dispense Message"] != DBNull.Value ? (row["Dispense Message"].ToString() ?? "Enjoy your item!") : "Enjoy your item!";
+                string examineMsg = row.Row.Table.Columns.Contains("Examine Message") && row["Examine Message"] != DBNull.Value ? (row["Examine Message"].ToString() ?? "A standard vending item.") : "A standard vending item.";
 
                 var editWindow = new InventoryItemWindow(name, type, price, calories, stock, maxCap, imagePath, dispenseMsg, examineMsg)
                 {

@@ -7,7 +7,7 @@ namespace Eco_Matic.Data
     public class ArduinoService
     {
         private SerialPort _serialPort;
-        public event EventHandler<string> OnCardScanned;
+        public event EventHandler<string>? OnCardScanned;
 
         public ArduinoService(string portName = "COM5", int baudRate = 9600)
         {
