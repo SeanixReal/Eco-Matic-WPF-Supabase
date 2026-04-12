@@ -264,15 +264,35 @@
                             
                             <Grid Margin="0,0,0,24" Width="95" Height="95" RenderTransformOrigin="0.5,0.9">
                                 <Grid.RenderTransform>
-                                    <RotateTransform x:Name="LeafLogoTransform" Angle="0"/>
+                                    <RotateTransform Angle="0"/>
                                 </Grid.RenderTransform>
+                                <Grid.Style>
+                                    <Style TargetType="Grid">
+                                        <Style.Triggers>
+                                            <EventTrigger RoutedEvent="MouseEnter">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                         To="15" Duration="0:0:0.1" AutoReverse="True" RepeatBehavior="Forever"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                            <EventTrigger RoutedEvent="MouseLeave">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                         To="0" Duration="0:0:0.2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Grid.Style>
                                 
-                                <Path Data="M 48 95 C 45 65 52 35 70 15 
-                                            M 48 78 C 30 85 10 70 18 55 C 25 40 42 55 49 68
-                                            M 50 63 C 70 70 90 55 82 40 C 75 25 58 40 50 50
-                                            M 54 45 C 36 43 28 20 38 7 C 48 -5 62 10 59 28
-                                            M 64 26 C 85 24 95 0 85 -12 C 75 -25 58 -10 60 8
-                                            M 68 18 C 55 5 60 -15 75 -22 C 90 -30 96 -10 82 2"
+                                <Path Data="M 48 95 Q 40 65 65 15 
+                                            M 45 70 Q 20 75 15 50 Q 25 35 47 50
+                                            M 55 55 Q 85 65 80 40 Q 65 25 58 40
+                                            M 53 35 Q 30 35 25 15 Q 40 -5 60 18"
                                       Stroke="#181D1A"
                                       StrokeThickness="5"
                                       StrokeLineJoin="Round"
