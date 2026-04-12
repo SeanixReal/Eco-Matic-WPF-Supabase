@@ -4,57 +4,75 @@
         Title="README"
         Height="560"
         Width="860"
-        WindowStartupLocation="CenterOwner">
-    <Grid Margin="14">
-        <Border Background="White"
-                BorderBrush="#D7DFEC"
-                BorderThickness="1"
-                CornerRadius="16"
-                Padding="16">
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+    <Grid>
+        <!-- Custom Window Controls Tab -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Panel.ZIndex="10" Margin="0,0,30,0">
+            <Button Content="-" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMinimize_Click"/>
+            <Button Content="o" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMaximize_Click"/>
+            <Button Content="x" Width="40" Height="28" Style="{StaticResource WindowCloseTab}" Click="BtnClose_Click" />
+        </StackPanel>
+        
+        <!-- Main Card Border -->
+        <Border Background="White" CornerRadius="12" Margin="0,30,0,0">
             <Border.Effect>
-                <DropShadowEffect Color="#10000000" BlurRadius="18" ShadowDepth="4" />
+                <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.1" />
             </Border.Effect>
+            <Grid Margin="14">
+                    <Border Background="White"
+                            BorderBrush="#D7DFEC"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="16">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#10000000" BlurRadius="18" ShadowDepth="4" />
+                        </Border.Effect>
 
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0"
-                           Text="README"
-                           FontSize="24"
-                           FontWeight="Bold"
-                           Foreground="#2E77E6"
-                           Margin="0,0,0,10" />
+                            <TextBlock Grid.Row="0"
+                                       Text="README"
+                                       FontSize="24"
+                                       FontWeight="Bold"
+                                       Foreground="#2E77E6"
+                                       Margin="0,0,0,10" />
 
-                <TextBox x:Name="txtContent"
-                         Grid.Row="1"
-                         IsReadOnly="True"
-                         FontFamily="Consolas"
-                         FontSize="13"
-                         TextWrapping="Wrap"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Auto"
-                         Background="#F9FBFF"
-                         Foreground="#20304C"
-                         BorderBrush="#D7DFEC"
-                         BorderThickness="1"
-                         Padding="10" />
+                            <TextBox x:Name="txtContent"
+                                     Grid.Row="1"
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas"
+                                     FontSize="13"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     Background="#F9FBFF"
+                                     Foreground="#20304C"
+                                     BorderBrush="#D7DFEC"
+                                     BorderThickness="1"
+                                     Padding="10" />
 
-                <Button Grid.Row="2"
-                        Width="110"
-                        Height="34"
-                        HorizontalAlignment="Center"
-                        Margin="0,12,0,0"
-                        Content="Close"
-                        Background="#2E77E6"
-                        Foreground="White"
-                        BorderBrush="#2E77E6"
-                        BorderThickness="0"
-                        Click="BtnClose_Click" />
-            </Grid>
+                            <Button Grid.Row="2"
+                                    Width="110"
+                                    Height="34"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,12,0,0"
+                                    Content="Close"
+                                    Background="#2E77E6"
+                                    Foreground="White"
+                                    BorderBrush="#2E77E6"
+                                    BorderThickness="0"
+                                    Click="BtnClose_Click" />
+                        </Grid>
+                    </Border>
+                </Grid>
         </Border>
     </Grid>
 </Window>

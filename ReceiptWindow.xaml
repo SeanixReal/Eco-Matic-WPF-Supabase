@@ -5,71 +5,89 @@
         Height="560"
         Width="480"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
-    <Grid Margin="14">
-        <Border Background="White"
-                BorderBrush="#D7DFEC"
-                BorderThickness="1"
-                CornerRadius="16"
-                Padding="16">
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+    <Grid>
+        <!-- Custom Window Controls Tab -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Panel.ZIndex="10" Margin="0,0,30,0">
+            <Button Content="-" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMinimize_Click"/>
+            <Button Content="o" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMaximize_Click"/>
+            <Button Content="x" Width="40" Height="28" Style="{StaticResource WindowCloseTab}" Click="BtnClose_Click" />
+        </StackPanel>
+        
+        <!-- Main Card Border -->
+        <Border Background="White" CornerRadius="12" Margin="0,30,0,0">
             <Border.Effect>
-                <DropShadowEffect Color="#14000000" BlurRadius="18" ShadowDepth="4" />
+                <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.1" />
             </Border.Effect>
+            <Grid Margin="14">
+                    <Border Background="White"
+                            BorderBrush="#D7DFEC"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="16">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#14000000" BlurRadius="18" ShadowDepth="4" />
+                        </Border.Effect>
 
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,12">
-                    <TextBlock Text="Eco-Matic Receipt"
-                               FontSize="27"
-                               FontWeight="Bold"
-                               Foreground="#2E77E6"
-                               HorizontalAlignment="Center" />
-                    <TextBlock Text="Thank you for using Eco-Matic"
-                               Foreground="#6A7891"
-                               HorizontalAlignment="Center" />
-                </StackPanel>
+                            <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                <TextBlock Text="Eco-Matic Receipt"
+                                           FontSize="27"
+                                           FontWeight="Bold"
+                                           Foreground="#2E77E6"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="Thank you for using Eco-Matic"
+                                           Foreground="#6A7891"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
 
-                <ListBox x:Name="itemsList"
-                         Grid.Row="1"
-                         FontFamily="Consolas"
-                         FontSize="13"
-                         Background="#F9FBFF"
-                         BorderBrush="#D7DFEC"
-                         BorderThickness="1"
-                         Padding="6" />
+                            <ListBox x:Name="itemsList"
+                                     Grid.Row="1"
+                                     FontFamily="Consolas"
+                                     FontSize="13"
+                                     Background="#F9FBFF"
+                                     BorderBrush="#D7DFEC"
+                                     BorderThickness="1"
+                                     Padding="6" />
 
-                <Border Grid.Row="2"
-                        Margin="0,12,0,0"
-                        Background="#F7FAFF"
-                        BorderBrush="#DDE5F2"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Padding="10">
-                    <StackPanel>
-                        <TextBlock x:Name="lblTotal" FontFamily="Consolas" FontSize="14" Text="Total:  PHP 0.00" />
-                        <TextBlock x:Name="lblPaid" FontFamily="Consolas" FontSize="14" Text="Paid:   PHP 0.00" />
-                        <TextBlock x:Name="lblChange" FontFamily="Consolas" FontSize="14" Text="Change: PHP 0.00" />
-                    </StackPanel>
-                </Border>
+                            <Border Grid.Row="2"
+                                    Margin="0,12,0,0"
+                                    Background="#F7FAFF"
+                                    BorderBrush="#DDE5F2"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="10">
+                                <StackPanel>
+                                    <TextBlock x:Name="lblTotal" FontFamily="Consolas" FontSize="14" Text="Total:  PHP 0.00" />
+                                    <TextBlock x:Name="lblPaid" FontFamily="Consolas" FontSize="14" Text="Paid:   PHP 0.00" />
+                                    <TextBlock x:Name="lblChange" FontFamily="Consolas" FontSize="14" Text="Change: PHP 0.00" />
+                                </StackPanel>
+                            </Border>
 
-                <Button Grid.Row="3"
-                        Height="36"
-                        Width="130"
-                        Margin="0,14,0,0"
-                        HorizontalAlignment="Center"
-                        Content="Close"
-                        Background="#2E77E6"
-                        Foreground="White"
-                        BorderBrush="#2E77E6"
-                        BorderThickness="0"
-                        Click="BtnClose_Click" />
-            </Grid>
+                            <Button Grid.Row="3"
+                                    Height="36"
+                                    Width="130"
+                                    Margin="0,14,0,0"
+                                    HorizontalAlignment="Center"
+                                    Content="Close"
+                                    Background="#2E77E6"
+                                    Foreground="White"
+                                    BorderBrush="#2E77E6"
+                                    BorderThickness="0"
+                                    Click="BtnClose_Click" />
+                        </Grid>
+                    </Border>
+                </Grid>
         </Border>
     </Grid>
 </Window>

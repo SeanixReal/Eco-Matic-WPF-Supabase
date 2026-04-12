@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 namespace Eco_Matic;
@@ -17,7 +14,7 @@ public static class CsvStorage
     private static string InventoryPath => Path.Combine(DataDirectory, "inventory.csv");
     private static string EventLogPath => Path.Combine(DataDirectory, "eventLog.csv");
 
-    public static List<VendingItem> LoadInventory(List<VendingItem> fallback)
+    public static List<Product> LoadInventory(List<Product> fallback)
     {
         Directory.CreateDirectory(DataDirectory);
         Directory.CreateDirectory(ImageDirectory);
@@ -35,21 +32,39 @@ public static class CsvStorage
             return CloneProducts(fallback);
         }
 
-        var products = new List<VendingItem>();
+        var products = new List<Product>();
         for (int i = 1; i < lines.Length; i++)
         {
-            if (string.IsNullOrWhiteSpace(lines[i])) continue;
+            if (string.IsNullOrWhiteSpace(lines[i]))
+            {
+                continue;
+            }
 
             var fields = ParseLine(lines[i]);
-            if (fields.Count < 8) continue;
+            if (fields.Count < 8)
+            {
+                continue;
+            }
 
-            if (!int.TryParse(fields[0], out int id)) continue;
+            if (!int.TryParse(fields[0], out int id))
+            {
+                continue;
+            }
 
-            string type = fields[1];
+            if (!Enum.TryParse(fields[1], true, out ProductType type))
+            {
+                type = ProductType.Misc;
+            }
 
-            if (!decimal.TryParse(fields[3], NumberStyles.Number, CultureInfo.InvariantCulture, out decimal price)) continue;
+            if (!decimal.TryParse(fields[3], NumberStyles.Number, CultureInfo.InvariantCulture, out decimal price))
+            {
+                continue;
+            }
 
-            if (!int.TryParse(fields[4], out int stock)) continue;
+            if (!int.TryParse(fields[4], out int stock))
+            {
+                continue;
+            }
 
             _ = int.TryParse(fields[6], out int calories);
             _ = int.TryParse(fields[7], out int volumeMl);
@@ -58,14 +73,16 @@ public static class CsvStorage
 
             stock = Math.Clamp(stock, 0, DataStore.MaxStockPerItem);
 
-            VendingItem item = type switch
-            {
-                "Snack" => new SnackItem { Id = id, Name = fields[2], Price = price, Stock = stock, FlavorText = fields[5], Calories = calories, ImagePath = imagePath },
-                "Drink" => new DrinkItem { Id = id, Name = fields[2], Price = price, Stock = stock, FlavorText = fields[5], Calories = calories, VolumeMl = volumeMl, ImagePath = imagePath },
-                _ => new MiscItem { Id = id, Name = fields[2], Price = price, Stock = stock, FlavorText = fields[5], ImagePath = imagePath }
-            };
-            
-            products.Add(item);
+            products.Add(Product.Create(
+                type,
+                id,
+                fields[2],
+                price,
+                stock,
+                fields[5],
+                calories,
+                volumeMl,
+                imagePath));
         }
 
         if (products.Count == 0)
@@ -74,10 +91,13 @@ public static class CsvStorage
             return CloneProducts(fallback);
         }
 
-        return products.OrderBy(p => p.Id).Take(DataStore.MaxItemSlots).ToList();
+        return products
+            .OrderBy(p => p.Id)
+            .Take(DataStore.MaxItemSlots)
+            .ToList();
     }
 
-    public static void SaveInventory(IEnumerable<VendingItem> products)
+    public static void SaveInventory(IEnumerable<Product> products)
     {
         Directory.CreateDirectory(DataDirectory);
         Directory.CreateDirectory(ImageDirectory);
@@ -91,7 +111,7 @@ public static class CsvStorage
 
             writer.WriteLine(string.Join(",",
                 product.Id,
-                product.Type.ToString(),
+                product.Type,
                 Escape(product.Name),
                 product.Price.ToString("0.00", CultureInfo.InvariantCulture),
                 product.Stock,
@@ -119,12 +139,34 @@ public static class CsvStorage
 
         for (int i = 1; i < lines.Length; i++)
         {
-            if (string.IsNullOrWhiteSpace(lines[i])) continue;
+            if (string.IsNullOrWhiteSpace(lines[i]))
+            {
+                continue;
+            }
+
             var fields = ParseLine(lines[i]);
-            if (fields.Count < 4) continue;
-            if (!DateTime.TryParse(fields[0], null, DateTimeStyles.AdjustToUniversal, out DateTime ts)) continue;
-            if (!decimal.TryParse(fields[3], NumberStyles.Number, CultureInfo.InvariantCulture, out decimal amount)) amount = 0m;
-            result.Add(new EventLogEntry { TimestampUtc = ts, EventType = fields[1], Details = fields[2], Amount = amount });
+            if (fields.Count < 4)
+            {
+                continue;
+            }
+
+            if (!DateTime.TryParse(fields[0], null, DateTimeStyles.AdjustToUniversal, out DateTime ts))
+            {
+                continue;
+            }
+
+            if (!decimal.TryParse(fields[3], NumberStyles.Number, CultureInfo.InvariantCulture, out decimal amount))
+            {
+                amount = 0m;
+            }
+
+            result.Add(new EventLogEntry
+            {
+                TimestampUtc = ts,
+                EventType = fields[1],
+                Details = fields[2],
+                Amount = amount
+            });
         }
 
         return result.OrderByDescending(e => e.TimestampUtc).ToList();
@@ -133,7 +175,11 @@ public static class CsvStorage
     public static void AppendEvent(EventLogEntry entry)
     {
         EnsureEventLogFile();
-        string line = string.Join(",", entry.TimestampUtc.ToString("O"), Escape(entry.EventType), Escape(entry.Details), entry.Amount.ToString("0.00", CultureInfo.InvariantCulture));
+        string line = string.Join(",",
+            entry.TimestampUtc.ToString("O"),
+            Escape(entry.EventType),
+            Escape(entry.Details),
+            entry.Amount.ToString("0.00", CultureInfo.InvariantCulture));
         File.AppendAllText(EventLogPath, line + Environment.NewLine);
     }
 
@@ -156,7 +202,11 @@ public static class CsvStorage
 
     public static string GetImageFullPath(string relativeFileName)
     {
-        if (string.IsNullOrWhiteSpace(relativeFileName)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(relativeFileName))
+        {
+            return string.Empty;
+        }
+
         return Path.Combine(ImageDirectory, relativeFileName);
     }
 
@@ -169,6 +219,7 @@ public static class CsvStorage
         for (int i = 0; i < line.Length; i++)
         {
             char ch = line[i];
+
             if (ch == '"')
             {
                 if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
@@ -177,15 +228,18 @@ public static class CsvStorage
                     i++;
                     continue;
                 }
+
                 inQuotes = !inQuotes;
                 continue;
             }
+
             if (ch == ',' && !inQuotes)
             {
                 fields.Add(sb.ToString());
                 sb.Clear();
                 continue;
             }
+
             sb.Append(ch);
         }
 
@@ -203,18 +257,19 @@ public static class CsvStorage
         return value;
     }
 
-    private static List<VendingItem> CloneProducts(IEnumerable<VendingItem> source)
+    private static List<Product> CloneProducts(IEnumerable<Product> source)
     {
-        var cloned = new List<VendingItem>();
-        foreach (var p in source)
-        {
-            if (p is SnackItem s) 
-                cloned.Add(new SnackItem { Id = s.Id, Name = s.Name, Price = s.Price, Stock = s.Stock, FlavorText = s.FlavorText, Calories = s.Calories, ImagePath = s.ImagePath });
-            else if (p is DrinkItem d) 
-                cloned.Add(new DrinkItem { Id = d.Id, Name = d.Name, Price = d.Price, Stock = d.Stock, FlavorText = d.FlavorText, Calories = d.Calories, VolumeMl = d.VolumeMl, ImagePath = d.ImagePath });
-            else 
-                cloned.Add(new MiscItem { Id = p.Id, Name = p.Name, Price = p.Price, Stock = p.Stock, FlavorText = p.FlavorText, ImagePath = p.ImagePath });
-        }
-        return cloned;
+        return source
+            .Select(p => Product.Create(
+                p.Type,
+                p.Id,
+                p.Name,
+                p.Price,
+                p.Stock,
+                p.FlavorText,
+                p is IHasCalories c ? c.Calories : 0,
+                p is IHasVolume v ? v.VolumeMl : 0,
+                p.ImagePath))
+            .ToList();
     }
 }

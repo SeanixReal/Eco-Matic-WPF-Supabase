@@ -23,12 +23,12 @@ namespace Eco_Matic
         {
             if (DataStore.LastTransaction != null)
             {
-                btnExit.Content = "Get Receipt and Exit";
+                btnExit.Content = "Print Receipt & Finish";
                 btnExit.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(46, 119, 230));
             }
             else
             {
-                btnExit.Content = "Exit";
+                btnExit.Content = "Exit Station";
                 btnExit.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(214, 90, 90));
             }
         }
@@ -60,18 +60,28 @@ namespace Eco_Matic
 
         private void BtnCustomer_Click(object sender, RoutedEventArgs e)
         {
-            Hide();
-            var customerWindow = new CustomerWindow
+            var selectionWindow = new MachineSelectionWindow
             {
                 Owner = this
             };
-            customerWindow.Closed += (_, _) =>
+
+            if (selectionWindow.ShowDialog() == true)
             {
-                Show();
-                Activate();
-                UpdateExitButton();
-            };
-            customerWindow.Show();
+                Hide();
+                DataStore.Initialize(selectionWindow.SelectedMachineId);
+                var customerWindow = new CustomerWindow
+                {
+                    Owner = this
+                };
+                
+                customerWindow.Closed += (_, _) =>
+                {
+                    Show();
+                    Activate();
+                    UpdateExitButton();
+                };
+                customerWindow.Show();
+            }
         }
 
         private void BtnAdmin_Click(object sender, RoutedEventArgs e)
@@ -83,10 +93,15 @@ namespace Eco_Matic
 
             if (login.ShowDialog() == true)
             {
-                if (login.Password == AdminPassword)
+                var store = new Eco_Matic.Data.MySqlStore();
+                var loginResult = store.AuthenticateUser(login.Username, login.Password);
+                string? role = loginResult.Role;
+                int? machineId = loginResult.AssignedMachineId;
+
+                if (role != null)
                 {
                     Hide();
-                    var adminWindow = new AdminWindow
+                    var adminWindow = new AdminWindow(role, machineId)
                     {
                         Owner = this
                     };
@@ -101,7 +116,7 @@ namespace Eco_Matic
                 else
                 {
                     MessageBox.Show(this,
-                        "Incorrect password.",
+                        "Incorrect authentication.",
                         "Access Denied",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
@@ -119,12 +134,12 @@ namespace Eco_Matic
                 };
                 receipt.ShowDialog();
                 DataStore.LastTransaction = null;
-                Application.Current.Shutdown();
+                UpdateExitButton();
                 return;
             }
 
             var result = MessageBox.Show(this,
-                "Are you sure you want to exit?",
+                "Are you sure you want to exit the application?",
                 "Exit",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);

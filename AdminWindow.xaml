@@ -1,280 +1,333 @@
 <Window x:Class="Eco_Matic.AdminWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Eco-Matic - Admin"
-        Height="900"
-        Width="1280"
-        MinHeight="790"
-        MinWidth="1140"
-        WindowStartupLocation="CenterScreen">
+        Title="Admin Console"
+        Height="800"
+        Width="1200"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+
     <Window.Resources>
-        <Style x:Key="CardBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#D7DFEC" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="14" />
-            <Setter Property="Padding" Value="12" />
+        <Style x:Key="SidebarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#5A6C84" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="20,15" />
+            <Setter Property="Margin" Value="10,2" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#F2F5FB" />
+                                <Setter Property="Foreground" Value="#2E77E6" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <Style x:Key="AdminPrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Style x:Key="SidebarButtonActiveStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
             <Setter Property="Background" Value="#2E77E6" />
             <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderBrush" Value="#2E77E6" />
-            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <Style x:Key="AdminSuccessButton" TargetType="Button" BasedOn="{StaticResource AdminPrimaryButton}">
-            <Setter Property="Background" Value="#2FA66A" />
-            <Setter Property="BorderBrush" Value="#2FA66A" />
-        </Style>
-
-        <Style x:Key="AdminDangerButton" TargetType="Button" BasedOn="{StaticResource AdminPrimaryButton}">
-            <Setter Property="Background" Value="#D65A5A" />
-            <Setter Property="BorderBrush" Value="#D65A5A" />
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#E2E8F0" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#10000000" BlurRadius="12" ShadowDepth="2" />
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
+    <Grid Margin="20,10,20,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="2*" />
-            <RowDefinition Height="3*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,12">
-            <TextBlock Text="Admin Console"
-                       FontSize="32"
-                       FontWeight="Bold"
-                       Foreground="#2E77E6" />
-            <TextBlock Text="Inventory control, item management, and event monitoring"
-                       Foreground="#6A7891"
-                       Margin="0,2,0,0" />
-        </StackPanel>
+        <Grid Grid.Row="0"
+              Margin="16,0,16,-1"
+              Panel.ZIndex="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="1" Margin="0,0,0,12" Style="{StaticResource CardBorderStyle}">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="README"
+                        Style="{StaticResource TopActionTabActive}"
+                        Click="OpenReadmeMenuItem_Click" />
+                <Button Content="ABOUT ME"
+                        Style="{StaticResource TopActionTab}"
+                        Margin="0"
+                        Click="AboutMenuItem_Click" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="btnMinimize" Content="-" Style="{StaticResource WindowControlTab}" Click="BtnMinimize_Click" />
+                <Button x:Name="btnMax" Content="o" Style="{StaticResource WindowControlTab}" Click="BtnMaximize_Click" />
+                <Button x:Name="btnClose" Content="x" Style="{StaticResource WindowCloseTab}" Margin="6,0,0,0" Click="BtnClose_Click" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Background="#F7F9FC" CornerRadius="16" BorderBrush="#C5D3EB" BorderThickness="1" MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">
             <Border.Effect>
-                <DropShadowEffect Color="#10000000" BlurRadius="14" ShadowDepth="3" />
+                <DropShadowEffect Color="#2F0C264A" BlurRadius="25" ShadowDepth="6" />
             </Border.Effect>
+
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0"
-                           Text="Current Inventory"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,8"
-                           Foreground="#2C3F60" />
-            <DataGrid x:Name="inventoryGrid"
-                      Grid.Row="1"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      CanUserResizeRows="False"
-                      HeadersVisibility="Column"
-                      SelectionMode="Single"
-                      GridLinesVisibility="Horizontal"
-                      Background="#FCFDFF"
-                      Foreground="#22324D"
-                      BorderBrush="#D7DFEC"
-                      BorderThickness="1"
-                      LoadingRow="InventoryGrid_LoadingRow"
-                      SelectionChanged="InventoryGrid_SelectionChanged">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="65" />
-                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100" />
-                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="220" />
-                    <DataGridTextColumn Header="Price" Binding="{Binding Price, StringFormat=PHP {0:F2}}" Width="130" />
-                    <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="95" />
-                    <DataGridTextColumn Header="Flavor / Description" Binding="{Binding FlavorText}" Width="*" />
-                </DataGrid.Columns>
-            </DataGrid>
-            </Grid>
-        </Border>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="240" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <WrapPanel Margin="0,0,0,12">
-                    <GroupBox Header="Restock" Width="370" Margin="0,0,12,12">
-                        <Grid Margin="10">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <StackPanel Grid.Row="0">
-                                <TextBlock Text="Select item" />
-                                <ComboBox x:Name="cboItem" Margin="0,4,0,8" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="1">
-                                <TextBlock Text="Quantity to add" />
-                                <TextBox x:Name="txtRestockQty" Margin="0,4,0,8" Text="1" />
-                            </StackPanel>
-
-                            <UniformGrid Grid.Row="2" Columns="2">
-                                <Button x:Name="btnUpdate"
-                                        Margin="0,0,6,0"
-                                        Height="34"
-                                        Content="Restock to Max"
-                                        Style="{StaticResource AdminSuccessButton}"
-                                        Click="BtnUpdate_Click" />
-                                <Button x:Name="btnRestockAdd"
-                                        Margin="6,0,0,0"
-                                        Height="34"
-                                        Content="Add Quantity"
-                                        Style="{StaticResource AdminPrimaryButton}"
-                                        Click="BtnRestockAdd_Click" />
-                            </UniformGrid>
-                        </Grid>
-                    </GroupBox>
-
-                    <GroupBox Header="Remove Item" Width="370" Margin="0,0,12,12">
-                        <StackPanel Margin="10">
-                            <TextBlock Text="Select item" />
-                            <ComboBox x:Name="cboRemoveItem" Margin="0,4,0,10" />
-                            <Button x:Name="btnRemoveItem"
-                                    Height="34"
-                                    Content="Remove Item"
-                                    Style="{StaticResource AdminDangerButton}"
-                                    Click="BtnRemoveItem_Click" />
-                        </StackPanel>
-                    </GroupBox>
-
-                    <GroupBox Header="Log Tools" Width="420" Margin="0,0,0,12">
-                        <StackPanel Margin="10">
-                            <Button x:Name="btnViewLog"
-                                    Height="34"
-                                    Margin="0,0,0,8"
-                                    Content="View Event Log"
-                                    Style="{StaticResource AdminPrimaryButton}"
-                                    Click="BtnViewLog_Click" />
-                            <Button x:Name="btnClearLog"
-                                    Height="34"
-                                    Margin="0,0,0,8"
-                                    Content="Clear Event Log"
-                                    Style="{StaticResource AdminDangerButton}"
-                                    Click="BtnClearLog_Click" />
-                            <Button x:Name="btnOpenReadme"
-                                    Height="34"
-                                    Content="Open README"
-                                    Style="{StaticResource {x:Type Button}}"
-                                    Click="BtnOpenReadme_Click" />
-                        </StackPanel>
-                    </GroupBox>
-                </WrapPanel>
-
-                <GroupBox Header="Add Item">
-                    <Grid Margin="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="170" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="220" />
-                        </Grid.ColumnDefinitions>
+                <!-- Sidebar -->
+                <Border Grid.Column="0" Background="White" CornerRadius="15,0,0,15" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,4,8,4" Text="Type" />
-                        <ComboBox x:Name="cboAddType"
-                                  Grid.Row="0"
-                                  Grid.Column="1"
-                                  Margin="0,2,12,6"
-                                  SelectionChanged="CboAddType_SelectedIndexChanged" />
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4,8,4" Text="Name" />
-                        <TextBox x:Name="txtAddName" Grid.Row="1" Grid.Column="1" Margin="0,2,12,6" />
-
-                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,4,8,4" Text="Price (PHP)" />
-                        <TextBox x:Name="txtAddPrice" Grid.Row="2" Grid.Column="1" Margin="0,2,12,6" Text="1" />
-
-                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,4,8,4" Text="Stock" />
-                        <TextBox x:Name="txtAddStock" Grid.Row="3" Grid.Column="1" Margin="0,2,12,6" Text="15" />
-
-                        <TextBlock x:Name="lblAddCalories" Grid.Row="4" Grid.Column="0" Margin="0,4,8,4" Text="Calories" />
-                        <TextBox x:Name="txtAddCalories" Grid.Row="4" Grid.Column="1" Margin="0,2,12,6" Text="0" />
-
-                        <TextBlock x:Name="lblAddVolume" Grid.Row="5" Grid.Column="0" Margin="0,4,8,4" Text="Volume (ml)" />
-                        <TextBox x:Name="txtAddVolume" Grid.Row="5" Grid.Column="1" Margin="0,2,12,6" Text="0" />
-
-                        <TextBlock Grid.Row="6" Grid.Column="0" Margin="0,4,8,4" Text="Flavor / Description" />
-                        <TextBox x:Name="txtAddFlavor"
-                                 Grid.Row="6"
-                                 Grid.Column="1"
-                                 Margin="0,2,12,6"
-                                 Height="72"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 VerticalScrollBarVisibility="Auto" />
-
-                        <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Margin="0,2,12,6">
-                            <Button x:Name="btnBrowseImage"
-                                    Width="120"
-                                    Height="30"
-                                    Margin="0,0,10,0"
-                                    Content="Browse Image"
-                                    Click="BtnBrowseImage_Click" />
-                            <TextBlock x:Name="lblImagePath" VerticalAlignment="Center" Text="No image selected" />
+                        
+                        <!-- Logo & Title -->
+                        <StackPanel Grid.Row="0" Margin="20,30,20,40">
+                            <TextBlock Text="Eco-Matic" FontSize="24" FontWeight="Black" Foreground="#2C3E50" />
+                            <TextBlock x:Name="txtRoleLabel" Text="ADMIN ACCESS" FontSize="11" FontWeight="Bold" Foreground="#6A7891" Margin="0,5,0,0" />
                         </StackPanel>
 
-                        <Button x:Name="btnAddItem"
-                                Grid.Row="8"
-                                Grid.Column="1"
-                                Height="36"
-                                Margin="0,8,12,0"
-                                Content="Add Item"
-                            Style="{StaticResource AdminSuccessButton}"
-                                Click="BtnAddItem_Click" />
+                        <!-- Nav Buttons -->
+                        <StackPanel Grid.Row="1">
+                            <Button x:Name="navDashboard" Content="Dashboard" Style="{StaticResource SidebarButtonActiveStyle}" Click="Nav_Click" Tag="Dashboard" />
+                            <Button x:Name="navInventory" Content="Inventory" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Inventory" />
+                            <Button x:Name="navLogs" Content="Event Logs" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Logs" />
+                            <Button x:Name="navSales" Content="Sales Report" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Sales" />
+                            <Button x:Name="navMachines" Content="Vending Machines" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Machines" />
+                            <Button x:Name="navUsers" Content="User Manager" Style="{StaticResource SidebarButtonStyle}" Click="Nav_Click" Tag="Users" />
+                        </StackPanel>
 
-                        <Border Grid.Row="0"
-                                Grid.Column="2"
-                                Grid.RowSpan="9"
-                                Margin="6,2,0,0"
-                            Background="#F8FAFD"
-                            BorderBrush="#D7DFEC"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="8">
-                            <StackPanel>
-                                <TextBlock Text="Image Preview" FontWeight="SemiBold" Margin="0,0,0,8" />
-                                <Image x:Name="picImagePreview" Height="210" Stretch="Uniform" />
-                            </StackPanel>
-                        </Border>
+                        <!-- Bottom Meta -->
+                        <StackPanel Grid.Row="2" Margin="20,0,20,30">
+                            <Button x:Name="btnLogout" Content="Logout" Style="{StaticResource SidebarButtonStyle}" Click="BtnLogout_Click" />
+                        </StackPanel>
                     </Grid>
-                </GroupBox>
-            </StackPanel>
-        </ScrollViewer>
+                </Border>
 
-        <StackPanel Grid.Row="3"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="0,12,0,0">
-            <Button Content="Admin Help"
-                    Width="120"
-                    Height="34"
-                    Margin="0,0,8,0"
-                    Style="{StaticResource {x:Type Button}}"
-                    Click="BtnAdminHelp_Click" />
-            <Button Content="Back"
-                    Width="120"
-                    Height="34"
-                    Background="#2E77E6"
-                    Foreground="White"
-                    BorderBrush="#2E77E6"
-                    BorderThickness="0"
-                    Click="BtnBack_Click" />
-        </StackPanel>
+                <!-- Main Content Area -->
+                <Grid Grid.Column="1" Margin="30">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Bar -->
+                    <Grid Grid.Row="0" Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="txtViewTitle" Text="Project Dashboard" FontSize="28" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center" />
+                        <TextBlock x:Name="txtViewSubtitle" Text="Oversee operational statistics." FontSize="12" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,35,0,0" VerticalAlignment="Top"/>
+                    </Grid>
+
+                    <!-- Content Grids -->
+                    <Grid Grid.Row="1">
+                        
+                        <!-- Dashboard View -->
+                        <Grid x:Name="viewDashboard" Visibility="Visible">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <UniformGrid Grid.Row="0" Columns="4" Rows="1" Margin="0,0,0,20">
+                                <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                    <StackPanel>
+                                        <TextBlock Text="TOTAL SALES" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,10" />
+                                        <TextBlock x:Name="txtTotalSales" Text="₱0.00" FontSize="28" FontWeight="Black" Foreground="#1E293B" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                    <StackPanel>
+                                        <TextBlock Text="ITEMS SOLD" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,10" />
+                                        <TextBlock x:Name="txtItemsSold" Text="0" FontSize="28" FontWeight="Black" Foreground="#1E293B" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                    <StackPanel>
+                                        <TextBlock Text="LOW STOCK ALERTS" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,10" />
+                                        <TextBlock x:Name="txtLowStock" Text="0" FontSize="28" FontWeight="Black" Foreground="#D65A5A" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource CardBorderStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="ACTIVE MACHINES" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,10" />
+                                        <TextBlock x:Name="txtActiveMachines" Text="0" FontSize="28" FontWeight="Black" Foreground="#1E293B" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="Recent Activity" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15" />
+                                    <TextBlock Text="Feature coming soon..." Foreground="#94A3B8" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Inventory View Placeholder -->
+                        <Grid x:Name="viewInventory" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                <TextBlock Text="Select Vending Machine:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                <ComboBox x:Name="cboInventoryMachine" Width="250" SelectionChanged="CboInventoryMachine_SelectionChanged" DisplayMemberPath="location_name" SelectedValuePath="machine_id"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
+                                <Button Content="Add New Item" Width="140" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddItem_Click"/>
+                                <Button Content="Restock Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnRestock_Click"/>
+                                <Button Content="Edit Item" Width="130" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditItem_Click"/>
+                                <Button Content="Delete Item" Width="140" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteItem_Click"/>
+                            </StackPanel>
+
+                            <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="Transparent">
+                                <DataGrid x:Name="dgInventory" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0" RowHeight="60">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="50"/>
+                                        <DataGridTemplateColumn Header="Image" Width="70">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Image Source="{Binding Image}" Width="50" Height="50" HorizontalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="Item Name" Binding="{Binding Item}" Width="*"/>
+                                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
+                                        <DataGridTextColumn Header="Price (₱)" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="100"/>
+                                        <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="80"/>
+                                        <DataGridTextColumn Header="Max Cap" Binding="{Binding Max Capacity}" Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Logs View -->
+                        <Grid x:Name="viewLogs" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Button Content="Clear Logs" Width="120" HorizontalAlignment="Left" Margin="0,0,0,15" Style="{StaticResource SidebarButtonStyle}" Background="#FCE7E7" Foreground="#D65A5A" Click="BtnClearLogs_Click"/>
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                <DataGrid x:Name="dgLogs" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- Sales View -->
+                        <Grid x:Name="viewSales" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="250"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                    <StackPanel>
+                                        <TextBlock x:Name="txtSalesFilterLabel" Text="Sales (Today)" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
+                                        <TextBlock x:Name="txtSalesTotal" Text="₱ 0.00" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="Filter By:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
+                                    <ComboBox x:Name="cboSalesFilter" Width="100" Margin="0,0,10,0" SelectedIndex="0" SelectionChanged="SalesFilter_Changed" VerticalContentAlignment="Center">
+                                        <ComboBoxItem Content="Day"/>
+                                        <ComboBoxItem Content="Week"/>
+                                        <ComboBoxItem Content="Month"/>
+                                        <ComboBoxItem Content="Year"/>
+                                    </ComboBox>
+                                    <DatePicker x:Name="dpSalesDate" Width="130" SelectedDateChanged="SalesFilter_Changed" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                <DataGrid x:Name="dgSales" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- Machines View -->
+                        <Grid x:Name="viewMachines" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                <Button Content="Register Machine" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddMachine_Click"/>
+                                <Button Content="Remove Machine" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteMachine_Click"/>
+                            </StackPanel>
+
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                <DataGrid x:Name="dgMachines" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- Users View -->
+                        <Grid x:Name="viewUsers" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                                <Button Content="Add New Staff" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddUser_Click"/>
+                                <Button Content="Remove Staff" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteUser_Click"/>
+                            </StackPanel>
+
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                <DataGrid x:Name="dgUsers" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

@@ -1,510 +1,456 @@
-using Microsoft.Win32;
-using System.Globalization;
-using System.IO;
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Controls;
 
-namespace Eco_Matic;
-
-public partial class AdminWindow : Window
+namespace Eco_Matic
 {
-    private string? _selectedImagePath;
-
-    private sealed class ProductOption
+    public partial class AdminWindow : Window
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public override string ToString() => Name;
-    }
+        private string _currentUserRole;
+        private readonly int? _assignedMachineId;
 
-    public AdminWindow()
-    {
-        InitializeComponent();
-        RefreshGrid();
-        RefreshSelectors();
-        LoadAddTypeSelector();
-        UpdateTypeSpecificFields();
-        SyncSelectorsFromGridSelection();
-    }
-
-    private void RefreshGrid()
-    {
-        int? selectedId = (inventoryGrid.SelectedItem as VendingItem)?.Id;
-        var products = DataStore.Products.OrderBy(p => p.Id).ToList();
-
-        inventoryGrid.ItemsSource = products;
-
-        if (selectedId.HasValue)
+        public AdminWindow(string role, int? assignedMachineId = null)
         {
-            var same = products.FirstOrDefault(p => p.Id == selectedId.Value);
-            if (same != null)
+            InitializeComponent();
+            dpSalesDate.SelectedDate = DateTime.Today;
+            _currentUserRole = role;
+            _assignedMachineId = assignedMachineId;
+            SetupUIForRole();
+            
+            // Start at the respective active view
+            if (_currentUserRole == "Inventory Manager")
+                SetActiveView("Inventory");
+            else
+                SetActiveView("Dashboard");
+        }
+
+        private void SetupUIForRole()
+        {
+            txtRoleLabel.Text = _currentUserRole.ToUpper() + " ACCESS";
+
+            if (_currentUserRole == "Inventory Manager")
             {
-                inventoryGrid.SelectedItem = same;
+                // Hide parts of the sidebar according to RBAC
+                navDashboard.Visibility = Visibility.Collapsed;
+                navLogs.Visibility = Visibility.Collapsed;
+                navSales.Visibility = Visibility.Collapsed;
+                navMachines.Visibility = Visibility.Collapsed;
+                navUsers.Visibility = Visibility.Collapsed;
             }
         }
 
-        if (inventoryGrid.SelectedItem == null && products.Count > 0)
+        private void WindowFrame_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            inventoryGrid.SelectedIndex = 0;
-        }
-    }
-
-    private void LoadAddTypeSelector()
-    {
-        cboAddType.Items.Clear();
-        cboAddType.Items.Add("Snack");
-        cboAddType.Items.Add("Drink");
-        cboAddType.Items.Add("Misc");
-
-        if (cboAddType.Items.Count > 0)
-        {
-            cboAddType.SelectedIndex = 0;
+            if (e.ChangedButton == MouseButton.Left)
+                this.DragMove();
         }
 
-        UpdateTypeSpecificFields();
-    }
-
-    private void RefreshSelectors()
-    {
-        int? restockId = (cboItem.SelectedItem as ProductOption)?.Id;
-        int? removeId = (cboRemoveItem.SelectedItem as ProductOption)?.Id;
-
-        cboItem.Items.Clear();
-        cboRemoveItem.Items.Clear();
-
-        foreach (var product in DataStore.Products.OrderBy(p => p.Id))
+        // Navigation Sidebar Logic
+        private void Nav_Click(object sender, RoutedEventArgs e)
         {
-            var option = new ProductOption
+            if (sender is Button clickedBtn)
             {
-                Id = product.Id,
-                Name = $"#{product.Id} - {product.Name}"
+                string target = clickedBtn.Tag?.ToString();
+                if (target != null)
+                {
+                    SetActiveView(target);
+                }
+            }
+        }
+
+        private void SetActiveView(string viewName)
+        {
+            // Reset all buttons
+            navDashboard.Style = (Style)FindResource("SidebarButtonStyle");
+            navInventory.Style = (Style)FindResource("SidebarButtonStyle");
+            navLogs.Style = (Style)FindResource("SidebarButtonStyle");
+            navSales.Style = (Style)FindResource("SidebarButtonStyle");
+            navMachines.Style = (Style)FindResource("SidebarButtonStyle");
+            navUsers.Style = (Style)FindResource("SidebarButtonStyle");
+
+            // Reset all views
+            viewDashboard.Visibility = Visibility.Collapsed;
+            viewInventory.Visibility = Visibility.Collapsed;
+            viewLogs.Visibility = Visibility.Collapsed;
+            viewSales.Visibility = Visibility.Collapsed;
+            viewMachines.Visibility = Visibility.Collapsed;
+            viewUsers.Visibility = Visibility.Collapsed;
+
+            // Activate Target
+            switch (viewName)
+            {
+                case "Dashboard":
+                    navDashboard.Style = (Style)FindResource("SidebarButtonActiveStyle");
+                    viewDashboard.Visibility = Visibility.Visible;
+                    LoadDashboardMetrics();
+                    txtViewTitle.Text = "Dashboard";
+                    txtViewSubtitle.Text = "System Overview";
+                    break;
+                case "Inventory":
+                    navInventory.Style = (Style)FindResource("SidebarButtonActiveStyle");
+                    viewInventory.Visibility = Visibility.Visible;
+                    LoadInventoryMachines();
+                    txtViewTitle.Text = "Inventory Management";
+                    txtViewSubtitle.Text = "Manage items and restock.";
+                    break;
+                case "Logs":
+                    navLogs.Style = (Style)FindResource("SidebarButtonActiveStyle");
+                    viewLogs.Visibility = Visibility.Visible;
+                    LoadEventLogs();
+                    txtViewTitle.Text = "Event Logs";
+                    txtViewSubtitle.Text = "Track system activity.";
+                    break;
+                case "Sales":
+                    navSales.Style = (Style)FindResource("SidebarButtonActiveStyle");
+                    viewSales.Visibility = Visibility.Visible;
+                    LoadSalesData();
+                    txtViewTitle.Text = "Sales Report";
+                    txtViewSubtitle.Text = "Analyze transaction history.";
+                    break;
+                case "Machines":
+                    navMachines.Style = (Style)FindResource("SidebarButtonActiveStyle");
+                    viewMachines.Visibility = Visibility.Visible;
+                    LoadMachinesData();
+                    txtViewTitle.Text = "Vending Machines";
+                    txtViewSubtitle.Text = "Manage interconnected machine instances.";
+                    break;
+                case "Users":
+                    navUsers.Style = (Style)FindResource("SidebarButtonActiveStyle");
+                    viewUsers.Visibility = Visibility.Visible;
+                    LoadUsersData();
+                    txtViewTitle.Text = "User Manager";
+                    txtViewSubtitle.Text = "Manage admins and inventory workers.";
+                    break;
+            }
+        }
+
+        private void CboInventoryMachine_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (cboInventoryMachine.SelectedValue is int machineId)
+            {
+                var store = new Data.MySqlStore();
+                LoadInventoryGrid(machineId);
+            }
+        }
+
+        private void BtnAddItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (cboInventoryMachine.SelectedValue is int machineId)
+            {
+                var addWindow = new InventoryItemWindow();
+                addWindow.Owner = this;
+                if (addWindow.ShowDialog() == true)
+                {
+                    var store = new Data.MySqlStore();
+                    if (store.AddNewItemToMachine(machineId, addWindow.ItemName, addWindow.ItemType, addWindow.Price, addWindow.Calories, addWindow.InitialStock, addWindow.MaxCapacity, addWindow.ImagePath))
+                    {
+                        LoadInventoryGrid(machineId);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select a vending machine first.");
+            }
+        }
+
+        private void BtnRestock_Click(object sender, RoutedEventArgs e)
+        {
+            if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
+            {
+                int inventoryId = Convert.ToInt32(row["ID"]);
+                var restockWindow = new RestockWindow();
+                restockWindow.Owner = this;
+                if (restockWindow.ShowDialog() == true)
+                {
+                    var store = new Data.MySqlStore();
+                    if (store.RestockInventoryItem(inventoryId, restockWindow.RestockQuantity))
+                    {
+                        LoadInventoryGrid(machineId);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select a vending machine and an item from the grid.");
+            }
+        }
+
+        private void BtnEditItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
+            {
+                int inventoryId = Convert.ToInt32(row["ID"]);
+                string name = row["Item"].ToString() ?? "";
+                string type = row["Type"].ToString() ?? "";
+                decimal price = Convert.ToDecimal(row["Price"]);
+                int calories = row["Calories"] != DBNull.Value ? Convert.ToInt32(row["Calories"]) : 0;
+                string imagePath = row["Image"].ToString() ?? "";
+                int stock = Convert.ToInt32(row["Stock"]);
+                int maxCap = Convert.ToInt32(row["Max Capacity"]);
+
+                var editWindow = new InventoryItemWindow(name, type, price, calories, stock, maxCap, imagePath)
+                {
+                    Owner = this
+                };
+
+                if (editWindow.ShowDialog() == true)
+                {
+                    var store = new Data.MySqlStore();
+                    if (store.UpdateInventoryItem(inventoryId, editWindow.ItemName, editWindow.ItemType, editWindow.Price, editWindow.Calories, editWindow.ImagePath, editWindow.InitialStock, editWindow.MaxCapacity))
+                    {
+                        LoadInventoryGrid(machineId);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select an item from the grid to edit.");
+            }
+        }
+
+        private void BtnDeleteItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
+            {
+                int inventoryId = Convert.ToInt32(row["ID"]);
+                string name = row["Item"].ToString() ?? "";
+
+                if (MessageBox.Show($"Are you sure you want to permanently delete '{name}'?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    var store = new Data.MySqlStore();
+                    if (store.DeleteInventoryItem(inventoryId))
+                    {
+                        LoadInventoryGrid(machineId);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select an item from the grid to delete.");
+            }
+        }
+
+        private void LoadInventoryGrid(int machineId)
+        {
+            var store = new Data.MySqlStore();
+            dgInventory.ItemsSource = store.GetMachineInventory(machineId).DefaultView;
+        }
+
+        private void LoadInventoryMachines()
+        {
+            var store = new Data.MySqlStore();
+            var dt = store.GetVendingMachines();
+            
+            if (_currentUserRole == "Inventory Manager" && _assignedMachineId.HasValue)
+            {
+                var filteredView = new System.Data.DataView(dt)
+                {
+                    RowFilter = $"ID = {_assignedMachineId.Value}"
+                };
+                cboInventoryMachine.ItemsSource = filteredView;
+            }
+            else
+            {
+                cboInventoryMachine.ItemsSource = dt.DefaultView;
+            }
+
+            if (cboInventoryMachine.Items.Count > 0)
+                cboInventoryMachine.SelectedIndex = 0;
+            else
+                dgInventory.ItemsSource = null;
+        }
+
+        private void BtnLogout_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = WindowState.Minimized;
+        }
+
+        private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.WindowState == WindowState.Normal)
+                this.WindowState = WindowState.Maximized;
+            else
+                this.WindowState = WindowState.Normal;
+        }
+
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show(this,
+                "Eco-Matic Vending Machine Admin Console\nVersion 1.0\n\nCopyright 2026 Seanix",
+                "About",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        private void OpenReadmeMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var readme = new ReadmeWindow
+            {
+                Owner = this
             };
-
-            cboItem.Items.Add(option);
-            cboRemoveItem.Items.Add(option);
+            readme.ShowDialog();
         }
 
-        if (cboItem.Items.Count == 0)
+        private void LoadDashboardMetrics()
         {
-            cboItem.SelectedItem = null;
-            cboRemoveItem.SelectedItem = null;
-            return;
+            var store = new Data.MySqlStore();
+            store.GetDashboardMetrics(out decimal totalSales, out int totalItemsSold, out int lowStockAlerts, out int activeMachines);
+
+            txtTotalSales.Text = $"₱{totalSales:F2}";
+            txtItemsSold.Text = totalItemsSold.ToString();
+            txtLowStock.Text = lowStockAlerts.ToString();
+            txtActiveMachines.Text = activeMachines.ToString();
+
+            if (lowStockAlerts > 0)
+                txtLowStock.Foreground = new SolidColorBrush(Color.FromRgb(214, 90, 90)); // Soft Red
+            else
+                txtLowStock.Foreground = new SolidColorBrush(Color.FromRgb(47, 166, 106)); // Green
         }
 
-        SelectComboById(cboItem, restockId ?? ((ProductOption)cboItem.Items[0]).Id);
-        SelectComboById(cboRemoveItem, removeId ?? ((ProductOption)cboRemoveItem.Items[0]).Id);
-    }
-
-    private static bool SelectComboById(ComboBox comboBox, int targetId)
-    {
-        var target = comboBox.Items.OfType<ProductOption>().FirstOrDefault(x => x.Id == targetId);
-        if (target == null)
+        private void LoadEventLogs()
         {
-            return false;
+            var store = new Data.MySqlStore();
+            dgLogs.ItemsSource = store.GetEventLogs().DefaultView;
         }
 
-        comboBox.SelectedItem = target;
-        return true;
-    }
-
-    private void SelectFromGrid(int productId)
-    {
-        SelectComboById(cboItem, productId);
-        SelectComboById(cboRemoveItem, productId);
-    }
-
-    private void SyncSelectorsFromGridSelection()
-    {
-        if (inventoryGrid.SelectedItem is VendingItem product)
+        private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
         {
-            SelectFromGrid(product.Id);
-        }
-    }
-
-    private void BtnUpdate_Click(object sender, RoutedEventArgs e)
-    {
-        if (cboItem.SelectedItem is not ProductOption selected)
-        {
-            MessageBox.Show(this, "Please select an item.", "Restock", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        var product = DataStore.Products.FirstOrDefault(p => p.Id == selected.Id);
-        if (product == null)
-        {
-            return;
-        }
-
-        int oldStock = product.Stock;
-        product.Stock = DataStore.MaxStockPerItem;
-
-        DataStore.SaveInventory();
-        DataStore.LogEvent("ADMIN_RESTOCK", $"{product.Name}: {oldStock} -> {product.Stock}");
-
-        MessageBox.Show(this,
-            $"{product.Name} restocked to {DataStore.MaxStockPerItem}.",
-            "Restock",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
-
-        RefreshGrid();
-        RefreshSelectors();
-        SelectFromGrid(product.Id);
-    }
-
-    private void BtnRestockAdd_Click(object sender, RoutedEventArgs e)
-    {
-        if (cboItem.SelectedItem is not ProductOption selected)
-        {
-            return;
-        }
-
-        var product = DataStore.Products.FirstOrDefault(p => p.Id == selected.Id);
-        if (product == null)
-        {
-            return;
-        }
-
-        if (!TryParseInt(txtRestockQty.Text, out int qty) || qty <= 0)
-        {
-            MessageBox.Show(this,
-                "Quantity must be a positive whole number.",
-                "Restock",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-            return;
-        }
-
-        int oldStock = product.Stock;
-        product.Stock = Math.Clamp(product.Stock + qty, 0, DataStore.MaxStockPerItem);
-
-        DataStore.SaveInventory();
-        DataStore.LogEvent("ADMIN_RESTOCK_ADD", $"{product.Name}: {oldStock} +{qty} -> {product.Stock}");
-
-        MessageBox.Show(this,
-            $"{product.Name}: {oldStock} -> {product.Stock}.",
-            "Restock",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
-
-        RefreshGrid();
-        RefreshSelectors();
-        SelectFromGrid(product.Id);
-    }
-
-    private void BtnAddItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataStore.Products.Count >= DataStore.MaxItemSlots)
-        {
-            MessageBox.Show(this,
-                $"Max slots ({DataStore.MaxItemSlots}) reached.",
-                "Add Item",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-            return;
-        }
-
-        string name = txtAddName.Text.Trim();
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            MessageBox.Show(this, "Name is required.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        if (DataStore.Products.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-        {
-            MessageBox.Show(this, "Name must be unique.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        if (cboAddType.SelectedItem is not string type)
-        {
-            MessageBox.Show(this, "Select a product type.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        if (!TryParseDecimal(txtAddPrice.Text, out decimal price) || price <= 0)
-        {
-            MessageBox.Show(this, "Price must be greater than zero.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        if (!TryParseInt(txtAddStock.Text, out int stock) || stock <= 0)
-        {
-            MessageBox.Show(this, "Stock must be a positive whole number.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        stock = Math.Clamp(stock, 1, DataStore.MaxStockPerItem);
-
-        string flavor = string.IsNullOrWhiteSpace(txtAddFlavor.Text)
-            ? "No description available."
-            : txtAddFlavor.Text.Trim();
-
-        int calories = 0;
-        int volumeMl = 0;
-
-        if (type == "Snack" && !TryParseOptionalNonNegativeInt(txtAddCalories.Text, out calories))
-        {
-            MessageBox.Show(this, "Calories must be 0 or a positive whole number.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        if (type == "Drink" && !TryParseOptionalNonNegativeInt(txtAddVolume.Text, out volumeMl))
-        {
-            MessageBox.Show(this, "Volume must be 0 or a positive whole number.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        int newId = DataStore.Products.Count == 0 ? 1 : DataStore.Products.Max(p => p.Id) + 1;
-
-        VendingItem newProduct = type switch
-        {
-            "Snack" => new SnackItem { Id = newId, Name = name, Price = price, Stock = stock, FlavorText = flavor, Calories = calories },
-            "Drink" => new DrinkItem { Id = newId, Name = name, Price = price, Stock = stock, FlavorText = flavor, VolumeMl = volumeMl },
-            _ => new MiscItem { Id = newId, Name = name, Price = price, Stock = stock, FlavorText = flavor }
-        };
-
-        if (!string.IsNullOrWhiteSpace(_selectedImagePath) && File.Exists(_selectedImagePath))
-        {
-            try
+            if (MessageBox.Show("Are you sure you want to clear all event logs?", "Clear Logs", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                string relativeName = CsvStorage.CopyProductImage(_selectedImagePath!, newId);
-                newProduct.ImagePath = relativeName;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this,
-                    $"Image copy warning: {ex.Message}",
-                    "Add Item",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                var store = new Data.MySqlStore();
+                store.ClearEventLogs();
+                LoadEventLogs();
             }
         }
 
-        DataStore.Products.Add(newProduct);
-        DataStore.SaveInventory();
-        DataStore.LogEvent("ADMIN_ADD_ITEM", $"{newProduct.Name} ({newProduct.Type})", newProduct.Price);
-
-        MessageBox.Show(this, "Item added.", "Add Item", MessageBoxButton.OK, MessageBoxImage.Information);
-
-        ResetAddFields();
-        RefreshGrid();
-        RefreshSelectors();
-        SelectFromGrid(newProduct.Id);
-    }
-
-    private void ResetAddFields()
-    {
-        txtAddName.Clear();
-        txtAddFlavor.Clear();
-        txtAddPrice.Text = "1";
-        txtAddStock.Text = DataStore.MaxStockPerItem.ToString(CultureInfo.InvariantCulture);
-        txtAddCalories.Text = "0";
-        txtAddVolume.Text = "0";
-
-        _selectedImagePath = null;
-        lblImagePath.Text = "No image selected";
-        picImagePreview.Source = null;
-
-        UpdateTypeSpecificFields();
-    }
-
-    private void BtnRemoveItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (cboRemoveItem.SelectedItem is not ProductOption selected)
+        private void LoadSalesData()
         {
-            return;
+            if (cboSalesFilter == null || dpSalesDate == null) return;
+            
+            var store = new Data.MySqlStore();
+            string filterType = (cboSalesFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
+            DateTime targetDate = dpSalesDate.SelectedDate ?? DateTime.Today;
+
+            var result = store.GetFilteredSales(targetDate, filterType);
+            dgSales.ItemsSource = result.Data.DefaultView;
+            
+            if (txtSalesFilterLabel != null) 
+                txtSalesFilterLabel.Text = $"Sales ({filterType})";
+                
+            if (txtSalesTotal != null)
+                txtSalesTotal.Text = $"₱ {result.Total:0.00}";
         }
 
-        var product = DataStore.Products.FirstOrDefault(p => p.Id == selected.Id);
-        if (product == null)
+        private void SalesFilter_Changed(object sender, SelectionChangedEventArgs e)
         {
-            return;
+            if (viewSales != null && viewSales.Visibility == Visibility.Visible)
+            {
+                LoadSalesData();
+            }
         }
 
-        var confirm = MessageBox.Show(this,
-            $"Remove {product.Name}?",
-            "Confirm",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (confirm != MessageBoxResult.Yes)
+        private void LoadMachinesData()
         {
-            return;
+            var store = new Data.MySqlStore();
+            dgMachines.ItemsSource = store.GetVendingMachines().DefaultView;
         }
 
-        DataStore.Products.Remove(product);
-        DataStore.SaveInventory();
-        DataStore.LogEvent("ADMIN_REMOVE_ITEM", product.Name);
-
-        RefreshGrid();
-        RefreshSelectors();
-        SyncSelectorsFromGridSelection();
-    }
-
-    private void BtnViewLog_Click(object sender, RoutedEventArgs e)
-    {
-        var logWindow = new EventLogWindow
+        private void BtnAddMachine_Click(object sender, RoutedEventArgs e)
         {
-            Owner = this
-        };
-        logWindow.ShowDialog();
-    }
-
-    private void BtnClearLog_Click(object sender, RoutedEventArgs e)
-    {
-        var confirm = MessageBox.Show(this,
-            "Clear all logs?",
-            "Confirm",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (confirm != MessageBoxResult.Yes)
-        {
-            return;
+            var addMach = new AddMachineWindow { Owner = this };
+            if (addMach.ShowDialog() == true)
+            {
+                var store = new Data.MySqlStore();
+                if (store.AddMachine(addMach.LocationName))
+                {
+                    LoadMachinesData();
+                    LoadInventoryMachines(); // refresh dropdowns
+                }
+            }
         }
 
-        DataStore.ClearLogs();
-        MessageBox.Show(this, "Log cleared.", "Done", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void BtnOpenReadme_Click(object sender, RoutedEventArgs e)
-    {
-        var readme = new ReadmeWindow
+        private void BtnDeleteMachine_Click(object sender, RoutedEventArgs e)
         {
-            Owner = this
-        };
-        readme.ShowDialog();
-    }
-
-    private void BtnBrowseImage_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "Select Product Image",
-            Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp|All Files|*.*"
-        };
-
-        if (dialog.ShowDialog(this) != true)
-        {
-            return;
+            if (dgMachines.SelectedItem is System.Data.DataRowView row)
+            {
+                int machineId = Convert.ToInt32(row["ID"]);
+                string loc = row["Location"].ToString() ?? "";
+                if (MessageBox.Show($"Are you sure you want to delete Machine {machineId} at '{loc}'? This removes its inventory and sales history.", "Delete Machine", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    var store = new Data.MySqlStore();
+                    if (store.DeleteMachine(machineId))
+                    {
+                        LoadMachinesData();
+                        LoadInventoryMachines();
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select a machine to delete.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
-        _selectedImagePath = dialog.FileName;
-        lblImagePath.Text = Path.GetFileName(_selectedImagePath);
-
-        var image = ImageLoader.LoadFromPath(_selectedImagePath);
-        if (image == null)
+        private void LoadUsersData()
         {
-            _selectedImagePath = null;
-            picImagePreview.Source = null;
-            lblImagePath.Text = "Invalid image";
-            return;
+            var store = new Data.MySqlStore();
+            dgUsers.ItemsSource = store.GetUsers().DefaultView;
         }
 
-        picImagePreview.Source = image;
-    }
-
-    private void CboAddType_SelectedIndexChanged(object sender, SelectionChangedEventArgs e)
-    {
-        UpdateTypeSpecificFields();
-    }
-
-    private void UpdateTypeSpecificFields()
-    {
-        if (cboAddType.SelectedItem is not string type)
+        private void BtnAddUser_Click(object sender, RoutedEventArgs e)
         {
-            return;
+            var editor = new UserEditorWindow { Owner = this };
+            if (editor.ShowDialog() == true)
+            {
+                var store = new Data.MySqlStore();
+                if (store.AddUser(editor.Username, editor.Password, editor.RoleId, editor.AssignedMachineId))
+                {
+                    LoadUsersData();
+                }
+                else
+                {
+                    MessageBox.Show("Could not add user. Username may already exist.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
 
-        bool showCalories = type == "Snack";
-        bool showVolume = type == "Drink";
-
-        lblAddCalories.Visibility = showCalories ? Visibility.Visible : Visibility.Collapsed;
-        txtAddCalories.Visibility = showCalories ? Visibility.Visible : Visibility.Collapsed;
-
-        lblAddVolume.Visibility = showVolume ? Visibility.Visible : Visibility.Collapsed;
-        txtAddVolume.Visibility = showVolume ? Visibility.Visible : Visibility.Collapsed;
-
-        if (!showCalories)
+        private void BtnDeleteUser_Click(object sender, RoutedEventArgs e)
         {
-            txtAddCalories.Text = "0";
+            if (dgUsers.SelectedItem is System.Data.DataRowView row)
+            {
+                int userId = Convert.ToInt32(row["ID"]);
+                string user = row["Username"].ToString() ?? "";
+                if (user.ToLower() == "admin")
+                {
+                    MessageBox.Show("Cannot delete the master admin account.", "Restricted", MessageBoxButton.OK, MessageBoxImage.Stop);
+                    return;
+                }
+
+                if (MessageBox.Show($"Are you sure you want to delete user '{user}'?", "Delete User", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    var store = new Data.MySqlStore();
+                    if (store.DeleteUser(userId))
+                    {
+                        LoadUsersData();
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select a user to delete.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
-
-        if (!showVolume)
-        {
-            txtAddVolume.Text = "0";
-        }
-    }
-
-    private void BtnAdminHelp_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show(this,
-            "Admin Tools:\n\n" +
-            "- Restock items to max or add custom quantities.\n" +
-            "- Add and remove products with optional images.\n" +
-            "- View and clear event logs.\n\n" +
-            "Low stock items (2 or less) are highlighted in the grid.",
-            "Admin Help",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
-    }
-
-    private void BtnBack_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
-
-    private void InventoryGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        SyncSelectorsFromGridSelection();
-    }
-
-    private void InventoryGrid_LoadingRow(object sender, DataGridRowEventArgs e)
-    {
-        if (e.Row.Item is VendingItem product && product.Stock <= 2)
-        {
-            e.Row.Foreground = Brushes.OrangeRed;
-            e.Row.FontWeight = FontWeights.SemiBold;
-        }
-        else
-        {
-            e.Row.Foreground = new SolidColorBrush(Color.FromRgb(38, 52, 77));
-            e.Row.FontWeight = FontWeights.Normal;
-        }
-    }
-
-    private static bool TryParseDecimal(string value, out decimal result)
-    {
-        if (decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out result))
-        {
-            return true;
-        }
-
-        return decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out result);
-    }
-
-    private static bool TryParseInt(string value, out int result)
-    {
-        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out result)
-               || int.TryParse(value, NumberStyles.Integer, CultureInfo.CurrentCulture, out result);
-    }
-
-    private static bool TryParseOptionalNonNegativeInt(string value, out int result)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            result = 0;
-            return true;
-        }
-
-        if (!TryParseInt(value, out result))
-        {
-            return false;
-        }
-
-        return result >= 0;
     }
 }

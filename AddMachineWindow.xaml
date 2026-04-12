@@ -1,0 +1,37 @@
+<Window x:Class="Eco_Matic.AddMachineWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Machine" Height="250" Width="300"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterOwner"
+        MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">
+    <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect Color="#10000000" BlurRadius="15" ShadowDepth="4"/>
+        </Border.Effect>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Add Vending Machine" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
+
+            <StackPanel Grid.Row="1">
+                <TextBlock Text="Location Name:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
+                <TextBox x:Name="txtLocation" Height="35" Padding="5,8" BorderBrush="#CBD5E1"/>
+            </StackPanel>
+
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="Register" Background="#2FA66A" Foreground="White" FontWeight="Bold" Height="40" Click="BtnConfirm_Click"/>
+                <Button Grid.Column="2" Content="Cancel" Background="#E2E8F0" Foreground="#1E293B" FontWeight="Bold" Height="40" Click="BtnCancel_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

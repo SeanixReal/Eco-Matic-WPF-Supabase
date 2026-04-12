@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -159,12 +160,12 @@ public partial class CustomerWindow : Window
             {
                 slot.NameLabel.Text = product.Name;
                 slot.NameLabel.Foreground = TextDim;
-                slot.PriceLabel.Text = "SOLD OUT";
+                slot.PriceLabel.Text = "OUT OF STOCK";
                 slot.PriceLabel.Foreground = SoldOutRed;
                 slot.Panel.Background = SlotEmpty;
 
                 slot.SelectButton.IsEnabled = false;
-                slot.SelectButton.Content = "SOLD";
+                slot.SelectButton.Content = "OUT OF STOCK";
                 slot.SelectButton.Background = ButtonSold;
                 slot.SelectButton.Foreground = CreateBrush(133, 57, 57);
                 slot.SelectButton.BorderBrush = CreateBrush(223, 163, 163);
@@ -383,7 +384,13 @@ public partial class CustomerWindow : Window
         var transaction = CreateTransaction(product);
         DataStore.Transactions.Add(transaction);
         DataStore.LastTransaction = transaction;
-        DataStore.LogEvent("PURCHASE", $"1x {product.Name}", product.Price);
+        
+        string logDetails = $"Item: {product.Name} | Quantity: 1 | Price: ₱{product.Price:0.00} | Total: ₱{product.Price:0.00}";
+        DataStore.LogEvent("PURCHASE", logDetails, product.Price);
+        DataStore.RecordSale(product.DbInventoryId, product.Price);
+
+        btnBack.Content = "DONE & RECEIPT";
+        btnBack.Background = new SolidColorBrush(Color.FromRgb(47, 166, 106));
 
         StartDispenseFeedback(product);
         UpdateMoneyDisplay();
@@ -505,6 +512,16 @@ public partial class CustomerWindow : Window
 
     private void BtnBack_Click(object sender, RoutedEventArgs e)
     {
+        if (DataStore.LastTransaction != null)
+        {
+            var receipt = new ReceiptWindow(DataStore.LastTransaction)
+            {
+                Owner = this
+            };
+            receipt.ShowDialog();
+            DataStore.LastTransaction = null;
+        }
+
         Close();
     }
 
@@ -523,5 +540,44 @@ public partial class CustomerWindow : Window
         var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
         brush.Freeze();
         return brush;
+    }
+
+    private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+    {
+        this.WindowState = WindowState.Minimized;
+    }
+    private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+    {
+        this.WindowState = this.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+    private void BtnClose_Click(object sender, RoutedEventArgs e)
+    {
+        this.Close();
+    }
+
+    private void WindowFrame_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
+    private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(this,
+            "Eco-Matic Vending Machine\nVersion 1.0\n\nCopyright 2026 Seanix",
+            "About",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void OpenReadmeMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var readme = new ReadmeWindow
+        {
+            Owner = this
+        };
+        readme.ShowDialog();
     }
 }

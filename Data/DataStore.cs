@@ -1,4 +1,6 @@
 namespace Eco_Matic;
+using System;
+using System.Collections.Generic;
 
 public static class DataStore
 {
@@ -13,51 +15,93 @@ public static class DataStore
             [RecycleMaterial.Aluminum] = 3.00m
         };
 
-    private static readonly List<VendingItem> DefaultProducts =
-    [
-        new SnackItem { Id = 1, Name = "Mr Chips", Price = 30.5m, Stock = 10, FlavorText = "Crunchy salted potato chips.", Calories = 160 },
-        new SnackItem { Id = 2, Name = "Nova", Price = 40m, Stock = 10, FlavorText = "Cheesy square crackers.", Calories = 170 },
-        new DrinkItem { Id = 3, Name = "Coca Cola", Price = 30.5m, Stock = 10, FlavorText = "Classic cola refreshment.", Calories = 140, VolumeMl = 330 },
-        new DrinkItem { Id = 4, Name = "Pepsi", Price = 30m, Stock = 10, FlavorText = "Bold cola flavor.", Calories = 150, VolumeMl = 330 },
-        new MiscItem { Id = 5, Name = "Bandaid Box", Price = 20m, Stock = 10, FlavorText = "Compact first-aid strips." },
-        new MiscItem { Id = 6, Name = "Eco Bag", Price = 30.75m, Stock = 10, FlavorText = "Reusable eco-friendly carry bag." },
-        new SnackItem { Id = 7, Name = "Piattos", Price = 35m, Stock = 10, FlavorText = "Sour cream and onion chips.", Calories = 180 },
-        new SnackItem { Id = 8, Name = "Chippy", Price = 32m, Stock = 10, FlavorText = "Light and crispy chips.", Calories = 175 },
-        new SnackItem { Id = 9, Name = "Roller Coaster", Price = 28.5m, Stock = 10, FlavorText = "Ridged chips with barbecue taste.", Calories = 165 },
-        new SnackItem { Id = 10, Name = "Fudge Bar", Price = 25m, Stock = 10, FlavorText = "Chocolate coated wafer bar.", Calories = 150 },
-        new SnackItem { Id = 11, Name = "Cheese Ring", Price = 30m, Stock = 10, FlavorText = "Cheesy ring-shaped corn snack.", Calories = 170 },
-        new DrinkItem { Id = 12, Name = "RC Cola", Price = 25m, Stock = 10, FlavorText = "Refreshing RC cola.", Calories = 135, VolumeMl = 330 }
-    ];
-
-    public static List<VendingItem> Products { get; } = new();
+    public static List<Product> Products { get; } = new();
     public static List<Transaction> Transactions { get; } = new();
     public static int NextTransactionId { get; set; } = 1;
     public static Transaction? LastTransaction { get; set; }
+    public static int ActiveMachineId { get; set; } = 1;
 
-    public static void Initialize()
+    public static void Initialize(int machineId = 1)
     {
+        ActiveMachineId = machineId;
         Products.Clear();
-        Products.AddRange(CsvStorage.LoadInventory(DefaultProducts));
-        CsvStorage.EnsureEventLogFile();
+        var store = new Eco_Matic.Data.MySqlStore();
+        var dt = store.GetMachineInventory(machineId);
+
+        int slotIndex = 1;
+        foreach (System.Data.DataRow row in dt.Rows)
+        {
+            int inventoryId = Convert.ToInt32(row["ID"]);
+            string name = row["Item"].ToString() ?? "Unknown";
+            string typeStr = row["Type"].ToString() ?? "Misc";
+            decimal price = Convert.ToDecimal(row["Price"]);
+            int stock = Convert.ToInt32(row["Stock"]);
+            int calories = row["Calories"] != DBNull.Value ? Convert.ToInt32(row["Calories"]) : 0;
+            string imagePath = row["Image"].ToString() ?? "";
+
+            ProductType pType = ProductType.Misc;
+            if (Enum.TryParse<ProductType>(typeStr, out var parsedType))
+            {
+                pType = parsedType;
+            }
+
+            var p = Product.Create(pType, slotIndex++, name, price, stock, "Fresh from Eco-Matic.", calories, 0, imagePath);
+            p.DbInventoryId = inventoryId; // Use DbInventoryId for SQL ops if tracking ID. But UI uses slotIndex.
+            Products.Add(p);
+        }
+        
         NextTransactionId = 1;
         LastTransaction = null;
         Transactions.Clear();
     }
 
-    public static void SaveInventory() => CsvStorage.SaveInventory(Products);
+    public static void SaveInventory()
+    {
+        // Now synced live with DB, flush the current stock.
+        var store = new Eco_Matic.Data.MySqlStore();
+        foreach (var p in Products)
+        {
+            if (p.DbInventoryId > 0)
+            {
+                store.UpdateStock(p.DbInventoryId, p.Stock);
+            }
+        }
+    }
 
     public static void LogEvent(string eventType, string details, decimal amount = 0m)
     {
-        CsvStorage.AppendEvent(new EventLogEntry
-        {
-            TimestampUtc = DateTime.UtcNow,
-            EventType = eventType,
-            Details = details,
-            Amount = amount
-        });
+        var store = new Eco_Matic.Data.MySqlStore();
+        store.LogEvent(eventType, details, amount, ActiveMachineId);
     }
 
-    public static List<EventLogEntry> ReadLogs() => CsvStorage.LoadEventLog();
+    public static void RecordSale(int inventoryId, decimal amountPaid)
+    {
+        // Actually needs the current machine ID.
+        // If we only have 1 active machine right now, or if we track ActiveMachineId in DataStore
+        var store = new Eco_Matic.Data.MySqlStore();
+        store.RecordSale(ActiveMachineId, inventoryId, amountPaid);
+    }
 
-    public static void ClearLogs() => CsvStorage.ClearEventLog();
+    public static List<EventLogEntry> ReadLogs()
+    {
+        var store = new Eco_Matic.Data.MySqlStore();
+        var dt = store.GetEventLogs();
+        var list = new List<EventLogEntry>();
+        foreach (System.Data.DataRow r in dt.Rows)
+        {
+            list.Add(new EventLogEntry
+            {
+                TimestampUtc = Convert.ToDateTime(r["Timestamp"]),
+                EventType = r["Event"].ToString() ?? "",
+                Details = r["Details"].ToString() ?? ""
+            });
+        }
+        return list;
+    }
+
+    public static void ClearLogs()
+    {
+        var store = new Eco_Matic.Data.MySqlStore();
+        store.ClearEventLogs();
+    }
 }

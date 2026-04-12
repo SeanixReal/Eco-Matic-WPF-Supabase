@@ -4,61 +4,79 @@
         Title="Event Log"
         Height="520"
         Width="860"
-        WindowStartupLocation="CenterOwner">
-    <Grid Margin="14">
-        <Border Background="White"
-                BorderBrush="#D7DFEC"
-                BorderThickness="1"
-                CornerRadius="16"
-                Padding="16">
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+    <Grid>
+        <!-- Custom Window Controls Tab -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Panel.ZIndex="10" Margin="0,0,30,0">
+            <Button Content="-" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMinimize_Click"/>
+            <Button Content="o" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMaximize_Click"/>
+            <Button Content="x" Width="40" Height="28" Style="{StaticResource WindowCloseTab}" Click="BtnClose_Click" />
+        </StackPanel>
+        
+        <!-- Main Card Border -->
+        <Border Background="White" CornerRadius="12" Margin="0,30,0,0">
             <Border.Effect>
-                <DropShadowEffect Color="#10000000" BlurRadius="18" ShadowDepth="4" />
+                <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.1" />
             </Border.Effect>
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+            <Grid Margin="14">
+                    <Border Background="White"
+                            BorderBrush="#D7DFEC"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="16">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#10000000" BlurRadius="18" ShadowDepth="4" />
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0"
-                           Text="Event Log"
-                           FontSize="24"
-                           FontWeight="Bold"
-                           Foreground="#2E77E6"
-                           Margin="0,0,0,10" />
+                            <TextBlock Grid.Row="0"
+                                       Text="Event Log"
+                                       FontSize="24"
+                                       FontWeight="Bold"
+                                       Foreground="#2E77E6"
+                                       Margin="0,0,0,10" />
 
-                <TextBox x:Name="txtLog"
-                         Grid.Row="1"
-                         IsReadOnly="True"
-                         FontFamily="Consolas"
-                         FontSize="13"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Auto"
-                         TextWrapping="NoWrap"
-                         Background="#F9FBFF"
-                         Foreground="#20304C"
-                         BorderBrush="#D7DFEC"
-                         BorderThickness="1"
-                         Padding="10" />
+                            <TextBox x:Name="txtLog"
+                                     Grid.Row="1"
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas"
+                                     FontSize="13"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     TextWrapping="NoWrap"
+                                     Background="#F9FBFF"
+                                     Foreground="#20304C"
+                                     BorderBrush="#D7DFEC"
+                                     BorderThickness="1"
+                                     Padding="10" />
 
-                <StackPanel Grid.Row="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            Margin="0,12,0,0">
-                    <Button Content="Refresh"
-                            Width="100"
-                            Margin="0,0,8,0"
-                            Background="#2E77E6"
-                            Foreground="White"
-                            BorderBrush="#2E77E6"
-                            BorderThickness="0"
-                            Click="BtnRefresh_Click" />
-                    <Button Content="Close"
-                            Width="100"
-                            Click="BtnClose_Click" />
-                </StackPanel>
-            </Grid>
+                            <StackPanel Grid.Row="2"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,12,0,0">
+                                <Button Content="Refresh"
+                                        Width="100"
+                                        Margin="0,0,8,0"
+                                        Background="#2E77E6"
+                                        Foreground="White"
+                                        BorderBrush="#2E77E6"
+                                        BorderThickness="0"
+                                        Click="BtnRefresh_Click" />
+                                <Button Content="Close"
+                                        Width="100"
+                                        Click="BtnClose_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
         </Border>
     </Grid>
 </Window>

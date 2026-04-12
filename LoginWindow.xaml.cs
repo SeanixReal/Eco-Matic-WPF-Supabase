@@ -5,12 +5,13 @@ namespace Eco_Matic;
 
 public partial class LoginWindow : Window
 {
+    public string Username => txtUsername.Text;
     public string Password => txtPassword.Password;
 
     public LoginWindow()
     {
         InitializeComponent();
-        Loaded += (_, _) => txtPassword.Focus();
+        Loaded += (_, _) => txtUsername.Focus();
     }
 
     private void BtnLogin_Click(object sender, RoutedEventArgs e)
@@ -38,7 +39,7 @@ public partial class LoginWindow : Window
         }
     }
 
-    private void TxtPassword_KeyDown(object sender, KeyEventArgs e)
+    private void TxtControl_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
         {
