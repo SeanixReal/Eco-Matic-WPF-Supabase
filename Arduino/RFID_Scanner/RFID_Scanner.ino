@@ -15,6 +15,12 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 unsigned long timer = 0;
 unsigned long messageTimer = 0;
 bool showingMessage = false;
+bool waitingValidation = false;
+bool lastScanWasValid = false;
+
+unsigned long activeLedTimer = 0;
+bool activeHeartbeatOn = false;
+bool activeBlinkState = false;
 
 // 0 = AFK Mode (Screensaver/Facts), 1 = Active Vending Mode
 int systemMode = 0; 
@@ -45,6 +51,47 @@ void setup() {
   Serial.println("Eco-Matic RFID & LCD Scanner Ready.");
 }
 
+void updateActiveLedState() {
+  unsigned long now = millis();
+
+  if (showingMessage) {
+    if (lastScanWasValid) {
+      // Granted access: solid green for the message duration.
+      digitalWrite(GREEN_LED, HIGH);
+      digitalWrite(RED_LED, LOW);
+    } else {
+      // Denied access: blinking red to attract attention.
+      if (now - activeLedTimer >= 180) {
+        activeLedTimer = now;
+        activeBlinkState = !activeBlinkState;
+        digitalWrite(GREEN_LED, LOW);
+        digitalWrite(RED_LED, activeBlinkState ? HIGH : LOW);
+      }
+    }
+    return;
+  }
+
+  if (waitingValidation) {
+    // Card tapped and awaiting app response: quick dual blink.
+    if (now - activeLedTimer >= 110) {
+      activeLedTimer = now;
+      activeBlinkState = !activeBlinkState;
+      digitalWrite(GREEN_LED, activeBlinkState ? HIGH : LOW);
+      digitalWrite(RED_LED, activeBlinkState ? HIGH : LOW);
+    }
+    return;
+  }
+
+  // Idle customer mode: green heartbeat indicates scanner is ready.
+  unsigned long interval = activeHeartbeatOn ? 120 : 760;
+  if (now - activeLedTimer >= interval) {
+    activeLedTimer = now;
+    activeHeartbeatOn = !activeHeartbeatOn;
+    digitalWrite(GREEN_LED, activeHeartbeatOn ? HIGH : LOW);
+    digitalWrite(RED_LED, LOW);
+  }
+}
+
 void loop() {
   // 1. Listen for State Changes from C# App
   if (Serial.available() > 0) {
@@ -63,8 +110,9 @@ void loop() {
       lcd.clear();
       lcd.setCursor(0, 0); lcd.print("Access Granted!");
       lcd.setCursor(0, 1); lcd.print("Welcome Back");
-      digitalWrite(GREEN_LED, HIGH);
-      digitalWrite(RED_LED, LOW);
+      waitingValidation = false;
+      lastScanWasValid = true;
+      activeLedTimer = millis();
       showingMessage = true;
       messageTimer = millis();
     } 
@@ -72,8 +120,10 @@ void loop() {
       lcd.clear();
       lcd.setCursor(0, 0); lcd.print("Unknown Card");
       lcd.setCursor(0, 1); lcd.print("Not Registered");
-      digitalWrite(GREEN_LED, LOW);
-      digitalWrite(RED_LED, HIGH);
+      waitingValidation = false;
+      lastScanWasValid = false;
+      activeLedTimer = millis();
+      activeBlinkState = true;
       showingMessage = true;
       messageTimer = millis();
     }
@@ -106,6 +156,13 @@ void loop() {
       resetDisplay();
     }
 
+    // Keep LEDs informative while active.
+    updateActiveLedState();
+
+    if (waitingValidation) {
+      return;
+    }
+
     if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
       return; // No card
     }
@@ -113,8 +170,11 @@ void loop() {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Checking...");
-    digitalWrite(GREEN_LED, LOW);
-    digitalWrite(RED_LED, LOW);
+    waitingValidation = true;
+    activeLedTimer = millis();
+    activeBlinkState = true;
+    digitalWrite(GREEN_LED, HIGH);
+    digitalWrite(RED_LED, HIGH);
 
     Serial.print("RFID:");
     for (byte i = 0; i < mfrc522.uid.size; i++) {
@@ -140,8 +200,21 @@ void resetDisplay() {
     lcd.setCursor(0, 1);
     lcd.print("Please Tap Card");
   }
-  digitalWrite(GREEN_LED, LOW);
-  digitalWrite(RED_LED, LOW);
+
+  waitingValidation = false;
   showingMessage = false;
+  lastScanWasValid = false;
+  activeLedTimer = millis();
+  activeHeartbeatOn = false;
+  activeBlinkState = false;
+
+  if (systemMode == 1) {
+    digitalWrite(GREEN_LED, HIGH);
+    digitalWrite(RED_LED, LOW);
+  } else {
+    digitalWrite(GREEN_LED, LOW);
+    digitalWrite(RED_LED, LOW);
+  }
+
   timer = millis();
 }
