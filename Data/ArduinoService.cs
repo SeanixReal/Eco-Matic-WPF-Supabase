@@ -65,5 +65,12 @@ namespace Eco_Matic.Data
                 _serialPort.WriteLine(state);
             }
         }
+        public void SendMessage(string message)
+        {
+            if (_serialPort != null && _serialPort.IsOpen)
+            {
+                _serialPort.WriteLine("MSG:" + message);
+            }
+        }
     }
 }

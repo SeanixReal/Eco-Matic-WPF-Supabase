@@ -106,6 +106,21 @@ void loop() {
       systemMode = 0;
       resetDisplay();
     }
+    else if (msg.startsWith("MSG:")) {
+      String customMsg = msg.substring(4);
+      customMsg.trim();
+      
+      lcd.clear();
+      if (customMsg.length() > 16) {
+        lcd.setCursor(0, 0); lcd.print(customMsg.substring(0, 16));
+        lcd.setCursor(0, 1); lcd.print(customMsg.substring(16, 32));
+      } else {
+        lcd.setCursor(0, 0); lcd.print(customMsg);
+      }
+      
+      showingMessage = true;
+      messageTimer = millis();
+    }
     else if (systemMode == 1 && msg == "VALID") {
       lcd.clear();
       lcd.setCursor(0, 0); lcd.print("Access Granted!");

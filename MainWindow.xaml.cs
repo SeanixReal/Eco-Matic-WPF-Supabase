@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 
 namespace Eco_Matic
@@ -94,7 +94,7 @@ namespace Eco_Matic
             {
                 Hide();
                 DataStore.Initialize(selectionWindow.SelectedMachineId);
-                var customerWindow = new CustomerWindow
+                var customerWindow = new CustomerWindow(_arduino)
                 {
                     Owner = this
                 };
