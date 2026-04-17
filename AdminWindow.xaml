@@ -237,10 +237,11 @@
                                 <DataGrid x:Name="dgInventory" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0" RowHeight="60">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="50"/>
+                                        <DataGridTextColumn Header="Slot" Binding="{Binding Slot}" Width="60"/>
                                         <DataGridTemplateColumn Header="Image" Width="70">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
-                                                    <Image Source="{Binding Image}" Width="50" Height="50" HorizontalAlignment="Center"/>
+                                                    <Image Source="{Binding Image, Converter={StaticResource ImagePathConverter}}" Width="50" Height="50" HorizontalAlignment="Center"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>

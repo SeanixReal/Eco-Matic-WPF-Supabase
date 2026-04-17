@@ -19,6 +19,15 @@
             <TextBlock x:Name="TitleContent" Text="Add New Item" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20"/>
 
             <StackPanel Grid.Row="1" Margin="0,0,0,20">
+                <TextBlock Text="Slot ID (e.g., A1, B2):" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
+                <TextBox x:Name="txtSlotId" Height="35" Padding="5,8" Margin="0,0,0,15" BorderBrush="#CBD5E1"/>
+
+                <TextBlock Text="Select Existing Item (Optional):" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
+                <ComboBox x:Name="cboExistingItem" Padding="10,8" Margin="0,0,0,15" BorderBrush="#CBD5E1" Height="35" 
+                          DisplayMemberPath="name" SelectionChanged="CboExistingItem_SelectionChanged"/>
+
+                <Separator Margin="0,10,0,15" Background="#E2E8F0"/>
+
                 <TextBlock Text="Item Name:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
                 <TextBox x:Name="txtName" Height="35" Padding="5,8" Margin="0,0,0,15" BorderBrush="#CBD5E1"/>
 
@@ -30,7 +39,14 @@
                 </ComboBox>
 
                 <TextBlock Text="Image Path:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
-                <TextBox x:Name="txtImagePath" Height="35" Padding="5,8" Margin="0,0,0,15" BorderBrush="#CBD5E1" Text="/Assets/Placeholder.png"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="txtImagePath" Height="35" Padding="5,8" BorderBrush="#CBD5E1" IsReadOnly="True" Text="Assets/Images/placeholder.png"/>
+                    <Button x:Name="btnBrowseImage" Grid.Column="1" Content="Browse..." Margin="5,0,0,0" Padding="10,0" Height="35" Click="BtnBrowseImage_Click"/>
+                </Grid>
 
                 <Grid Margin="0,0,0,15">
                     <Grid.ColumnDefinitions>

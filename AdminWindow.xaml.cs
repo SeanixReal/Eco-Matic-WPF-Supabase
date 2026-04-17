@@ -182,7 +182,20 @@ namespace Eco_Matic
                 if (addWindow.ShowDialog() == true)
                 {
                     var store = new Data.MySqlStore();
-                    if (store.AddNewItemToMachine(machineId, addWindow.ItemName, addWindow.ItemType, addWindow.Price, addWindow.Calories, addWindow.InitialStock, addWindow.MaxCapacity, addWindow.ImagePath, addWindow.DispenseMessage, addWindow.ExamineMessage))
+                    
+                    bool success;
+                    if (addWindow.SelectedItemId.HasValue)
+                    {
+                        // Use existing item from catalog
+                        success = store.AddItemToMachineSlot(machineId, addWindow.SlotId, addWindow.SelectedItemId.Value, addWindow.InitialStock);
+                    }
+                    else
+                    {
+                        // Create brand new item AND add to machine
+                        success = store.AddNewItemToMachine(machineId, addWindow.SlotId, addWindow.ItemName, addWindow.ItemType, addWindow.Price, addWindow.Calories, addWindow.InitialStock, addWindow.MaxCapacity, addWindow.ImagePath, addWindow.DispenseMessage, addWindow.ExamineMessage);
+                    }
+
+                    if (success)
                     {
                         LoadInventoryGrid(machineId);
                     }
@@ -221,6 +234,7 @@ namespace Eco_Matic
             if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
             {
                 int inventoryId = Convert.ToInt32(row["_InventoryID"]);
+                string slotId = row["Slot"].ToString() ?? "";
                 string name = row["Item"].ToString() ?? "";
                 string type = row["Type"].ToString() ?? "";
                 decimal price = Convert.ToDecimal(row["Price"]);
@@ -231,7 +245,7 @@ namespace Eco_Matic
                 string dispenseMsg = row.Row.Table.Columns.Contains("Dispense Message") && row["Dispense Message"] != DBNull.Value ? (row["Dispense Message"].ToString() ?? "Enjoy your item!") : "Enjoy your item!";
                 string examineMsg = row.Row.Table.Columns.Contains("Examine Message") && row["Examine Message"] != DBNull.Value ? (row["Examine Message"].ToString() ?? "A standard vending item.") : "A standard vending item.";
 
-                var editWindow = new InventoryItemWindow(name, type, price, calories, stock, maxCap, imagePath, dispenseMsg, examineMsg)
+                var editWindow = new InventoryItemWindow(slotId, name, type, price, calories, stock, maxCap, imagePath, dispenseMsg, examineMsg)
                 {
                     Owner = this
                 };
@@ -239,7 +253,7 @@ namespace Eco_Matic
                 if (editWindow.ShowDialog() == true)
                 {
                     var store = new Data.MySqlStore();
-                    if (store.UpdateInventoryItem(inventoryId, editWindow.ItemName, editWindow.ItemType, editWindow.Price, editWindow.Calories, editWindow.ImagePath, editWindow.InitialStock, editWindow.MaxCapacity, editWindow.DispenseMessage, editWindow.ExamineMessage))
+                    if (store.UpdateInventoryItem(inventoryId, editWindow.SlotId, editWindow.ItemName, editWindow.ItemType, editWindow.Price, editWindow.Calories, editWindow.ImagePath, editWindow.InitialStock, editWindow.MaxCapacity, editWindow.DispenseMessage, editWindow.ExamineMessage))
                     {
                         LoadInventoryGrid(machineId);
                     }

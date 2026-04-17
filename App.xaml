@@ -1,8 +1,11 @@
-﻿<Application x:Class="Eco_Matic.App"
+<Application x:Class="Eco_Matic.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Eco_Matic.Utilities"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
+        <local:ImagePathConverter x:Key="ImagePathConverter" />
+        
         <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F5FA" />
         <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
         <SolidColorBrush x:Key="SurfaceAltBrush" Color="#F8FAFD" />

@@ -13,6 +13,22 @@ public partial class MySqlStore
         return new MySqlConnection(_connectionString);
     }
 
+    public System.Data.DataTable GetAllItems()
+    {
+        var dt = new System.Data.DataTable();
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            string query = "SELECT item_id, name, type, price, calories, image_path, dispense_message, examine_message FROM items ORDER BY name ASC";
+            using var cmd = new MySqlCommand(query, conn);
+            using var adapter = new MySqlDataAdapter(cmd);
+            adapter.Fill(dt);
+        }
+        catch {}
+        return dt;
+    }
+
     public (string? Role, int? AssignedMachineId) AuthenticateUser(string username, string password)
     {
         try
@@ -115,23 +131,8 @@ public partial class MySqlStore
             
             if (inserted)
             {
-                // After safely creating the new machine, let's grab its newly created machine_id
-                using var idCmd = new MySqlCommand("SELECT LAST_INSERT_ID()", conn);
-                int newMachineId = Convert.ToInt32(idCmd.ExecuteScalar());
-
-                // Auto-populate this brand new machine with EVERY available master item in the global items table
-                // This initializes every item in the machine's inventory to 15 (max capacity).
-                string popScript = @"
-                    INSERT INTO machine_inventory (machine_id, item_id, stock_level)
-                    SELECT @newId, item_id, 15
-                    FROM items
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM machine_inventory 
-                        WHERE machine_id = @newId AND item_id = items.item_id
-                    )";
-                using var popCmd = new MySqlCommand(popScript, conn);
-                popCmd.Parameters.AddWithValue("@newId", newMachineId);
-                popCmd.ExecuteNonQuery();
+                // Removed auto-population of brand new machines with every item.
+                // New machines now start empty so the user can assign specific items to specific slots.
             }
 
             return inserted;
@@ -239,8 +240,9 @@ public partial class MySqlStore
             conn.Open();
             string query = @"
                 SELECT 
-                    ROW_NUMBER() OVER(ORDER BY mi.inventory_id) AS 'ID',
+                    mi.slot_id AS 'Slot',
                     mi.inventory_id AS '_InventoryID',
+                    i.item_id AS '_ItemID',
                     i.image_path AS 'Image',
                     i.name AS 'Item',
                     i.type AS 'Type',
@@ -252,7 +254,8 @@ public partial class MySqlStore
                     mi.max_capacity AS 'Max Capacity'
                 FROM machine_inventory mi
                 JOIN items i ON mi.item_id = i.item_id
-                WHERE mi.machine_id = @machineId";
+                WHERE mi.machine_id = @machineId
+                ORDER BY mi.slot_id ASC";
             using var cmd = new MySqlCommand(query, conn);
             cmd.Parameters.AddWithValue("@machineId", machineId);
             using var adapter = new MySqlDataAdapter(cmd);
@@ -264,24 +267,43 @@ public partial class MySqlStore
         }
         return dt;
     }
-    public bool AddNewItemToMachine(int machineId, string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath = "/Assets/Placeholder.png", string dispenseMessage = "Enjoy your item!", string examineMessage = "A standard vending item.")
+    /// <summary>
+    /// Links an existing item from the master catalog to a specific vending machine slot.
+    /// </summary>
+    public bool AddItemToMachineSlot(int machineId, string slotId, int itemId, int stock)
+    {
+        try
+        {
+            using var conn = GetConnection();
+            conn.Open();
+            
+            string query = "INSERT INTO machine_inventory (machine_id, item_id, slot_id, stock_level, max_capacity) VALUES (@mid, @iid, @sid, @stock, 15)";
+            using var cmd = new MySqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@mid", machineId);
+            cmd.Parameters.AddWithValue("@iid", itemId);
+            cmd.Parameters.AddWithValue("@sid", slotId);
+            cmd.Parameters.AddWithValue("@stock", stock);
+            cmd.ExecuteNonQuery();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Failed to link item to slot: " + ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Creates a brand new item in the master catalog AND links it to a vending machine slot.
+    /// </summary>
+    public bool AddNewItemToMachine(int machineId, string slotId, string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath = "/Assets/Placeholder.png", string dispenseMessage = "Enjoy your item!", string examineMessage = "A standard vending item.")
     {
         try
         {
             using var conn = GetConnection();
             conn.Open();
 
-            // Enforce max 12 items limit per machine
-            string checkQuery = "SELECT COUNT(*) FROM machine_inventory WHERE machine_id = @mid";
-            using var checkCmd = new MySqlCommand(checkQuery, conn);
-            checkCmd.Parameters.AddWithValue("@mid", machineId);
-            int count = Convert.ToInt32(checkCmd.ExecuteScalar());
-            if (count >= 12)
-            {
-                System.Windows.MessageBox.Show("Maximum of 12 items allowed per vending machine.", "Capacity Reached", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return false;
-            }
-
+            // 1. Create new master item
             string q1 = "INSERT INTO items (name, type, price, calories, image_path, dispense_message, examine_message) VALUES (@name, @type, @price, @calories, @img, @dispenseMessage, @examineMessage)";
             using var cmd1 = new MySqlCommand(q1, conn);
             cmd1.Parameters.AddWithValue("@name", name);
@@ -291,15 +313,15 @@ public partial class MySqlStore
             cmd1.Parameters.AddWithValue("@img", imagePath);
             cmd1.Parameters.AddWithValue("@dispenseMessage", dispenseMessage);
             cmd1.Parameters.AddWithValue("@examineMessage", examineMessage);
-            cmd1.Parameters.AddWithValue("@examineMessage", examineMessage);
             cmd1.ExecuteNonQuery();
+            int itemId = (int)cmd1.LastInsertedId;
             
-            long itemId = cmd1.LastInsertedId;
-            
-            string q2 = "INSERT INTO machine_inventory (machine_id, item_id, stock_level, max_capacity) VALUES (@mid, @iid, @stock, @maxCap)";
+            // 2. Link to slot
+            string q2 = "INSERT INTO machine_inventory (machine_id, item_id, slot_id, stock_level, max_capacity) VALUES (@mid, @iid, @sid, @stock, @maxCap)";
             using var cmd2 = new MySqlCommand(q2, conn);
             cmd2.Parameters.AddWithValue("@mid", machineId);
             cmd2.Parameters.AddWithValue("@iid", itemId);
+            cmd2.Parameters.AddWithValue("@sid", slotId);
             cmd2.Parameters.AddWithValue("@stock", stock);
             cmd2.Parameters.AddWithValue("@maxCap", maxCap);
             cmd2.ExecuteNonQuery();
@@ -307,7 +329,7 @@ public partial class MySqlStore
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Failed to add item: {ex.Message}");
+            System.Windows.MessageBox.Show("Failed to add new item: " + ex.Message);
             return false;
         }
     }
@@ -369,7 +391,7 @@ public partial class MySqlStore
         cmd.ExecuteNonQuery();
     }
 
-    public bool UpdateInventoryItem(int inventoryId, string name, string type, decimal price, int calories, string imagePath, int stock, int maxCap, string dispenseMessage, string examineMessage)
+    public bool UpdateInventoryItem(int inventoryId, string slotId, string name, string type, decimal price, int calories, string imagePath, int stock, int maxCap, string dispenseMessage, string examineMessage)
     {
         try
         {
@@ -383,6 +405,7 @@ public partial class MySqlStore
             if (itemIdObj == null) return false;
             int itemId = Convert.ToInt32(itemIdObj);
 
+            // Update master item (catalog)
             string q1 = "UPDATE items SET name = @n, type = @t, price = @p, calories = @cal, image_path = @img, dispense_message = @dispenseMessage, examine_message = @examineMessage WHERE item_id = @iid";
             using var cmd1 = new MySqlCommand(q1, conn);
             cmd1.Parameters.AddWithValue("@n", name);
@@ -395,8 +418,10 @@ public partial class MySqlStore
             cmd1.Parameters.AddWithValue("@iid", itemId);
             cmd1.ExecuteNonQuery();
 
-            string q2 = "UPDATE machine_inventory SET stock_level = @s, max_capacity = @mc WHERE inventory_id = @invId";
+            // Update machine specific slot details
+            string q2 = "UPDATE machine_inventory SET slot_id = @sid, stock_level = @s, max_capacity = @mc WHERE inventory_id = @invId";
             using var cmd2 = new MySqlCommand(q2, conn);
+            cmd2.Parameters.AddWithValue("@sid", slotId);
             cmd2.Parameters.AddWithValue("@s", stock);
             cmd2.Parameters.AddWithValue("@mc", maxCap);
             cmd2.Parameters.AddWithValue("@invId", inventoryId);
@@ -424,15 +449,12 @@ public partial class MySqlStore
             if (itemIdObj == null) return false;
             int itemId = Convert.ToInt32(itemIdObj);
 
+            // Remove ONLY from machine inventory. 
+            // The item remains in the global 'items' catalog for other machines to use.
             string q2 = "DELETE FROM machine_inventory WHERE inventory_id = @invId";
             using var cmd2 = new MySqlCommand(q2, conn);
             cmd2.Parameters.AddWithValue("@invId", inventoryId);
             cmd2.ExecuteNonQuery();
-
-            string q1 = "DELETE FROM items WHERE item_id = @iid";
-            using var cmd1 = new MySqlCommand(q1, conn);
-            cmd1.Parameters.AddWithValue("@iid", itemId);
-            cmd1.ExecuteNonQuery();
 
             return true;
         }
