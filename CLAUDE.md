@@ -22,3 +22,5 @@
 - `AdminWindow.xaml`: Administrative and inventory management.
 - `Utilities/ImageLoader.cs`: Core logic for loading product images.
 - `Data/MySqlStore.cs`: Database interaction layer.
+- `Data/ArduinoService.cs`: Serial communication with hardware.
+- `Arduino/RFID_Scanner/RFID_Scanner.ino`: Arduino firmware.

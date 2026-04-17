@@ -21,6 +21,12 @@ Eco-Matic is a modern, eco-friendly vending machine application built with .NET 
   - User authentication (Admin/Customer).
 - **Models**: Simple POCO classes (e.g., `Product`, `User`) represent data entities.
 
+### 4. Hardware Integration
+- **ArduinoService**: Manages serial communication between the WPF app and an Arduino microcontroller.
+  - **RFID Scanning**: Listens for card UID inputs to identify and authenticate customers.
+  - **LCD Mirroring**: Sends machine status messages (via `MSG:` protocol) to a physical 16x2 LCD display, ensuring hardware and software stay in sync.
+- **RFID_Scanner.ino**: The C++ firmware for the Arduino, handling RFID reading, LED feedback (RGB status), and LCD message parsing.
+
 ## Design Decisions
 - **Side-by-Side Layout**: Chosen over vertical stacking to maximize screen real estate and mimic real-world machine ergonomics.
 - **Resource Embedding**: Assets are set as `Resource` in the `.csproj` to bundle them into the assembly for easier deployment.
