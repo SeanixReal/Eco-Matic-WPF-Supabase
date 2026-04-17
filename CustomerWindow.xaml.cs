@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace Eco_Matic;
@@ -14,7 +15,7 @@ public partial class CustomerWindow : Window
 
     private decimal _insertedMoney;
     private bool _isDispensing;
-
+    private readonly Data.ArduinoService? _arduino;
     private DispatcherTimer? _dispenseTimer;
     private DispatcherTimer? _blinkTimer;
     private int _blinkSlotId;
@@ -46,9 +47,10 @@ public partial class CustomerWindow : Window
         public override string ToString() => Name;
     }
 
-    public CustomerWindow()
+    public CustomerWindow(Data.ArduinoService? arduino = null)
     {
         InitializeComponent();
+        _arduino = arduino;
         InitializeSlots();
         InitializeSelectors();
         RefreshProducts();
@@ -435,7 +437,51 @@ public partial class CustomerWindow : Window
     {
         _isDispensing = true;
         imgDispense.Source = ImageLoader.LoadProductImage(product.ImagePath);
+        imgDispense.Visibility = Visibility.Visible;
+        imgDispense.Opacity = 1.0;
+
         SetDispenseStatus("DISPENSING...", Brushes.Goldenrod);
+
+        // --- Randomized Dispense Animation ---
+        Random rand = new Random();
+        double targetX = rand.Next(-50, 50);
+        double targetAngle = rand.Next(-15, 15);
+
+        // Initial state: Center, but we animate Y from above
+        imgDispenseTranslate.X = 0;
+        imgDispenseTranslate.Y = 0; 
+        imgDispenseRotate.Angle = 0;
+
+        Storyboard sb = new Storyboard();
+
+        // 1. Drop and Bounce (Y) - Animate FROM -300 TO 0
+        DoubleAnimationUsingKeyFrames dropAnim = new DoubleAnimationUsingKeyFrames();
+        dropAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(-300, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        dropAnim.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.8)), new BounceEase { Bounces = 3, Bounciness = 2 }));
+        Storyboard.SetTarget(dropAnim, imgDispenseTranslate);
+        Storyboard.SetTargetProperty(dropAnim, new PropertyPath(TranslateTransform.YProperty));
+        sb.Children.Add(dropAnim);
+
+        // 2. Horizontal Shift (X)
+        DoubleAnimation xAnim = new DoubleAnimation(0, targetX, TimeSpan.FromSeconds(0.8))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(xAnim, imgDispenseTranslate);
+        Storyboard.SetTargetProperty(xAnim, new PropertyPath(TranslateTransform.XProperty));
+        sb.Children.Add(xAnim);
+
+        // 3. Random Rotation (Angle)
+        DoubleAnimation rotAnim = new DoubleAnimation(0, targetAngle, TimeSpan.FromSeconds(0.8))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(rotAnim, imgDispenseRotate);
+        Storyboard.SetTargetProperty(rotAnim, new PropertyPath(RotateTransform.AngleProperty));
+        sb.Children.Add(rotAnim);
+
+        sb.Begin(); // Start with default name scope
+        // -------------------------------------
 
         if (_dispenseTimer != null)
         {
@@ -444,7 +490,7 @@ public partial class CustomerWindow : Window
 
         _dispenseTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(1.5)
+            Interval = TimeSpan.FromSeconds(3.0)
         };
         _dispenseTimer.Tick += (_, _) =>
         {
@@ -494,8 +540,14 @@ public partial class CustomerWindow : Window
 
     private void SetDispenseStatus(string text, Brush color)
     {
-        lblDispenseText.Text = text;
-        lblDispenseText.Foreground = color;
+        // Sync with the virtual LCD display
+        if (lblLcdDisplay != null)
+        {
+            lblLcdDisplay.Text = text.ToUpper().Replace("\n", " ");
+        }
+
+        // Sync with the physical Arduino LCD display
+        _arduino?.SendMessage(text.ToUpper().Replace("\n", " "));
     }
 
     private void BtnHelp_Click(object sender, RoutedEventArgs e)
@@ -506,7 +558,7 @@ public partial class CustomerWindow : Window
             "2. Press SELECT below a product slot.\n" +
             "3. Use RECYCLE FOR CREDIT if needed.\n" +
             "4. Use EXAMINE to view item details.\n" +
-            "5. Use COIN RETURN to refund your balance.",
+            "5. Your remaining balance will be returned automatically when you click DONE.",
             "Help - ECO-MATIC",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
@@ -514,6 +566,7 @@ public partial class CustomerWindow : Window
 
     private void BtnBack_Click(object sender, RoutedEventArgs e)
     {
+        // Show receipt first if a transaction exists
         if (DataStore.LastTransaction != null)
         {
             var receipt = new ReceiptWindow(DataStore.LastTransaction)
@@ -522,6 +575,20 @@ public partial class CustomerWindow : Window
             };
             receipt.ShowDialog();
             DataStore.LastTransaction = null;
+        }
+
+        // Automatically return change
+        if (_insertedMoney > 0)
+        {
+            decimal returned = _insertedMoney;
+            _insertedMoney = 0;
+            UpdateMoneyDisplay();
+            
+            MessageBox.Show(this,
+                $"P{returned:F2} change returned. Thank you for using Eco-Matic!",
+                "Change Returned",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         Close();
