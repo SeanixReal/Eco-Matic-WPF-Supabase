@@ -43,9 +43,9 @@ CREATE TABLE IF NOT EXISTS items (
     type VARCHAR(50) NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     calories INT DEFAULT 0,
-    volume_ml INT DEFAULT 0,
-    flavor_text TEXT,
-    image_path VARCHAR(255)
+    image_path VARCHAR(255),
+    dispense_message VARCHAR(255) DEFAULT 'Enjoy your item!',
+    examine_message TEXT
 );
 
 -- @block Create Machine Inventory Table
@@ -54,11 +54,12 @@ CREATE TABLE IF NOT EXISTS machine_inventory (
     inventory_id INT AUTO_INCREMENT PRIMARY KEY,
     machine_id INT NOT NULL,
     item_id INT NOT NULL,
+    slot_id VARCHAR(10) NOT NULL,
     stock_level INT DEFAULT 0,
     max_capacity INT DEFAULT 15,
     FOREIGN KEY (machine_id) REFERENCES vending_machines(machine_id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(item_id) ON DELETE CASCADE,
-    UNIQUE KEY unique_machine_item (machine_id, item_id)
+    UNIQUE KEY unique_machine_slot (machine_id, slot_id)
 );
 
 -- @block Create Sales/Transactions Table
