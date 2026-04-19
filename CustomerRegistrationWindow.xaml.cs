@@ -24,7 +24,7 @@ namespace Eco_Matic
                 return;
             }
 
-            var db = new Data.MySqlStore();
+            var db = new Data.SupabaseStore();
             if (db.RegisterCustomer(_rfid, email, pass))
             {
                 MessageBox.Show("Registration successful! You can now earn Eco-Credits.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);

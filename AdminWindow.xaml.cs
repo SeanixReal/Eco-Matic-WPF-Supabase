@@ -10,7 +10,7 @@ namespace Eco_Matic
     /// 
     ///  : Highlights core OOP concepts (Encapsulation, UI vs Data layer separation) 
     /// and Event-Driven architecture in WPF. Uses Role-Based Access Control (RBAC) to restrict features.
-    ///  : This is the View logic. Do not put raw SQL here; always call MySqlStore.cs.
+    ///  : This is the View logic. Do not put raw SQL here; always call SupabaseStore.cs.
     ///  : Explain that this single window morphs dynamically based on who logs in!
     /// </summary>
     public partial class AdminWindow : Window
@@ -163,7 +163,7 @@ namespace Eco_Matic
         {
             if (cboInventoryMachine.SelectedValue is int machineId)
             {
-                var store = new Data.MySqlStore();
+                var store = new Data.SupabaseStore();
                 LoadInventoryGrid(machineId);
             }
         }
@@ -181,7 +181,7 @@ namespace Eco_Matic
                 addWindow.Owner = this;
                 if (addWindow.ShowDialog() == true)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     
                     bool success;
                     if (addWindow.SelectedItemId.HasValue)
@@ -216,7 +216,7 @@ namespace Eco_Matic
                 restockWindow.Owner = this;
                 if (restockWindow.ShowDialog() == true)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     if (store.RestockInventoryItem(inventoryId, restockWindow.RestockQuantity))
                     {
                         LoadInventoryGrid(machineId);
@@ -252,7 +252,7 @@ namespace Eco_Matic
 
                 if (editWindow.ShowDialog() == true)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     if (store.UpdateInventoryItem(inventoryId, editWindow.SlotId, editWindow.ItemName, editWindow.ItemType, editWindow.Price, editWindow.Calories, editWindow.ImagePath, editWindow.InitialStock, editWindow.MaxCapacity, editWindow.DispenseMessage, editWindow.ExamineMessage))
                     {
                         LoadInventoryGrid(machineId);
@@ -274,7 +274,7 @@ namespace Eco_Matic
 
                 if (MessageBox.Show($"Are you sure you want to permanently delete '{name}'?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     if (store.DeleteInventoryItem(inventoryId))
                     {
                         LoadInventoryGrid(machineId);
@@ -289,19 +289,19 @@ namespace Eco_Matic
 
         private void LoadInventoryGrid(int machineId)
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             dgInventory.ItemsSource = store.GetMachineInventory(machineId).DefaultView;
         }
 
         /// <summary>
-        /// Retrieves vending machines from the MySqlStore dependency and assigns them to the Inventory Machine Switcher Dropdown. 
+        /// Retrieves vending machines from the SupabaseStore dependency and assigns them to the Inventory Machine Switcher Dropdown. 
         /// Crucially enforces RBAC constraints dynamically by filtering the resulting DataView.
         ///  : Demonstrates slicing DB datasets directly in RAM via `System.Data.DataView` 
         /// to avoid performing multiple distinct, round-trip SQL queries to the DB Layer.
         /// </summary>        
         private void LoadInventoryMachines()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             var dt = store.GetVendingMachinesLookup();
             
             if (_currentUserRole == "Inventory Manager" && _assignedMachineId.HasValue)
@@ -371,7 +371,7 @@ namespace Eco_Matic
         /// </summary>
         private void LoadDashboardMetrics()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             store.GetDashboardMetrics(out decimal totalSales, out int totalItemsSold, out int lowStockAlerts, out int activeMachines);
 
             txtTotalSales.Text = $"₱{totalSales:F2}";
@@ -402,7 +402,7 @@ namespace Eco_Matic
         {
             if (cboLogsFilter == null || dpLogsDate == null) return;
 
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             string filterType = (cboLogsFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
             DateTime targetDate = dpLogsDate.SelectedDate ?? DateTime.Today;
 
@@ -421,7 +421,7 @@ namespace Eco_Matic
         {
             if (MessageBox.Show("Are you sure you want to clear all event logs?", "Clear Logs", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                var store = new Data.MySqlStore();
+                var store = new Data.SupabaseStore();
                 store.ClearEventLogs();
                 LoadEventLogs();
             }
@@ -436,7 +436,7 @@ namespace Eco_Matic
         {
             if (cboSalesFilter == null || dpSalesDate == null) return;
             
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             string filterType = (cboSalesFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
             DateTime targetDate = dpSalesDate.SelectedDate ?? DateTime.Today;
 
@@ -460,7 +460,7 @@ namespace Eco_Matic
 
         private void LoadMachinesData()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             dgMachines.ItemsSource = store.GetVendingMachines().DefaultView;
         }
 
@@ -469,7 +469,7 @@ namespace Eco_Matic
             var addMach = new AddMachineWindow { Owner = this };
             if (addMach.ShowDialog() == true)
             {
-                var store = new Data.MySqlStore();
+                var store = new Data.SupabaseStore();
                 if (store.AddMachine(addMach.LocationName))
                 {
                     LoadMachinesData();
@@ -486,7 +486,7 @@ namespace Eco_Matic
                 string loc = row["Location"].ToString() ?? "";
                 if (MessageBox.Show($"Are you sure you want to delete Machine {machineId} at '{loc}'? This removes its inventory and sales history.", "Delete Machine", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     if (store.DeleteMachine(machineId))
                     {
                         LoadMachinesData();
@@ -511,7 +511,7 @@ namespace Eco_Matic
                 var editMach = new EditMachineWindow(loc, status) { Owner = this };
                 if (editMach.ShowDialog() == true)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     if (store.UpdateMachine(machineId, editMach.LocationName, editMach.Status))
                     {
                         LoadMachinesData();
@@ -532,7 +532,7 @@ namespace Eco_Matic
 
         private void LoadUsersData()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             dgUsers.ItemsSource = store.GetUsers().DefaultView;
         }
 
@@ -541,7 +541,7 @@ namespace Eco_Matic
             var editor = new UserEditorWindow { Owner = this };
             if (editor.ShowDialog() == true)
             {
-                var store = new Data.MySqlStore();
+                var store = new Data.SupabaseStore();
                 if (store.AddUser(editor.Username, editor.Password, editor.RoleId, editor.AssignedMachineId))
                 {
                     LoadUsersData();
@@ -567,7 +567,7 @@ namespace Eco_Matic
 
                 if (MessageBox.Show($"Are you sure you want to delete user '{user}'?", "Delete User", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     if (store.DeleteUser(userId))
                     {
                         LoadUsersData();
@@ -582,7 +582,7 @@ namespace Eco_Matic
 
         private void LoadCustomersData()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             dgCustomers.ItemsSource = store.GetCustomers().DefaultView;
         }
 
@@ -597,7 +597,7 @@ namespace Eco_Matic
                 // In a production app, you'd open a Dialog Box here asking for the exact amount.
                 if (MessageBox.Show($"Are you sure you want to add 10 Eco-Credits to {rfid}?", "Modify Credit", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     store.UpdateCustomerCredits(rfid, currentPoints + 10);
                     LoadCustomersData();
                 }
@@ -615,7 +615,7 @@ namespace Eco_Matic
                 string rfid = row["RFID"].ToString() ?? "";
                 if (MessageBox.Show($"Are you sure you want to permanently delete customer with RFID '{rfid}'?", "Delete Customer", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.MySqlStore();
+                    var store = new Data.SupabaseStore();
                     if (store.DeleteCustomer(rfid))
                     {
                         LoadCustomersData();

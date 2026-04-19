@@ -27,7 +27,7 @@ public static class DataStore
         ActiveMachineId = machineId;
         PendingPoints = 0;
         Products.Clear();
-        var store = new Eco_Matic.Data.MySqlStore();
+        var store = new Eco_Matic.Data.SupabaseStore();
         
         var dt = store.GetMachineInventory(machineId);
 
@@ -63,7 +63,7 @@ public static class DataStore
     public static void SaveInventory()
     {
         // Now synced live with DB, flush the current stock.
-        var store = new Eco_Matic.Data.MySqlStore();
+        var store = new Eco_Matic.Data.SupabaseStore();
         foreach (var p in Products)
         {
             if (p.DbInventoryId > 0)
@@ -75,7 +75,7 @@ public static class DataStore
 
     public static void LogEvent(string eventType, string details, decimal amount = 0m)
     {
-        var store = new Eco_Matic.Data.MySqlStore();
+        var store = new Eco_Matic.Data.SupabaseStore();
         store.LogEvent(eventType, details, amount, ActiveMachineId);
     }
 
@@ -83,13 +83,13 @@ public static class DataStore
     {
         // Actually needs the current machine ID.
         // If we only have 1 active machine right now, or if we track ActiveMachineId in DataStore
-        var store = new Eco_Matic.Data.MySqlStore();
+        var store = new Eco_Matic.Data.SupabaseStore();
         store.RecordSale(ActiveMachineId, inventoryId, amountPaid);
     }
 
     public static List<EventLogEntry> ReadLogs()
     {
-        var store = new Eco_Matic.Data.MySqlStore();
+        var store = new Eco_Matic.Data.SupabaseStore();
         var dt = store.GetEventLogs();
         var list = new List<EventLogEntry>();
         foreach (System.Data.DataRow r in dt.Rows)
@@ -98,7 +98,7 @@ public static class DataStore
             {
                 TimestampUtc = Convert.ToDateTime(r["Timestamp"]),
                 EventType = r["Event"].ToString() ?? "",
-                Details = r["Details"].ToString() ?? ""
+                Details = r["Notes"].ToString() ?? ""
             });
         }
         return list;
@@ -106,7 +106,7 @@ public static class DataStore
 
     public static void ClearLogs()
     {
-        var store = new Eco_Matic.Data.MySqlStore();
+        var store = new Eco_Matic.Data.SupabaseStore();
         store.ClearEventLogs();
     }
 }

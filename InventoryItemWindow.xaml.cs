@@ -59,7 +59,7 @@ namespace Eco_Matic
 
         private void LoadCatalog()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             var dt = store.GetAllItems();
             
             // Add a "Create New Item" dummy row

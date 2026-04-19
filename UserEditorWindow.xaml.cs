@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Collections.Generic;
-using MySql.Data.MySqlClient;
+
 
 namespace Eco_Matic
 {
@@ -23,7 +23,7 @@ namespace Eco_Matic
 
         private void LoadRoles()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             var dt = store.GetRoles();
             cboRole.ItemsSource = dt.DefaultView;
             cboRole.DisplayMemberPath = "role_name";
@@ -32,7 +32,7 @@ namespace Eco_Matic
 
         private void LoadMachines()
         {
-            var store = new Data.MySqlStore();
+            var store = new Data.SupabaseStore();
             var dt = store.GetVendingMachinesLookup();
             cboMachine.ItemsSource = dt.DefaultView;
             cboMachine.DisplayMemberPath = "location_name";

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using MySql.Data.MySqlClient;
 
 namespace Eco_Matic;
 
@@ -24,26 +23,22 @@ public partial class MachineSelectionWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        // Load machines from DB
-        var store = new Eco_Matic.Data.MySqlStore();
+        // Load machines from Supabase
+        var store = new Eco_Matic.Data.SupabaseStore();
         try
         {
+            var dt = store.GetVendingMachinesLookup();
             var machines = new List<VendingMachineModel>();
-            using var conn = store.GetConnection();
-            conn.Open();
 
-            string query = "SELECT machine_id, location_name FROM vending_machines WHERE status = 'Active'";
-            using var cmd = new MySqlCommand(query, conn);
-            using var reader = cmd.ExecuteReader();
-            
-            while (reader.Read())
+            foreach (System.Data.DataRow row in dt.Rows)
             {
-                int mId = reader.GetInt32(0);
-                string mLoc = reader.GetString(1);
+                string status = row["status"]?.ToString() ?? "";
+                if (status != "Active") continue;
+
                 machines.Add(new VendingMachineModel
                 {
-                    MachineId = mId,
-                    DisplayName = mLoc
+                    MachineId = Convert.ToInt32(row["machine_id"]),
+                    DisplayName = row["location_name"]?.ToString() ?? "Unknown"
                 });
             }
 
@@ -54,11 +49,6 @@ public partial class MachineSelectionWindow : Window
             }
 
             icMachines.ItemsSource = machines;
-        }
-        catch (MySqlException mex) when (mex.Number == 1049) 
-        {
-            txtStatus.Text = "Database not found. Please run the docs/database_setup.sql script first.";
-            txtStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(214, 90, 90));
         }
         catch (Exception ex)
         {

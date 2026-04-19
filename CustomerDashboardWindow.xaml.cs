@@ -12,7 +12,7 @@ namespace Eco_Matic
 
         private void LoadCustomerData(string rfid)
         {
-            var db = new Data.MySqlStore();
+            var db = new Data.SupabaseStore();
             var info = db.GetCustomerInfo(rfid);
 
             int finalBalance = info.EcoCredits;

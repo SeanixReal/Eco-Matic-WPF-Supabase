@@ -7,12 +7,12 @@ namespace Eco_Matic
     {
         private const string AdminPassword = "admin123";
         private Data.ArduinoService _arduino;
-        private Data.MySqlStore _db;
+        private Data.SupabaseStore _db;
 
         public MainWindow()
         {
             InitializeComponent();
-            _db = new Data.MySqlStore();
+            _db = new Data.SupabaseStore();
             _db.EnsureCustomerTableExists(); // Ensure DB is updated on boot
             
             // Connect to Arduino on COM5
@@ -120,7 +120,7 @@ namespace Eco_Matic
 
             if (login.ShowDialog() == true)
             {
-                var store = new Eco_Matic.Data.MySqlStore();
+                var store = new Eco_Matic.Data.SupabaseStore();
                 var loginResult = store.AuthenticateUser(login.Username, login.Password);
                 string? role = loginResult.Role;
                 int? machineId = loginResult.AssignedMachineId;
