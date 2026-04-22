@@ -11,13 +11,40 @@ Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty syste
 - **Eco-Credits Loyalty Program**: 
   - Scan physical RFID cards to register/login.
   - E-Wallet dashboard for tracking accumulated points.
-  - Pay for items using Eco-Credits.
+  - Save recycle points to an RFID-linked customer account.
 - **Admin CRM**: 
   - Role-Based Access Control (RBAC).
-  - Customer relation management (CRM) backend backed by MySQL to modify or view registered users and point balances.
+  - Customer relation management backed by Supabase to modify or view registered users and point balances.
 - **Event Logging**: Time-based filtering (Day, Week, Month) of all machine, sales, and user events for auditing.
 
 ## Setup
-- **Database**: Run the SQL scripts in `docs/database_setup.sql`. The system requires a running MySQL instance.
+- **Database**: The current application uses Supabase via `Data/SupabaseStore.cs` and `Data/SupabaseClient.cs`. Historical SQL reference files are kept in `docs/`.
 - **Hardware**: Wire the Arduino and MFRC522 per `Arduino/README.md` instructions and flash `RFID_Scanner.ino`.
-- **Application**: Open `Eco-Matic.sln` in Visual Studio and build the project, or run `dotnet run` in the root folder.
+- **Application**: Open the project in Visual Studio and build it, or run `dotnet run` in the root folder.
+
+## Offline Behavior
+
+The current system is **not** a true offline-first application.
+
+- It reads and writes through live Supabase REST calls.
+- `DataStore` only keeps in-memory state for the active vending session.
+- There is no persisted local database snapshot plus delayed sync queue yet.
+
+That means:
+
+- if the app already loaded a machine inventory and then the internet drops, some in-session UI behavior may continue temporarily
+- but full offline startup, reliable offline transactions, and automatic replay to Supabase when Wi-Fi returns are **not implemented yet**
+
+## Migration Note
+
+If your Supabase database was created before the per-machine price override refactor, run `docs/migration_increment3.sql`.
+
+That migration adds `machine_inventory.slot_price` and normalizes legacy slot IDs like `S1` into canonical values like `1`.
+
+## Documentation
+
+Project documentation now lives in `docs/`.
+
+- `docs/CODEBASE_ARCHITECTURE.md`
+- `docs/DIAGRAMS.md`
+- `docs/PROFESSOR_ARCHITECTURE_GUIDE.md`

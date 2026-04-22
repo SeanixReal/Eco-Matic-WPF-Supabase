@@ -1,39 +1,116 @@
-# Eco-Matic: User Manual
+# Eco-Matic Human Guide
 
-Welcome to the Eco-Matic Vending Machine Administration Console. This guide will walk you through the core functionalities of the system.
+This guide is for a human operator, classmate, or reviewer who needs to understand how to use the current system without reading the code first.
 
-## 1. Getting Started
-*   **Login**: Enter your provided username and password. The system will determine whether you are a **Master Admin** or an **Inventory Manager**.
-*   **Role Differences**:
-    *   *Master Admin*: Full access to everything, including Sales, Logs, User creation, and all machine inventories.
-    *   *Inventory Manager*: Restricted specifically to restocking items for the single vending machine assigned to them. All financial data is hidden.
+## 1. What the App Has
 
-## 2. Using the Dashboard
-When logged in as a Master Admin, you'll immediately see the **System Overview**:
-*   **Total Sales (₱)**: Cumulative revenue across all units.
-*   **Items Sold**: The total volume of stock processed.
-*   **Low Stock Alerts**: If an item in any machine drops below 5 units, this will turn red to alert you.
-*   **Active Machines**: The number of vending machines currently online on your network (max 4).
+Eco-Matic currently has three major user-facing flows:
 
-## 3. Inventory Management
-Select the **Inventory** tab on the left sidebar to manage machine stock.
-*   **Machine Dropdown**: Select the vending machine location you wish to inspect. Returning the grid of up to 12 slots.
-*   **Add New Item**: Clicking this allows you to create a brand new product, set its price, and specify its initial stock. Note that a vending machine cannot exceed 12 items.
-*   **Restock Item**: Select an item in the list and hit Restock to instantaneously refill the `Stock` amount.
-*   **Edit/Delete Item**: Modify item names, calorie values, prices, or completely remove them from the machine.
+- customer vending
+- admin management
+- RFID customer registration and recycle-credit saving
 
-## 4. Viewing Sales & Reports
-*   **Sales Filter**: Use the top-right filter to change the report's time range: Day, Week, Month, or Year. 
-*   **Date Selector**: Pick a specific calendar date and the system will dynamically filter the database to reflect only transactions that occurred on that date (or within that week/month/year).
+The admin side is now split into:
 
-## 5. Event Logs & Activity Tracking
-*   **Event Logs**: Every purchase, restock, edit, and deletion is recorded securely with a time-stamp.
-*   **Clear Logs**: A big red button resets the log list. Use this sparingly if the event logs list becomes too cluttered for tracking.
+- a shared `Items` catalog
+- a per-machine `Inventory` setup
 
-## 6. Network Expansion (Vending Machines)
-The **Vending Machines** tab allows you to configure your fleet.
-*   **Add Machine**: Input a custom location name. The machine will automatically self-populate its empty slots ready for business.
-*   **Edit Machine**: Change the location title or toggle the physical status (e.g., Active vs. Out of Order).
+## 2. Customer Mode
 
-## 7. User Manager
-*   Here, Master Admins can create new user credentials, set passwords, and assign them directly to manage a specific machine if they are an "Inventory Manager". Note: The Master Admin account cannot be deleted.
+The customer flow is centered on the vending machine UI.
+
+### What the customer can do
+
+- choose an active machine
+- insert money
+- examine items
+- buy available products
+- add recycle points during the session
+- receive a receipt and change
+
+### Important current behavior
+
+- purchases are still cash-based
+- recycle points are tracked separately from inserted cash
+- RFID is used for saving recycle points to a customer account, not for paying for products
+
+## 3. RFID Customer Flow
+
+When an RFID card is scanned:
+
+- if the card is already registered, the customer dashboard opens
+- if the card is unknown, the registration window opens
+- if there are pending recycle points, they can be saved to the customer account
+
+## 4. Admin Mode
+
+The admin side is controlled through `AdminWindow`.
+
+### Admin capabilities
+
+- view dashboard metrics
+- manage the global item catalog
+- manage machine inventory
+- restock items
+- view logs and sales
+- manage vending machines
+- manage users
+- manage RFID customers
+
+### Role behavior
+
+- `Admin`: full access
+- `Inventory Manager`: inventory-only style access with restricted views
+
+## 5. Inventory Rules You Should Follow
+
+The frontend customer vending screen only shows 12 product slots.
+
+That means:
+
+- keep each machine at 12 visible items or fewer
+- keep slot naming simple and consistent
+- avoid treating slot IDs as decorative labels only
+
+Recommended slot values:
+
+- `1`
+- `2`
+- ...
+- `12`
+
+The app treats those as the canonical machine slot IDs.
+
+Current technical note:
+
+- the code now validates slot IDs as `1` through `12`
+- the code now rejects duplicate slots on the same machine
+- the code now blocks adding more than 12 inventory entries to one machine
+
+## 6. Dashboard and Reports
+
+### Dashboard cards
+
+- total sales
+- items sold
+- low stock alerts
+- active machines
+
+### Low stock logic
+
+The current code marks low-stock alerts when stock is `3` or below.
+
+## 7. Known Practical Limitations
+
+- customer purchases do not yet deduct from RFID credits
+- the app is designed around a fixed 12-slot customer UI
+- images are intentionally local-first rather than cloud-dependent for reliable classroom demos
+- the system is not yet true offline-first; it does not persist a local database snapshot and sync queued changes later
+- if your live Supabase schema is older, run `docs/migration_increment3.sql` before expecting per-machine price overrides to work
+
+## 8. Where To Read More
+
+- architecture: `docs/CODEBASE_ARCHITECTURE.md`
+- diagrams: `docs/DIAGRAMS.md`
+- maintainer notes: `docs/MAINTAINER_GUIDE.md`
+- professor guide: `docs/PROFESSOR_ARCHITECTURE_GUIDE.md`
