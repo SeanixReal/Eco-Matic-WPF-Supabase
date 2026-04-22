@@ -52,6 +52,7 @@ namespace Eco_Matic
                 // Hide parts of the sidebar according to Role-Based Access Control
                 // Ensures employees only see what they are authorized to manage.
                 navDashboard.Visibility = Visibility.Collapsed;
+                navItems.Visibility = Visibility.Collapsed;
                 navLogs.Visibility = Visibility.Collapsed;
                 navSales.Visibility = Visibility.Collapsed;
                 navMachines.Visibility = Visibility.Collapsed;
@@ -89,6 +90,7 @@ namespace Eco_Matic
             // Reset all buttons to default styling
             navDashboard.Style = (Style)FindResource("SidebarButtonStyle");
             navInventory.Style = (Style)FindResource("SidebarButtonStyle");
+            navItems.Style = (Style)FindResource("SidebarButtonStyle");
             navLogs.Style = (Style)FindResource("SidebarButtonStyle");
             navSales.Style = (Style)FindResource("SidebarButtonStyle");
             navMachines.Style = (Style)FindResource("SidebarButtonStyle");
@@ -98,6 +100,7 @@ namespace Eco_Matic
             // Reset all views
             viewDashboard.Visibility = Visibility.Collapsed;
             viewInventory.Visibility = Visibility.Collapsed;
+            viewItems.Visibility = Visibility.Collapsed;
             viewLogs.Visibility = Visibility.Collapsed;
             viewSales.Visibility = Visibility.Collapsed;
             viewMachines.Visibility = Visibility.Collapsed;
@@ -119,7 +122,14 @@ namespace Eco_Matic
                     viewInventory.Visibility = Visibility.Visible;
                     LoadInventoryMachines();
                     txtViewTitle.Text = "Inventory Management";
-                    txtViewSubtitle.Text = "Manage items and restock.";
+                    txtViewSubtitle.Text = "Assign global items to machine slots and manage stock.";
+                    break;
+                case "Items":
+                    navItems.Style = (Style)FindResource("SidebarButtonActiveStyle");
+                    viewItems.Visibility = Visibility.Visible;
+                    LoadCatalogItems();
+                    txtViewTitle.Text = "Global Item Catalog";
+                    txtViewSubtitle.Text = "Manage shared item details used across machines.";
                     break;
                 case "Logs":
                     navLogs.Style = (Style)FindResource("SidebarButtonActiveStyle");
@@ -182,22 +192,13 @@ namespace Eco_Matic
                 if (addWindow.ShowDialog() == true)
                 {
                     var store = new Data.SupabaseStore();
-                    
-                    bool success;
+
                     if (addWindow.SelectedItemId.HasValue)
                     {
-                        // Use existing item from catalog
-                        success = store.AddItemToMachineSlot(machineId, addWindow.SlotId, addWindow.SelectedItemId.Value, addWindow.InitialStock);
-                    }
-                    else
-                    {
-                        // Create brand new item AND add to machine
-                        success = store.AddNewItemToMachine(machineId, addWindow.SlotId, addWindow.ItemName, addWindow.ItemType, addWindow.Price, addWindow.Calories, addWindow.InitialStock, addWindow.MaxCapacity, addWindow.ImagePath, addWindow.DispenseMessage, addWindow.ExamineMessage);
-                    }
-
-                    if (success)
-                    {
-                        LoadInventoryGrid(machineId);
+                        if (store.AddItemToMachineSlot(machineId, addWindow.SlotId, addWindow.SelectedItemId.Value, addWindow.InitialStock, addWindow.SlotPriceOverride))
+                        {
+                            LoadInventoryGrid(machineId);
+                        }
                     }
                 }
             }
@@ -234,18 +235,14 @@ namespace Eco_Matic
             if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
             {
                 int inventoryId = Convert.ToInt32(row["_InventoryID"]);
+                int itemId = Convert.ToInt32(row["_ItemID"]);
                 string slotId = row["Slot"].ToString() ?? "";
-                string name = row["Item"].ToString() ?? "";
-                string type = row["Type"].ToString() ?? "";
-                decimal price = Convert.ToDecimal(row["Price"]);
-                int calories = row["Calories"] != DBNull.Value ? Convert.ToInt32(row["Calories"]) : 0;
-                string imagePath = row["Image"].ToString() ?? "";
                 int stock = Convert.ToInt32(row["Stock"]);
-                int maxCap = Convert.ToInt32(row["Max Capacity"]);
-                string dispenseMsg = row.Row.Table.Columns.Contains("Dispense Message") && row["Dispense Message"] != DBNull.Value ? (row["Dispense Message"].ToString() ?? "Enjoy your item!") : "Enjoy your item!";
-                string examineMsg = row.Row.Table.Columns.Contains("Examine Message") && row["Examine Message"] != DBNull.Value ? (row["Examine Message"].ToString() ?? "A standard vending item.") : "A standard vending item.";
+                decimal? slotPrice = row.Row.Table.Columns.Contains("Slot Price") && row["Slot Price"] != DBNull.Value
+                    ? Convert.ToDecimal(row["Slot Price"])
+                    : null;
 
-                var editWindow = new InventoryItemWindow(slotId, name, type, price, calories, stock, maxCap, imagePath, dispenseMsg, examineMsg)
+                var editWindow = new InventoryItemWindow(slotId, itemId, stock, slotPrice)
                 {
                     Owner = this
                 };
@@ -253,7 +250,8 @@ namespace Eco_Matic
                 if (editWindow.ShowDialog() == true)
                 {
                     var store = new Data.SupabaseStore();
-                    if (store.UpdateInventoryItem(inventoryId, editWindow.SlotId, editWindow.ItemName, editWindow.ItemType, editWindow.Price, editWindow.Calories, editWindow.ImagePath, editWindow.InitialStock, editWindow.MaxCapacity, editWindow.DispenseMessage, editWindow.ExamineMessage))
+                    if (editWindow.SelectedItemId.HasValue &&
+                        store.UpdateMachineInventoryAssignment(inventoryId, machineId, editWindow.SlotId, editWindow.SelectedItemId.Value, editWindow.InitialStock, editWindow.MaxCapacity, editWindow.SlotPriceOverride))
                     {
                         LoadInventoryGrid(machineId);
                     }
@@ -290,7 +288,9 @@ namespace Eco_Matic
         private void LoadInventoryGrid(int machineId)
         {
             var store = new Data.SupabaseStore();
-            dgInventory.ItemsSource = store.GetMachineInventory(machineId).DefaultView;
+            var view = store.GetMachineInventory(machineId).DefaultView;
+            view.Sort = "[_SlotSort] ASC";
+            dgInventory.ItemsSource = view;
         }
 
         /// <summary>
@@ -534,6 +534,86 @@ namespace Eco_Matic
         {
             var store = new Data.SupabaseStore();
             dgUsers.ItemsSource = store.GetUsers().DefaultView;
+        }
+
+        private void LoadCatalogItems()
+        {
+            var store = new Data.SupabaseStore();
+            dgItems.ItemsSource = store.GetCatalogItems().DefaultView;
+        }
+
+        private void BtnAddCatalogItem_Click(object sender, RoutedEventArgs e)
+        {
+            var editor = new CatalogItemWindow { Owner = this };
+            if (editor.ShowDialog() == true)
+            {
+                var store = new Data.SupabaseStore();
+                if (store.AddCatalogItem(editor.ItemName, editor.ItemType, editor.Price, editor.Calories, editor.ImagePath, editor.DispenseMessage, editor.ExamineMessage))
+                {
+                    LoadCatalogItems();
+                }
+            }
+        }
+
+        private void BtnEditCatalogItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgItems.SelectedItem is not System.Data.DataRowView row)
+            {
+                MessageBox.Show("Please select a global item to edit.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            int itemId = Convert.ToInt32(row["ID"]);
+            var editor = new CatalogItemWindow(
+                row["Name"].ToString() ?? "",
+                row["Type"].ToString() ?? "Misc",
+                Convert.ToDecimal(row["Default Price"]),
+                Convert.ToInt32(row["Calories"]),
+                row["Image"].ToString() ?? "Assets/Images/placeholder.png",
+                row["Dispense Message"].ToString() ?? "Enjoy your item!",
+                row["Examine Message"].ToString() ?? "A standard vending item.")
+            {
+                Owner = this
+            };
+
+            if (editor.ShowDialog() == true)
+            {
+                var store = new Data.SupabaseStore();
+                if (store.UpdateCatalogItem(itemId, editor.ItemName, editor.ItemType, editor.Price, editor.Calories, editor.ImagePath, editor.DispenseMessage, editor.ExamineMessage))
+                {
+                    LoadCatalogItems();
+                    if (cboInventoryMachine.SelectedValue is int machineId)
+                    {
+                        LoadInventoryGrid(machineId);
+                    }
+                }
+            }
+        }
+
+        private void BtnDeleteCatalogItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgItems.SelectedItem is not System.Data.DataRowView row)
+            {
+                MessageBox.Show("Please select a global item to delete.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            int itemId = Convert.ToInt32(row["ID"]);
+            string name = row["Name"].ToString() ?? "";
+            if (MessageBox.Show($"Are you sure you want to permanently delete the global item '{name}'?", "Delete Global Item", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            var store = new Data.SupabaseStore();
+            if (store.DeleteCatalogItem(itemId))
+            {
+                LoadCatalogItems();
+                if (cboInventoryMachine.SelectedValue is int machineId)
+                {
+                    LoadInventoryGrid(machineId);
+                }
+            }
         }
 
         private void BtnAddUser_Click(object sender, RoutedEventArgs e)

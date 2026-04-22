@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Eco_Matic.Utilities;
 
 namespace Eco_Matic.Data;
 
@@ -25,6 +26,94 @@ public partial class SupabaseStore
     private void Run(System.Threading.Tasks.Task task)
     {
         task.GetAwaiter().GetResult();
+    }
+
+    private sealed class MachineSlotRecord
+    {
+        public int InventoryId { get; init; }
+        public string RawSlotId { get; init; } = string.Empty;
+        public string? NormalizedSlotId { get; init; }
+    }
+
+    private List<MachineSlotRecord> GetMachineSlotRecords(int machineId)
+    {
+        var list = new List<MachineSlotRecord>();
+        var rows = Run(_client.GetAsync("machine_inventory",
+            $"select=inventory_id,slot_id&machine_id=eq.{machineId}"));
+
+        foreach (var node in rows)
+        {
+            string rawSlotId = node?["slot_id"]?.GetValue<string>() ?? "";
+            list.Add(new MachineSlotRecord
+            {
+                InventoryId = node?["inventory_id"]?.GetValue<int>() ?? 0,
+                RawSlotId = rawSlotId,
+                NormalizedSlotId = SlotIdHelper.Normalize(rawSlotId)
+            });
+        }
+
+        return list;
+    }
+
+    private bool TryValidateSlotForMachine(int machineId, string slotId, out string normalizedSlotId, out string errorMessage, int? excludeInventoryId = null)
+    {
+        normalizedSlotId = SlotIdHelper.Normalize(slotId) ?? "";
+        errorMessage = "";
+        string targetSlotId = normalizedSlotId;
+
+        if (string.IsNullOrWhiteSpace(targetSlotId))
+        {
+            errorMessage = "Slot ID must be a number from 1 to 12.";
+            return false;
+        }
+
+        var slots = GetMachineSlotRecords(machineId);
+        bool slotTaken = slots.Any(x =>
+            x.InventoryId != excludeInventoryId &&
+            string.Equals(x.NormalizedSlotId, targetSlotId, StringComparison.Ordinal));
+
+        if (slotTaken)
+        {
+            errorMessage = $"Slot {normalizedSlotId} is already in use for this machine.";
+            return false;
+        }
+
+        if (!excludeInventoryId.HasValue && slots.Count >= SlotIdHelper.MaxSlot)
+        {
+            errorMessage = "A vending machine can only contain up to 12 slots.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryValidateStockValues(int stock, int maxCap, out string errorMessage)
+    {
+        errorMessage = "";
+        if (stock < 0)
+        {
+            errorMessage = "Stock cannot be negative.";
+            return false;
+        }
+
+        if (maxCap <= 0)
+        {
+            errorMessage = "Max capacity must be greater than zero.";
+            return false;
+        }
+
+        if (stock > maxCap)
+        {
+            errorMessage = $"Stock cannot exceed max capacity ({maxCap}).";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static object? ToDbNumber(decimal? value)
+    {
+        return value.HasValue ? value.Value : null;
     }
 
     // ══════════════════════════════════════════════════
@@ -62,6 +151,128 @@ public partial class SupabaseStore
         }
         catch { }
         return dt;
+    }
+
+    public System.Data.DataTable GetCatalogItems()
+    {
+        var dt = new System.Data.DataTable();
+        try
+        {
+            var rows = Run(_client.GetAsync("items",
+                "select=item_id,name,type,price,calories,image_path,dispense_message,examine_message&order=name.asc"));
+            var usageRows = Run(_client.GetAsync("machine_inventory", "select=item_id"));
+            var usageCounts = new Dictionary<int, int>();
+
+            foreach (var node in usageRows)
+            {
+                int itemId = node?["item_id"]?.GetValue<int>() ?? 0;
+                if (itemId <= 0)
+                {
+                    continue;
+                }
+
+                usageCounts[itemId] = usageCounts.TryGetValue(itemId, out int currentCount) ? currentCount + 1 : 1;
+            }
+
+            dt.Columns.Add("ID", typeof(int));
+            dt.Columns.Add("Name", typeof(string));
+            dt.Columns.Add("Type", typeof(string));
+            dt.Columns.Add("Default Price", typeof(decimal));
+            dt.Columns.Add("Calories", typeof(int));
+            dt.Columns.Add("Image", typeof(string));
+            dt.Columns.Add("Dispense Message", typeof(string));
+            dt.Columns.Add("Examine Message", typeof(string));
+            dt.Columns.Add("Machines Using Item", typeof(int));
+
+            foreach (var node in rows)
+            {
+                int itemId = node?["item_id"]?.GetValue<int>() ?? 0;
+                dt.Rows.Add(
+                    itemId,
+                    node?["name"]?.GetValue<string>() ?? "",
+                    node?["type"]?.GetValue<string>() ?? "Misc",
+                    node?["price"]?.GetValue<decimal>() ?? 0m,
+                    node?["calories"]?.GetValue<int>() ?? 0,
+                    node?["image_path"]?.GetValue<string>() ?? "",
+                    node?["dispense_message"]?.GetValue<string>() ?? "Enjoy your item!",
+                    node?["examine_message"]?.GetValue<string>() ?? "A standard vending item.",
+                    usageCounts.TryGetValue(itemId, out int usageCount) ? usageCount : 0
+                );
+            }
+        }
+        catch { }
+        return dt;
+    }
+
+    public bool AddCatalogItem(string name, string type, decimal price, int calories, string imagePath, string dispenseMessage, string examineMessage)
+    {
+        try
+        {
+            var result = Run(_client.PostAsync("items", new
+            {
+                name,
+                type,
+                price,
+                calories,
+                image_path = imagePath,
+                dispense_message = dispenseMessage,
+                examine_message = examineMessage
+            }));
+            return result.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Failed to create item: " + ex.Message);
+            return false;
+        }
+    }
+
+    public bool UpdateCatalogItem(int itemId, string name, string type, decimal price, int calories, string imagePath, string dispenseMessage, string examineMessage)
+    {
+        try
+        {
+            Run(_client.PatchAsync("items", $"item_id=eq.{itemId}", new
+            {
+                name,
+                type,
+                price,
+                calories,
+                image_path = imagePath,
+                dispense_message = dispenseMessage,
+                examine_message = examineMessage
+            }));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Failed to update item: " + ex.Message);
+            return false;
+        }
+    }
+
+    public bool DeleteCatalogItem(int itemId)
+    {
+        try
+        {
+            var usageRows = Run(_client.GetAsync("machine_inventory", $"select=inventory_id&item_id=eq.{itemId}"));
+            if (usageRows.Count > 0)
+            {
+                System.Windows.MessageBox.Show(
+                    "This item is still assigned to one or more machine slots. Remove those assignments first.",
+                    "Item In Use",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
+            Run(_client.DeleteAsync("items", $"item_id=eq.{itemId}"));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Failed to delete item: " + ex.Message);
+            return false;
+        }
     }
 
     // ══════════════════════════════════════════════════
@@ -287,15 +498,27 @@ public partial class SupabaseStore
         var dt = new System.Data.DataTable();
         try
         {
-            var rows = Run(_client.GetAsync("machine_inventory",
-                $"select=inventory_id,slot_id,stock_level,max_capacity,item_id,items(item_id,name,type,price,calories,image_path,dispense_message,examine_message)&machine_id=eq.{machineId}&order=slot_id.asc"));
+            JsonArray rows;
+            try
+            {
+                rows = Run(_client.GetAsync("machine_inventory",
+                    $"select=inventory_id,slot_id,stock_level,max_capacity,slot_price,item_id,items(item_id,name,type,price,calories,image_path,dispense_message,examine_message)&machine_id=eq.{machineId}&order=slot_id.asc"));
+            }
+            catch
+            {
+                rows = Run(_client.GetAsync("machine_inventory",
+                    $"select=inventory_id,slot_id,stock_level,max_capacity,item_id,items(item_id,name,type,price,calories,image_path,dispense_message,examine_message)&machine_id=eq.{machineId}&order=slot_id.asc"));
+            }
 
             dt.Columns.Add("Slot", typeof(string));
+            dt.Columns.Add("_SlotSort", typeof(int));
             dt.Columns.Add("_InventoryID", typeof(int));
             dt.Columns.Add("_ItemID", typeof(int));
             dt.Columns.Add("Image", typeof(string));
             dt.Columns.Add("Item", typeof(string));
             dt.Columns.Add("Type", typeof(string));
+            dt.Columns.Add("Default Price", typeof(decimal));
+            dt.Columns.Add("Slot Price", typeof(decimal));
             dt.Columns.Add("Price", typeof(decimal));
             dt.Columns.Add("Calories", typeof(int));
             dt.Columns.Add("Dispense Message", typeof(string));
@@ -306,14 +529,26 @@ public partial class SupabaseStore
             foreach (var node in rows)
             {
                 var item = node?["items"];
+                decimal defaultPrice = item?["price"]?.GetValue<decimal>() ?? 0m;
+                var slotPriceNode = node?["slot_price"];
+                decimal? slotPrice = slotPriceNode != null && slotPriceNode.GetValueKind() != JsonValueKind.Null
+                    ? slotPriceNode.GetValue<decimal>()
+                    : null;
+
+                string normalizedSlot = SlotIdHelper.Normalize(node?["slot_id"]?.GetValue<string>() ?? "") ?? (node?["slot_id"]?.GetValue<string>() ?? "");
+                int slotSort = SlotIdHelper.TryGetSlotNumber(normalizedSlot, out int parsedSlot) ? parsedSlot : 999;
+
                 dt.Rows.Add(
-                    node?["slot_id"]?.GetValue<string>() ?? "",
+                    normalizedSlot,
+                    slotSort,
                     node?["inventory_id"]?.GetValue<int>() ?? 0,
                     item?["item_id"]?.GetValue<int>() ?? 0,
                     item?["image_path"]?.GetValue<string>() ?? "",
                     item?["name"]?.GetValue<string>() ?? "Unknown",
                     item?["type"]?.GetValue<string>() ?? "Misc",
-                    item?["price"]?.GetValue<decimal>() ?? 0m,
+                    defaultPrice,
+                    slotPrice.HasValue ? slotPrice.Value : DBNull.Value,
+                    slotPrice ?? defaultPrice,
                     item?["calories"]?.GetValue<int>() ?? 0,
                     item?["dispense_message"]?.GetValue<string>() ?? "Enjoy your item!",
                     item?["examine_message"]?.GetValue<string>() ?? "A standard vending item.",
@@ -332,18 +567,47 @@ public partial class SupabaseStore
     /// <summary>
     /// Links an existing item from the master catalog to a specific vending machine slot.
     /// </summary>
-    public bool AddItemToMachineSlot(int machineId, string slotId, int itemId, int stock)
+    public bool AddItemToMachineSlot(int machineId, string slotId, int itemId, int stock, decimal? slotPrice = null)
     {
         try
         {
-            Run(_client.PostAsync("machine_inventory", new
+            if (!TryValidateStockValues(stock, 15, out string stockError))
             {
-                machine_id = machineId,
-                item_id = itemId,
-                slot_id = slotId,
-                stock_level = stock,
-                max_capacity = 15
-            }));
+                System.Windows.MessageBox.Show(stockError, "Invalid Stock",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (!TryValidateSlotForMachine(machineId, slotId, out string normalizedSlotId, out string slotError))
+            {
+                System.Windows.MessageBox.Show(slotError, "Invalid Slot",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
+            try
+            {
+                Run(_client.PostAsync("machine_inventory", new
+                {
+                    machine_id = machineId,
+                    item_id = itemId,
+                    slot_id = normalizedSlotId,
+                    stock_level = stock,
+                    max_capacity = 15,
+                    slot_price = ToDbNumber(slotPrice)
+                }));
+            }
+            catch when (!slotPrice.HasValue)
+            {
+                Run(_client.PostAsync("machine_inventory", new
+                {
+                    machine_id = machineId,
+                    item_id = itemId,
+                    slot_id = normalizedSlotId,
+                    stock_level = stock,
+                    max_capacity = 15
+                }));
+            }
             return true;
         }
         catch (Exception ex)
@@ -356,10 +620,24 @@ public partial class SupabaseStore
     /// <summary>
     /// Creates a brand new item in the master catalog AND links it to a vending machine slot.
     /// </summary>
-    public bool AddNewItemToMachine(int machineId, string slotId, string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath = "/Assets/Placeholder.png", string dispenseMessage = "Enjoy your item!", string examineMessage = "A standard vending item.")
+    public bool AddNewItemToMachine(int machineId, string slotId, string name, string type, decimal price, int calories, int stock, int maxCap, string imagePath = "/Assets/Placeholder.png", string dispenseMessage = "Enjoy your item!", string examineMessage = "A standard vending item.", decimal? slotPrice = null)
     {
         try
         {
+            if (!TryValidateStockValues(stock, maxCap, out string stockError))
+            {
+                System.Windows.MessageBox.Show(stockError, "Invalid Stock",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (!TryValidateSlotForMachine(machineId, slotId, out string normalizedSlotId, out string slotError))
+            {
+                System.Windows.MessageBox.Show(slotError, "Invalid Slot",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
             // 1. Create new master item
             var inserted = Run(_client.PostAsync("items", new
             {
@@ -375,15 +653,48 @@ public partial class SupabaseStore
             if (inserted.Count == 0) return false;
             int itemId = inserted[0]?["item_id"]?.GetValue<int>() ?? 0;
 
-            // 2. Link to slot
-            Run(_client.PostAsync("machine_inventory", new
+            try
             {
-                machine_id = machineId,
-                item_id = itemId,
-                slot_id = slotId,
-                stock_level = stock,
-                max_capacity = maxCap
-            }));
+                // 2. Link to slot
+                try
+                {
+                    Run(_client.PostAsync("machine_inventory", new
+                    {
+                        machine_id = machineId,
+                        item_id = itemId,
+                        slot_id = normalizedSlotId,
+                        stock_level = stock,
+                        max_capacity = maxCap,
+                        slot_price = ToDbNumber(slotPrice)
+                    }));
+                }
+                catch when (!slotPrice.HasValue)
+                {
+                    Run(_client.PostAsync("machine_inventory", new
+                    {
+                        machine_id = machineId,
+                        item_id = itemId,
+                        slot_id = normalizedSlotId,
+                        stock_level = stock,
+                        max_capacity = maxCap
+                    }));
+                }
+            }
+            catch
+            {
+                if (itemId > 0)
+                {
+                    try
+                    {
+                        Run(_client.DeleteAsync("items", $"item_id=eq.{itemId}"));
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw;
+            }
 
             return true;
         }
@@ -452,35 +763,46 @@ public partial class SupabaseStore
         catch { }
     }
 
-    public bool UpdateInventoryItem(int inventoryId, string slotId, string name, string type, decimal price, int calories, string imagePath, int stock, int maxCap, string dispenseMessage, string examineMessage)
+    public bool UpdateMachineInventoryAssignment(int inventoryId, int machineId, string slotId, int itemId, int stock, int maxCap, decimal? slotPrice)
     {
         try
         {
-            // Get item_id from inventory
-            var rows = Run(_client.GetAsync("machine_inventory",
-                $"select=item_id&inventory_id=eq.{inventoryId}"));
-            if (rows.Count == 0) return false;
-            int itemId = rows[0]?["item_id"]?.GetValue<int>() ?? 0;
-
-            // Update master item
-            Run(_client.PatchAsync("items", $"item_id=eq.{itemId}", new
+            if (!TryValidateStockValues(stock, maxCap, out string stockError))
             {
-                name,
-                type,
-                price,
-                calories,
-                image_path = imagePath,
-                dispense_message = dispenseMessage,
-                examine_message = examineMessage
-            }));
+                System.Windows.MessageBox.Show(stockError, "Invalid Stock",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
+            if (!TryValidateSlotForMachine(machineId, slotId, out string normalizedSlotId, out string slotError, inventoryId))
+            {
+                System.Windows.MessageBox.Show(slotError, "Invalid Slot",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
 
             // Update machine slot
-            Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{inventoryId}", new
+            try
             {
-                slot_id = slotId,
-                stock_level = stock,
-                max_capacity = maxCap
-            }));
+                Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{inventoryId}", new
+                {
+                    item_id = itemId,
+                    slot_id = normalizedSlotId,
+                    stock_level = stock,
+                    max_capacity = maxCap,
+                    slot_price = ToDbNumber(slotPrice)
+                }));
+            }
+            catch when (!slotPrice.HasValue)
+            {
+                Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{inventoryId}", new
+                {
+                    item_id = itemId,
+                    slot_id = normalizedSlotId,
+                    stock_level = stock,
+                    max_capacity = maxCap
+                }));
+            }
 
             return true;
         }

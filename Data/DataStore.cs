@@ -1,6 +1,7 @@
 namespace Eco_Matic;
 using System;
 using System.Collections.Generic;
+using Eco_Matic.Utilities;
 
 public static class DataStore
 {
@@ -31,9 +32,14 @@ public static class DataStore
         
         var dt = store.GetMachineInventory(machineId);
 
-        int slotIndex = 1;
         foreach (System.Data.DataRow row in dt.Rows)
         {
+            string rawSlotId = row["Slot"].ToString() ?? "";
+            if (!SlotIdHelper.TryGetSlotNumber(rawSlotId, out int slotNumber))
+            {
+                continue;
+            }
+
             int inventoryId = Convert.ToInt32(row["_InventoryID"]);
             string name = row["Item"].ToString() ?? "Unknown";
             string typeStr = row["Type"].ToString() ?? "Misc";
@@ -50,7 +56,7 @@ public static class DataStore
                 pType = parsedType;
             }
 
-            var p = Product.Create(pType, slotIndex++, name, price, stock, examineMessage, calories, 0, imagePath, dispenseMessage, examineMessage);
+            var p = Product.Create(pType, slotNumber, name, price, stock, examineMessage, calories, 0, imagePath, dispenseMessage, examineMessage);
             p.DbInventoryId = inventoryId; // Use DbInventoryId for SQL ops if tracking ID. But UI uses slotIndex.
             Products.Add(p);
         }
