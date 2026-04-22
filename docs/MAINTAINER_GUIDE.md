@@ -59,7 +59,7 @@ For current architecture and review status, use:
 
 - make sure the selected machine does not exceed 12 active inventory entries
 - make sure slot IDs are kept consistent and simple
-- make sure the live Supabase project has already applied `migration_increment3.sql` and `migration_increment4.sql`
+- make sure the live Supabase project has already applied `sql/migrations/supabase/migration_increment3.sql` and `sql/migrations/supabase/migration_increment4.sql`
 - make sure the COM port for Arduino matches the machine you are using
 - make sure images referenced in the database actually exist in runtime-accessible paths
 

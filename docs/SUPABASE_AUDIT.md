@@ -44,8 +44,8 @@ Current live migrations after remediation:
 
 Live schema alignment completed in this pass by applying:
 
-1. `docs/migration_increment3.sql`
-2. `docs/migration_increment4.sql`
+1. `docs/sql/migrations/supabase/migration_increment3.sql`
+2. `docs/sql/migrations/supabase/migration_increment4.sql`
 
 What each migration does:
 

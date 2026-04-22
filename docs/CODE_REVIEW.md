@@ -72,8 +72,8 @@ At the start of this audit pass, the live project was missing:
 
 Those gaps were aligned during this pass by applying:
 
-- `docs/migration_increment3.sql`
-- `docs/migration_increment4.sql`
+- `docs/sql/migrations/supabase/migration_increment3.sql`
+- `docs/sql/migrations/supabase/migration_increment4.sql`
 
 Why this still matters:
 
@@ -172,7 +172,7 @@ This review pass updated the main docs to reflect the actual implementation.
 ## Best Next Improvements
 
 1. replace plain-text passwords with real hashing
-2. apply `docs/migration_increment3.sql` and `docs/migration_increment4.sql` to the live Supabase project
+2. apply `docs/sql/migrations/supabase/migration_increment3.sql` and `docs/sql/migrations/supabase/migration_increment4.sql` to the live Supabase project
 3. externalize the Supabase configuration instead of hardcoding it in the client
 4. redesign backend access before attempting real least-privilege RLS tightening
 5. add a database-side uniqueness/slot-range constraint to complement the service-layer checks

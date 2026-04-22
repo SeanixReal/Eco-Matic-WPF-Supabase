@@ -107,8 +107,8 @@ The current code marks low-stock alerts when stock is `3` or below.
 - images are intentionally local-first rather than cloud-dependent for reliable classroom demos
 - customer mode can now load from a locally cached MySQL snapshot and replay queued sales/logs later after one successful online sync
 - admin mode and RFID account updates still require internet access
-- if your live Supabase schema is older, run `docs/migration_increment3.sql` before expecting per-machine price overrides to work
-- run `docs/migration_increment4.sql` before expecting offline replay deduplication to work safely
+- if your live Supabase schema is older, run `docs/sql/migrations/supabase/migration_increment3.sql` before expecting per-machine price overrides to work
+- run `docs/sql/migrations/supabase/migration_increment4.sql` before expecting offline replay deduplication to work safely
 - see `docs/SUPABASE_AUDIT.md` for the latest live schema and security findings
 
 ## 8. Where To Read More

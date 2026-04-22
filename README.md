@@ -18,7 +18,7 @@ Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty syste
 - **Event Logging**: Time-based filtering (Day, Week, Month) of all machine, sales, and user events for auditing.
 
 ## Setup
-- **Database**: The current application uses Supabase via `Data/SupabaseStore.cs` and `Data/SupabaseClient.cs`. Historical SQL reference files are kept in `docs/`.
+- **Database**: The current application uses Supabase via `Data/SupabaseStore.cs` and `Data/SupabaseClient.cs`. SQL reference files are organized under `docs/sql/`.
 - **Hardware**: Wire the Arduino and MFRC522 per `Arduino/README.md` instructions and flash `RFID_Scanner.ino`.
 - **Application**: Open the project in Visual Studio and build it, or run `dotnet run` in the root folder.
 
@@ -38,11 +38,11 @@ Important limits:
 
 ## Migration Note
 
-If your Supabase database was created before the per-machine price override refactor, run `docs/migration_increment3.sql`.
+If your Supabase database was created before the per-machine price override refactor, run `docs/sql/migrations/supabase/migration_increment3.sql`.
 
 That migration adds `machine_inventory.slot_price` and normalizes legacy slot IDs like `S1` into canonical values like `1`.
 
-If you want offline replay safety for customer mode, also run `docs/migration_increment4.sql`.
+If you want offline replay safety for customer mode, also run `docs/sql/migrations/supabase/migration_increment4.sql`.
 
 For the live schema audit and the current authentication/RLS findings, see `docs/SUPABASE_AUDIT.md`.
 

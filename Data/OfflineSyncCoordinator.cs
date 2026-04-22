@@ -83,7 +83,7 @@ public sealed class OfflineSyncCoordinator
 
         if (_cloudStore.CanConnect())
         {
-            message = "Supabase is reachable, but offline replay could not finish. Apply docs/migration_increment4.sql and retry.";
+            message = "Supabase is reachable, but offline replay could not finish. Apply docs/sql/migrations/supabase/migration_increment4.sql and retry.";
             return false;
         }
 
