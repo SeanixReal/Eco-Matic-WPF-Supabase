@@ -6,10 +6,11 @@ This is the single canonical documentation folder for the current Eco-Matic code
 
 1. `CODEBASE_ARCHITECTURE.md`
 2. `CODE_REVIEW.md`
-3. `DIAGRAMS.md`
-4. `MAINTAINER_GUIDE.md`
-5. `PROFESSOR_ARCHITECTURE_GUIDE.md`
-6. `USER_MANUAL.md`
+3. `SUPABASE_AUDIT.md`
+4. `DIAGRAMS.md`
+5. `MAINTAINER_GUIDE.md`
+6. `PROFESSOR_ARCHITECTURE_GUIDE.md`
+7. `USER_MANUAL.md`
 
 ## Main Contents
 
@@ -24,6 +25,11 @@ Relevant SQL docs for the current inventory model:
 - `database_setup.sql`
 - `seed_inventory.sql`
 - `migration_increment3.sql`
+- `migration_increment4.sql`
+
+Important current note:
+
+- `migration_increment2.sql` is a historical MySQL-era increment script, not the live Supabase migration path
 
 ## Current Stack
 

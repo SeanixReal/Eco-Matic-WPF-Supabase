@@ -24,22 +24,27 @@ Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty syste
 
 ## Offline Behavior
 
-The current system is **not** a true offline-first application.
+The current system now supports **customer-mode offline caching and replay** after one successful online sync.
 
-- It reads and writes through live Supabase REST calls.
-- `DataStore` only keeps in-memory state for the active vending session.
-- There is no persisted local database snapshot plus delayed sync queue yet.
+- customer vending mode reads machine lists and inventory from a local MySQL cache
+- offline purchases update that local cache first and queue sales/logs for later replay
+- when internet returns, queued writes replay to Supabase and the local cache refreshes again
 
-That means:
+Important limits:
 
-- if the app already loaded a machine inventory and then the internet drops, some in-session UI behavior may continue temporarily
-- but full offline startup, reliable offline transactions, and automatic replay to Supabase when Wi-Fi returns are **not implemented yet**
+- admin mode is still online-only
+- RFID registration and RFID credit saving are still online-only
+- the very first offline demo still requires one earlier successful online sync
 
 ## Migration Note
 
 If your Supabase database was created before the per-machine price override refactor, run `docs/migration_increment3.sql`.
 
 That migration adds `machine_inventory.slot_price` and normalizes legacy slot IDs like `S1` into canonical values like `1`.
+
+If you want offline replay safety for customer mode, also run `docs/migration_increment4.sql`.
+
+For the live schema audit and the current authentication/RLS findings, see `docs/SUPABASE_AUDIT.md`.
 
 ## Documentation
 

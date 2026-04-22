@@ -52,13 +52,14 @@ For current architecture and review status, use:
 - current purchase logic is cash-based
 - RFID is currently for identity and recycle-credit saving, not item payment
 - `DataStore` is the in-memory customer session state, so changes there affect the vending UX directly
-- the app is not yet offline-first; do not assume local persistence plus later sync exists
+- customer mode now depends on the local MySQL cache and sync queue for offline resilience
+- admin mode and RFID persistence still require internet access
 
 ## Things To Be Careful About Before Demoing
 
 - make sure the selected machine does not exceed 12 active inventory entries
 - make sure slot IDs are kept consistent and simple
-- make sure the Supabase project still contains all required tables
+- make sure the live Supabase project has already applied `migration_increment3.sql` and `migration_increment4.sql`
 - make sure the COM port for Arduino matches the machine you are using
 - make sure images referenced in the database actually exist in runtime-accessible paths
 
@@ -67,7 +68,8 @@ For current architecture and review status, use:
 - passwords are currently stored and compared directly
 - Supabase URL and anon key are still hardcoded in source
 - runtime behavior depends on the database having the new `slot_price` column
-- there is no durable offline cache or mutation queue
+- offline customer mode depends on the local MySQL cache being reachable on the demo laptop
+- live Supabase anon policies are currently too permissive, but safe tightening is blocked by the current direct-client architecture
 
 ## Recommended Improvement Order
 
@@ -76,6 +78,8 @@ For current architecture and review status, use:
 3. harden migration/runtime checks for databases missing `slot_price`
 4. add automated tests around inventory validation and machine independence
 5. consider transactional backend/RPC helpers for multi-step writes
+6. expand offline sync support beyond customer mode if the product needs it later
+7. redesign backend/auth before attempting strict RLS on live Supabase tables
 
 ## If You Ask AI To Help
 

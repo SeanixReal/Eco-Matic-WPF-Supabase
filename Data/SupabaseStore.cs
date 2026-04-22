@@ -116,6 +116,18 @@ public partial class SupabaseStore
         return value.HasValue ? value.Value : null;
     }
 
+    public bool CanConnect()
+    {
+        return Run(_client.CanConnectAsync());
+    }
+
+    private static InvalidOperationException BuildClientSyncColumnException(string tableName, Exception innerException)
+    {
+        return new InvalidOperationException(
+            $"Supabase sync replay requires the nullable client_sync_id column on {tableName}. Apply the repo migration for client_sync_id first.",
+            innerException);
+    }
+
     // ══════════════════════════════════════════════════
     //  ITEMS (Master Catalog)
     // ══════════════════════════════════════════════════
@@ -902,6 +914,39 @@ public partial class SupabaseStore
         catch { }
     }
 
+    public bool EventLogExists(string clientSyncId)
+    {
+        try
+        {
+            var rows = Run(_client.GetAsync("event_logs",
+                $"select=log_id&client_sync_id=eq.{Uri.EscapeDataString(clientSyncId)}&limit=1"));
+            return rows.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            throw BuildClientSyncColumnException("event_logs", ex);
+        }
+    }
+
+    public void InsertQueuedEventLog(string clientSyncId, string eventType, string details, int machineId, DateTime occurredUtc)
+    {
+        try
+        {
+            Run(_client.PostAsync("event_logs", new
+            {
+                event_type = eventType,
+                description = details,
+                machine_id = machineId,
+                log_date = occurredUtc.ToUniversalTime().ToString("O"),
+                client_sync_id = clientSyncId
+            }));
+        }
+        catch (Exception ex)
+        {
+            throw BuildClientSyncColumnException("event_logs", ex);
+        }
+    }
+
     public void ClearEventLogs()
     {
         try
@@ -935,6 +980,39 @@ public partial class SupabaseStore
             }));
         }
         catch { }
+    }
+
+    public bool SaleExists(string clientSyncId)
+    {
+        try
+        {
+            var rows = Run(_client.GetAsync("sales_transactions",
+                $"select=transaction_id&client_sync_id=eq.{Uri.EscapeDataString(clientSyncId)}&limit=1"));
+            return rows.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            throw BuildClientSyncColumnException("sales_transactions", ex);
+        }
+    }
+
+    public void InsertQueuedSale(string clientSyncId, int machineId, int itemId, decimal amountPaid, DateTime occurredUtc)
+    {
+        try
+        {
+            Run(_client.PostAsync("sales_transactions", new
+            {
+                machine_id = machineId,
+                item_id = itemId,
+                amount_paid = amountPaid,
+                transaction_date = occurredUtc.ToUniversalTime().ToString("O"),
+                client_sync_id = clientSyncId
+            }));
+        }
+        catch (Exception ex)
+        {
+            throw BuildClientSyncColumnException("sales_transactions", ex);
+        }
     }
 
     public (decimal Daily, decimal Weekly, decimal Monthly, decimal Yearly) GetSalesTotals()

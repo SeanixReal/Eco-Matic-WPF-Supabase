@@ -1,11 +1,11 @@
 using System.Windows;
 using System.Windows.Input;
+using Eco_Matic.Data;
 
 namespace Eco_Matic
 {
     public partial class MainWindow : Window
     {
-        private const string AdminPassword = "admin123";
         private Data.ArduinoService _arduino;
         private Data.SupabaseStore _db;
 
@@ -27,6 +27,13 @@ namespace Eco_Matic
             // We must use Dispatcher.Invoke to do anything visual in WPF.
             Dispatcher.Invoke(() =>
             {
+                if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
+                {
+                    _arduino.SendResponse(false);
+                    MessageBox.Show(this, offlineMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
                 if (_db.CustomerExists(rfid))
                 {
                     _arduino.SendResponse(true); // Turns Green LED on, says "Access Granted"
@@ -85,6 +92,12 @@ namespace Eco_Matic
 
         private void BtnCustomer_Click(object sender, RoutedEventArgs e)
         {
+            if (!OfflineSyncCoordinator.Instance.CanEnterCustomerMode(out string entryMessage))
+            {
+                MessageBox.Show(this, entryMessage, "Customer Mode Unavailable", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             var selectionWindow = new MachineSelectionWindow
             {
                 Owner = this
@@ -92,8 +105,17 @@ namespace Eco_Matic
 
             if (selectionWindow.ShowDialog() == true)
             {
+                if (!DataStore.Initialize(selectionWindow.SelectedMachineId))
+                {
+                    MessageBox.Show(this,
+                        "The selected machine does not have any cached inventory yet. Reconnect to the internet and sync first.",
+                        "No Cached Inventory",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
                 Hide();
-                DataStore.Initialize(selectionWindow.SelectedMachineId);
                 var customerWindow = new CustomerWindow(_arduino)
                 {
                     Owner = this
@@ -103,6 +125,7 @@ namespace Eco_Matic
 
                 customerWindow.Closed += (_, _) =>
                 {
+                    OfflineSyncCoordinator.Instance.TrySyncIfOnline();
                     _arduino.SendStateCommand("STATE:AFK");
                     Show();
                     Activate();
@@ -113,6 +136,12 @@ namespace Eco_Matic
 
         private void BtnAdmin_Click(object sender, RoutedEventArgs e)
         {
+            if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
+            {
+                MessageBox.Show(this, offlineMessage, "Admin Mode Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             var login = new LoginWindow
             {
                 Owner = this

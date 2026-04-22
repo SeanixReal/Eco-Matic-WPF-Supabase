@@ -7,6 +7,7 @@ public static class DataStore
 {
     public const int MaxItemSlots = 12;
     public const int MaxStockPerItem = 15;
+    private static readonly Eco_Matic.Data.OfflineSyncCoordinator OfflineSync = Eco_Matic.Data.OfflineSyncCoordinator.Instance;
 
     public static readonly IReadOnlyDictionary<RecycleMaterial, int> RecycleRates =
         new Dictionary<RecycleMaterial, int>
@@ -22,15 +23,21 @@ public static class DataStore
     public static Transaction? LastTransaction { get; set; }
     public static int ActiveMachineId { get; set; } = 1;
     public static int PendingPoints { get; set; } = 0;
+    public static bool IsOffline { get; set; }
+    public static bool HasCompletedInitialSync { get; set; }
+    public static DateTime? LastSuccessfulSyncUtc { get; set; }
 
-    public static void Initialize(int machineId = 1)
+    public static bool Initialize(int machineId = 1)
     {
         ActiveMachineId = machineId;
         PendingPoints = 0;
         Products.Clear();
-        var store = new Eco_Matic.Data.SupabaseStore();
-        
-        var dt = store.GetMachineInventory(machineId);
+        var dt = OfflineSync.GetMachineInventory(machineId);
+
+        if (dt.Rows.Count == 0)
+        {
+            return false;
+        }
 
         foreach (System.Data.DataRow row in dt.Rows)
         {
@@ -64,33 +71,22 @@ public static class DataStore
         NextTransactionId = 1;
         LastTransaction = null;
         Transactions.Clear();
+        return true;
     }
 
     public static void SaveInventory()
     {
-        // Now synced live with DB, flush the current stock.
-        var store = new Eco_Matic.Data.SupabaseStore();
-        foreach (var p in Products)
-        {
-            if (p.DbInventoryId > 0)
-            {
-                store.UpdateStock(p.DbInventoryId, p.Stock);
-            }
-        }
+        OfflineSync.SaveInventorySnapshot(ActiveMachineId, Products);
     }
 
     public static void LogEvent(string eventType, string details, decimal amount = 0m)
     {
-        var store = new Eco_Matic.Data.SupabaseStore();
-        store.LogEvent(eventType, details, amount, ActiveMachineId);
+        OfflineSync.QueueEventLog(ActiveMachineId, eventType, details, amount);
     }
 
     public static void RecordSale(int inventoryId, decimal amountPaid)
     {
-        // Actually needs the current machine ID.
-        // If we only have 1 active machine right now, or if we track ActiveMachineId in DataStore
-        var store = new Eco_Matic.Data.SupabaseStore();
-        store.RecordSale(ActiveMachineId, inventoryId, amountPaid);
+        OfflineSync.QueueSale(ActiveMachineId, inventoryId, amountPaid);
     }
 
     public static List<EventLogEntry> ReadLogs()

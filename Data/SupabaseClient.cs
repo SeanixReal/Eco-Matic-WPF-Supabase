@@ -38,7 +38,10 @@ public class SupabaseClient
     private SupabaseClient()
     {
         _baseUrl = $"{SUPABASE_URL}/rest/v1";
-        _http = new HttpClient();
+        _http = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(8)
+        };
         _http.DefaultRequestHeaders.Add("apikey", SUPABASE_ANON_KEY);
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SUPABASE_ANON_KEY);
         _http.DefaultRequestHeaders.Add("Prefer", "return=representation");
@@ -129,5 +132,19 @@ public class SupabaseClient
         var json = await response.Content.ReadAsStringAsync();
         var arr = JsonNode.Parse(json)?.AsArray();
         return arr?.Count ?? 0;
+    }
+
+    public async Task<bool> CanConnectAsync()
+    {
+        try
+        {
+            string url = $"{_baseUrl}/vending_machines?select=machine_id&limit=1";
+            var response = await _http.GetAsync(url);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System.Windows;
+using Eco_Matic.Data;
 
 namespace Eco_Matic
 {
@@ -12,6 +13,13 @@ namespace Eco_Matic
 
         private void LoadCustomerData(string rfid)
         {
+            if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
+            {
+                MessageBox.Show(this, offlineMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Close();
+                return;
+            }
+
             var db = new Data.SupabaseStore();
             var info = db.GetCustomerInfo(rfid);
 

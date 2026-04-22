@@ -51,12 +51,13 @@ This layer keeps temporary application state that is useful while a vending sess
   - keeps the in-session product list
   - tracks the latest transaction and pending recycle points
 
-This is important because not every UI action needs to call the backend immediately. The customer screen works against an in-memory session model and only syncs important changes such as stock updates, event logs, and sales records.
+This is important because not every UI action needs to call the backend immediately. The customer screen works against an in-memory session model and now reads from a durable local cache before replaying queued customer writes back to Supabase.
 
 Important limitation:
 
-- `DataStore` is an in-memory session cache, not a durable offline database
-- the system does not currently queue offline mutations and replay them later when internet returns
+- `DataStore` is still the in-memory session layer used by the customer UI
+- durable offline storage and replay are handled by the local MySQL cache plus sync queue
+- admin mode and RFID customer account writes are still online-only in v1
 
 ### C. Service and Integration Layer
 
@@ -102,14 +103,14 @@ This layer contains the main business objects used inside the application.
 
 1. `MainWindow` opens `MachineSelectionWindow`.
 2. The selected machine ID is stored through `DataStore.Initialize(machineId)`.
-3. `DataStore` loads the machine inventory from `SupabaseStore.GetMachineInventory`.
+3. `DataStore` loads the machine inventory from the local offline cache.
 4. `CustomerWindow` displays the 12-slot vending layout using the in-memory `DataStore.Products` list.
 5. When the customer buys an item:
    - money is validated in the UI
    - stock is decreased in memory
-   - `DataStore.SaveInventory()` pushes the new stock to the backend
-   - `DataStore.LogEvent()` writes an event log
-   - `DataStore.RecordSale()` writes a sales record
+   - `DataStore.SaveInventory()` updates the local cache and marks dirty stock for replay
+   - `DataStore.LogEvent()` queues a customer event log for replay
+   - `DataStore.RecordSale()` queues a sales record for replay
    - a receipt can be shown through `ReceiptWindow`
 
 Important current behavior:
@@ -230,6 +231,8 @@ For the current codebase, the accurate implementation is:
 
 Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed.
 
+For the live Supabase audit status, required migrations, and current auth/RLS findings, see `docs/SUPABASE_AUDIT.md`.
+
 ## 9. Current Review Notes
 
 The latest review found these implementation caveats:
@@ -239,6 +242,7 @@ The latest review found these implementation caveats:
 - RFID is used for registration and recycle-credit saving, not for direct purchase payment
 - password fields are currently stored and compared directly even though some field names still say `password_hash`
 - the image strategy is local-first rather than Supabase Storage-first to keep classroom/demo behavior reliable
-- the app is still online-first for data; it does not yet support durable offline sync-and-replay behavior
+- customer mode now supports durable offline cache-and-replay after one successful online sync
+- admin mode and RFID persistence still require live connectivity
 
 See `docs/CODE_REVIEW.md` for the detailed review.

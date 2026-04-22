@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Eco_Matic.Data;
 
 namespace Eco_Matic;
 
@@ -23,11 +24,9 @@ public partial class MachineSelectionWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        // Load machines from Supabase
-        var store = new Eco_Matic.Data.SupabaseStore();
         try
         {
-            var dt = store.GetVendingMachinesLookup();
+            var dt = OfflineSyncCoordinator.Instance.GetMachineLookupForCustomer();
             var machines = new List<VendingMachineModel>();
 
             foreach (System.Data.DataRow row in dt.Rows)
@@ -52,7 +51,7 @@ public partial class MachineSelectionWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not load vending machines: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Could not load cached vending machines: {ex.Message}", "Offline Cache Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

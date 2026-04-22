@@ -1,4 +1,5 @@
 using System.Windows;
+using Eco_Matic.Data;
 
 namespace Eco_Matic
 {
@@ -15,6 +16,12 @@ namespace Eco_Matic
 
         private void BtnRegister_Click(object sender, RoutedEventArgs e)
         {
+            if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
+            {
+                MessageBox.Show(this, offlineMessage, "Registration Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             string email = txtEmail.Text.Trim();
             string pass = txtPassword.Password;
 
