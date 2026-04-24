@@ -17,26 +17,53 @@ namespace Eco_Matic
         public UserEditorWindow()
         {
             InitializeComponent();
-            LoadRoles();
-            LoadMachines();
+            btnConfirm.IsEnabled = false;
+            cboRole.IsEnabled = false;
+            cboMachine.IsEnabled = false;
         }
 
-        private void LoadRoles()
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            var store = new Data.SupabaseStore();
-            var dt = store.GetRoles();
-            cboRole.ItemsSource = dt.DefaultView;
-            cboRole.DisplayMemberPath = "role_name";
-            cboRole.SelectedValuePath = "role_id";
+            await LoadReferenceDataAsync();
         }
 
-        private void LoadMachines()
+        private async Task LoadReferenceDataAsync()
         {
-            var store = new Data.SupabaseStore();
-            var dt = store.GetVendingMachinesLookup();
-            cboMachine.ItemsSource = dt.DefaultView;
-            cboMachine.DisplayMemberPath = "location_name";
-            cboMachine.SelectedValuePath = "machine_id";
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                var result = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return (Roles: store.GetRoles(), Machines: store.GetVendingMachinesLookup());
+                });
+
+                cboRole.ItemsSource = result.Roles.DefaultView;
+                cboRole.DisplayMemberPath = "role_name";
+                cboRole.SelectedValuePath = "role_id";
+
+                cboMachine.ItemsSource = result.Machines.DefaultView;
+                cboMachine.DisplayMemberPath = "location_name";
+                cboMachine.SelectedValuePath = "machine_id";
+
+                txtLoadStatus.Text = "Reference data loaded.";
+            }
+            catch (Exception ex)
+            {
+                txtLoadStatus.Text = "Failed to load roles or machines.";
+                MessageBox.Show(this,
+                    $"Could not load staff setup data.\n\n{ex.Message}",
+                    "User Editor Load Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                btnConfirm.IsEnabled = true;
+                cboRole.IsEnabled = true;
+                cboMachine.IsEnabled = true;
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void CboRole_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -6,57 +6,164 @@ namespace Eco_Matic
 {
     public partial class MainWindow : Window
     {
-        private Data.ArduinoService _arduino;
-        private Data.SupabaseStore _db;
+        private Data.ArduinoService? _arduino;
+        private Data.SupabaseStore? _db;
+        private CustomerWindow? _activeCustomerWindow;
+        private int _openCustomerWindows;
+        private bool _isHandlingRfidScan;
 
         public MainWindow()
         {
             InitializeComponent();
-            _db = new Data.SupabaseStore();
-            _db.EnsureCustomerTableExists(); // Ensure DB is updated on boot
-            
-            // Connect to Arduino on COM5
-            _arduino = new Data.ArduinoService("COM5", 9600);
-            _arduino.OnCardScanned += Arduino_OnCardScanned;
-            _arduino.Start();
+            Loaded += MainWindow_Loaded;
         }
 
-        private void Arduino_OnCardScanned(object? sender, string rfid)
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // The SerialPort event fires on a background thread.
-            // We must use Dispatcher.Invoke to do anything visual in WPF.
-            Dispatcher.Invoke(() =>
+            Loaded -= MainWindow_Loaded;
+
+            try
             {
-                if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
+                _db = new Data.SupabaseStore();
+                _db.EnsureCustomerTableExists(); // Compatibility no-op
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    $"Supabase could not be initialized.\n\n{ex.Message}",
+                    "Startup Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+
+            try
+            {
+                _arduino = Data.ArduinoService.FromEnvironment();
+                _arduino.OnCardScanned += Arduino_OnCardScanned;
+                _arduino.Start();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    $"Arduino service could not be initialized.\n\n{ex.Message}",
+                    "Hardware Warning",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
+        private async void Arduino_OnCardScanned(object? sender, string rfid)
+        {
+            if (_isHandlingRfidScan)
+            {
+                _arduino?.SendMessage("RFID BUSY WAIT");
+                return;
+            }
+
+            _isHandlingRfidScan = true;
+
+            try
+            {
+                Data.ArduinoService? arduino = _arduino;
+                Data.SupabaseStore? db = _db;
+                if (db == null || arduino == null)
                 {
-                    _arduino.SendResponse(false);
-                    MessageBox.Show(this, offlineMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Information);
+                    arduino?.SendMessage("RFID NOT READY");
                     return;
                 }
 
-                if (_db.CustomerExists(rfid))
+                bool canUseRfid = await Task.Run(() =>
                 {
-                    _arduino.SendResponse(true); // Turns Green LED on, says "Access Granted"
-                    
-                    var dashboard = new CustomerDashboardWindow(rfid);
-                    dashboard.Owner = this;
-                    dashboard.ShowDialog();
-                }
-                else
+                    return OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out _);
+                });
+
+                if (!canUseRfid)
                 {
-                    _arduino.SendResponse(false); // Turns Red LED on, says "Unknown Card"
-                    
-                    var registerWindow = new CustomerRegistrationWindow(rfid);
-                    registerWindow.Owner = this;
-                    if (registerWindow.ShowDialog() == true)
+                    arduino.SendMessage("RFID OFFLINE TRY AGAIN");
+                    arduino.SendResponse(false);
+
+                    await Dispatcher.InvokeAsync(() =>
                     {
-                        // Registration successful, open their dashboard right away
+                        OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage);
+                        MessageBox.Show(this, offlineMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Information);
+                    });
+                    return;
+                }
+
+                arduino.SendMessage("CHECKING DATABASE");
+                bool customerExists = await Task.Run(() => db.CustomerExists(rfid));
+
+                if (customerExists)
+                {
+                    arduino.SendResponse(true);
+                    arduino.SendMessage("WELCOME BACK");
+
+                    await Dispatcher.InvokeAsync(() =>
+                    {
                         var dashboard = new CustomerDashboardWindow(rfid);
                         dashboard.Owner = this;
                         dashboard.ShowDialog();
-                    }
+
+                        if (dashboard.SaveSucceeded)
+                        {
+                            _activeCustomerWindow?.MarkPendingPointsSaved();
+                            arduino.SendMessage($"{dashboard.SavedPoints} POINTS SAVED");
+                        }
+                        else if (DataStore.PendingPoints > 0)
+                        {
+                            arduino.SendMessage("NO POINTS SAVED");
+                        }
+                    });
                 }
-            });
+                else
+                {
+                    arduino.SendResponse(false);
+                    arduino.SendMessage("NEW USER REGISTER");
+
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        var registerWindow = new CustomerRegistrationWindow(rfid);
+                        registerWindow.Owner = this;
+                        if (registerWindow.ShowDialog() == true)
+                        {
+                            var dashboard = new CustomerDashboardWindow(rfid);
+                            dashboard.Owner = this;
+                            dashboard.ShowDialog();
+
+                            if (dashboard.SaveSucceeded)
+                            {
+                                _activeCustomerWindow?.MarkPendingPointsSaved();
+                                arduino.SendMessage($"{dashboard.SavedPoints} POINTS SAVED");
+                            }
+                            else
+                            {
+                                arduino.SendMessage("CARD REGISTERED");
+                            }
+                        }
+                        else
+                        {
+                            arduino.SendMessage("REGISTER CANCELLED");
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _arduino?.SendResponse(false);
+                _arduino?.SendMessage("RFID APP ERROR");
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show(this,
+                        $"RFID handling failed.\n\n{ex.Message}",
+                        "RFID Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
+            }
+            finally
+            {
+                _isHandlingRfidScan = false;
+            }
         }
 
         protected override void OnClosed(System.EventArgs e)
@@ -90,10 +197,16 @@ namespace Eco_Matic
             BtnExit_Click(sender, e);
         }
 
-        private void BtnCustomer_Click(object sender, RoutedEventArgs e)
+        private async void BtnCustomer_Click(object sender, RoutedEventArgs e)
         {
-            if (!OfflineSyncCoordinator.Instance.CanEnterCustomerMode(out string entryMessage))
+            btnCustomer.IsEnabled = false;
+            Mouse.OverrideCursor = Cursors.Wait;
+
+            (bool canEnter, string entryMessage) = await OfflineSyncCoordinator.Instance.PrepareCustomerModeAsync();
+            if (!canEnter)
             {
+                Mouse.OverrideCursor = null;
+                btnCustomer.IsEnabled = true;
                 MessageBox.Show(this, entryMessage, "Customer Mode Unavailable", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -103,45 +216,69 @@ namespace Eco_Matic
                 Owner = this
             };
 
+            Mouse.OverrideCursor = null;
+            btnCustomer.IsEnabled = true;
+
             if (selectionWindow.ShowDialog() == true)
             {
-                if (!DataStore.Initialize(selectionWindow.SelectedMachineId))
+                Mouse.OverrideCursor = Cursors.Wait;
+                var loadedProducts = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    return DataStore.TryGetProductsForMachine(
+                        selectionWindow.SelectedMachineId,
+                        out var products)
+                        ? products
+                        : new List<Product>();
+                });
+                Mouse.OverrideCursor = null;
+
+                if (loadedProducts.Count == 0)
                 {
                     MessageBox.Show(this,
-                        "The selected machine does not have any cached inventory yet. Reconnect to the internet and sync first.",
-                        "No Cached Inventory",
+                        DataStore.IsOffline
+                            ? "The selected machine does not have any local MySQL demo inventory configured."
+                            : "The selected machine does not have any inventory configured in Supabase.",
+                        "No Machine Inventory",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     return;
                 }
 
-                Hide();
-                var customerWindow = new CustomerWindow(_arduino)
+                var customerWindow = new CustomerWindow(
+                    selectionWindow.SelectedMachineId,
+                    selectionWindow.SelectedMachineDisplayName,
+                    selectionWindow.SelectedMachineAddress,
+                    loadedProducts,
+                    _arduino)
                 {
                     Owner = this
                 };
-                
-                _arduino.SendStateCommand("STATE:ACTIVE");
+
+                _openCustomerWindows++;
+                _activeCustomerWindow = customerWindow;
+                _arduino?.SendMessage("LOADING MACHINE");
 
                 customerWindow.Closed += (_, _) =>
                 {
-                    OfflineSyncCoordinator.Instance.TrySyncIfOnline();
-                    _arduino.SendStateCommand("STATE:AFK");
-                    Show();
-                    Activate();
+                    OfflineSyncCoordinator.Instance.BeginBackgroundSync();
+                    _openCustomerWindows = Math.Max(0, _openCustomerWindows - 1);
+                    if (ReferenceEquals(_activeCustomerWindow, customerWindow))
+                    {
+                        _activeCustomerWindow = null;
+                    }
+
+                    if (_openCustomerWindows == 0)
+                    {
+                        _arduino?.SendMessage("ECO-MATIC IDLE");
+                        _arduino?.SendStateCommand("STATE:AFK");
+                    }
                 };
                 customerWindow.Show();
             }
         }
 
-        private void BtnAdmin_Click(object sender, RoutedEventArgs e)
+        private async void BtnAdmin_Click(object sender, RoutedEventArgs e)
         {
-            if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
-            {
-                MessageBox.Show(this, offlineMessage, "Admin Mode Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
             var login = new LoginWindow
             {
                 Owner = this
@@ -149,8 +286,20 @@ namespace Eco_Matic
 
             if (login.ShowDialog() == true)
             {
-                var store = new Eco_Matic.Data.SupabaseStore();
-                var loginResult = store.AuthenticateUser(login.Username, login.Password);
+                string username = login.Username;
+                string password = login.Password;
+
+                btnAdmin.IsEnabled = false;
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                var loginResult = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    var store = new Eco_Matic.Data.SupabaseStore();
+                    return store.AuthenticateUser(username, password);
+                });
+
+                Mouse.OverrideCursor = null;
+                btnAdmin.IsEnabled = true;
                 string? role = loginResult.Role;
                 int? machineId = loginResult.AssignedMachineId;
 
@@ -195,11 +344,11 @@ namespace Eco_Matic
 
         private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(this,
-                "Eco-Matic Vending Machine\nVersion 1.0\n\nCopyright 2026 Seanix",
-                "About",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            var about = new AboutWindow
+            {
+                Owner = this
+            };
+            about.ShowDialog();
         }
 
         private void OpenReadmeMenuItem_Click(object sender, RoutedEventArgs e)

@@ -32,6 +32,7 @@ This is the WPF user interface.
   - `LoginWindow`
   - `CatalogItemWindow`
   - `MachineSelectionWindow`
+  - `MapPickerWindow`
   - `InventoryItemWindow`
   - `RestockWindow`
   - `AddMachineWindow`
@@ -73,6 +74,9 @@ This layer connects the UI to external systems.
 - `Data/SupabaseClient.cs`
   - low-level REST client for Supabase PostgREST
   - performs `GET`, `POST`, `PATCH`, `DELETE`, and RPC calls
+- `Data/MapLocationService.cs`
+  - reverse-geocodes selected map coordinates into a readable address
+  - supports map-assisted vending machine setup while keeping manual editing possible
 - `Data/ArduinoService.cs`
   - handles serial communication with the Arduino
   - raises an event when an RFID card is scanned
@@ -102,16 +106,19 @@ This layer contains the main business objects used inside the application.
 ### 3.1 Customer Vending Flow
 
 1. `MainWindow` opens `MachineSelectionWindow`.
-2. The selected machine ID is stored through `DataStore.Initialize(machineId)`.
-3. `DataStore` loads the machine inventory from the local offline cache.
-4. `CustomerWindow` displays the 12-slot vending layout using the in-memory `DataStore.Products` list.
-5. When the customer buys an item:
+2. The machine selection screen shows the machine name and address to help the customer identify the correct kiosk.
+3. The selected machine ID is stored through `DataStore.Initialize(machineId)`.
+4. `DataStore` loads the machine inventory from the local offline cache.
+5. `CustomerWindow` displays the 12-slot vending layout using the in-memory `DataStore.Products` list.
+6. When the customer buys an item:
    - money is validated in the UI
    - stock is decreased in memory
    - `DataStore.SaveInventory()` updates the local cache and marks dirty stock for replay
    - `DataStore.LogEvent()` queues a customer event log for replay
    - `DataStore.RecordSale()` queues a sales record for replay
    - a receipt can be shown through `ReceiptWindow`
+   - the on-screen receipt can show the selected machine name and address
+   - the printed receipt can include the selected machine name and address
 
 Important current behavior:
 
@@ -142,11 +149,16 @@ Important implementation note:
 3. `AdminWindow` loads with role-based restrictions.
 4. If the role is `Inventory Manager`, machine access is limited and finance-related sections are hidden.
 5. The admin window uses one shell window and switches views with `Visibility` toggling instead of opening many separate pages.
+6. Machine setup now stores:
+   - a machine name in `vending_machines.location_name`
+   - an editable address in `vending_machines.address_text`
+   - optional map-picked coordinates in `vending_machines.latitude` and `vending_machines.longitude`
 
 Important admin split:
 
 - the `Items` tab manages the shared global catalog in `items`
 - the `Inventory` tab manages per-machine slot assignment, stock, and optional slot-specific price override in `machine_inventory`
+- the `Machines` tab manages machine identity and physical placement information
 
 ## 4. Why the Architecture Looks Like This
 
@@ -202,12 +214,22 @@ The current backend revolves around these main entities:
 - `sales_transactions`
 - `event_logs`
 - `customers`
+- `receipt_sessions`
+- `receipt_session_lines`
+- `esp32_telemetry`
+- `esp32_commands`
 
 One important detail for presentation:
 
 - `customers` is logically related to RFID and eco-credits
 - but it is not currently linked by foreign key to `sales_transactions`
 - the connection is done at application level through RFID scanning and `PendingPoints`
+
+Important vending-machine detail:
+
+- `vending_machines.location_name` now acts as the machine name shown in admin and customer selection
+- `vending_machines.address_text` stores the human-readable address
+- `vending_machines.latitude` and `vending_machines.longitude` store optional map-selected coordinates
 
 That means your ERD should show `customers` as an independent table in the current implementation.
 
@@ -221,17 +243,18 @@ That means your ERD should show `customers` as an independent table in the curre
 
 ## 8. Known Documentation Mismatch in the Repository
 
-Some older files in `docs/` and `README.md` still describe the project as MySQL-driven through `MySqlStore`.
+Some older archived or non-canonical files in the repository still describe the project as MySQL-driven through `MySqlStore`.
 
 For the current codebase, the accurate implementation is:
 
 - `SupabaseStore`
 - `SupabaseClient`
 - REST access to Supabase
+- optional local `OfflineMySqlStore` cache for customer-mode offline sync
 
-Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed.
+Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed and the live schema now also includes receipt-history and ESP32-support tables.
 
-For the live Supabase audit status, required migrations, and current auth/RLS findings, see `docs/SUPABASE_AUDIT.md`.
+For the live Supabase audit status, migrations, and current auth/RLS findings, see `docs/SUPABASE_AUDIT.md` and `docs/SUPABASE_MCP_ANALYSIS.md`.
 
 ## 9. Current Review Notes
 

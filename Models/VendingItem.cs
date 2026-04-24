@@ -21,6 +21,7 @@ public abstract class VendingItem
 {
     public int Id { get; set; }
     public int DbInventoryId { get; set; }
+    public int CatalogItemId { get; set; }
     public string Name { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public int Stock { get; set; }

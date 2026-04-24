@@ -196,8 +196,63 @@
                                 </Border>
                             </UniformGrid>
 
-                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
-                                <Grid>
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.35*" />
+                                    <ColumnDefinition Width="0.95*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Column="0" Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,14">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="Sales Pulse" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12" />
+                                        <ItemsControl x:Name="icDashboardSalesTrend" Grid.Row="1">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="60"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="84"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center"/>
+                                                        <Border Grid.Column="1" Height="12" Background="#EAF1FB" CornerRadius="6" VerticalAlignment="Center">
+                                                            <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="#2E77E6" CornerRadius="6"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+
+                                <Border Grid.Column="1" Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="10,0,0,14">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="Stock Monitoring" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12" />
+                                        <DataGrid x:Name="dgDashboardLowStock" Grid.Row="1" MinHeight="118" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Item" Binding="{Binding Path='Item'}" Width="*"/>
+                                                <DataGridTextColumn Header="Stock" Binding="{Binding Path='Stock'}" Width="55"/>
+                                                <DataGridTextColumn Header="Status" Binding="{Binding Path='Status'}" Width="95"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Grid>
+                                </Border>
+
+                                <Border Grid.ColumnSpan="2" Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                    <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
@@ -210,8 +265,9 @@
                                             <DataGridTextColumn Header="Details" Binding="{Binding Path='Notes'}" Width="*"/>
                                         </DataGrid.Columns>
                                     </DataGrid>
-                                </Grid>
-                            </Border>
+                                    </Grid>
+                                </Border>
+                            </Grid>
                         </Grid>
 
                         <!-- Inventory View Placeholder -->
@@ -227,12 +283,13 @@
                                 <ComboBox x:Name="cboInventoryMachine" Width="250" SelectionChanged="CboInventoryMachine_SelectionChanged" DisplayMemberPath="location_name" SelectedValuePath="machine_id"/>
                             </StackPanel>
                             
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,15">
-                                <Button Content="Assign Item to Slot" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddItem_Click"/>
-                                <Button Content="Restock Item" Width="130" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnRestock_Click"/>
-                                <Button Content="Edit Slot" Width="120" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditItem_Click"/>
-                                <Button Content="Remove From Slot" Width="140" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteItem_Click"/>
-                            </StackPanel>
+                            <WrapPanel Grid.Row="1" Margin="0,0,0,15" Orientation="Horizontal">
+                                <Button Content="Assign Item to Slot" Width="170" Margin="0,0,10,10" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddItem_Click"/>
+                                <Button Content="Restock Item" Width="135" Margin="0,0,10,10" Style="{StaticResource SidebarButtonStyle}" Click="BtnRestock_Click"/>
+                                <Button Content="Randomize Stocks" Width="150" Margin="0,0,10,10" Style="{StaticResource SidebarButtonStyle}" Click="BtnRandomizeStocks_Click"/>
+                                <Button Content="Edit Slot" Width="125" Margin="0,0,10,10" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditItem_Click"/>
+                                <Button Content="Remove From Slot" Width="150" Margin="0,0,0,10" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteItem_Click"/>
+                            </WrapPanel>
 
                             <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="Transparent">
                                 <DataGrid x:Name="dgInventory" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0" RowHeight="60">
@@ -289,15 +346,25 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                <Button Content="Add Global Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddCatalogItem_Click"/>
-                                <Button Content="Edit Global Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditCatalogItem_Click"/>
-                                <Button Content="Delete Global Item" Width="160" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteCatalogItem_Click"/>
-                            </StackPanel>
+                            <Grid Grid.Row="0" Margin="0,0,0,15">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                <TextBlock Text="Global Item Catalog" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10" />
+                                <StackPanel Grid.Row="1" Orientation="Horizontal">
+                                    <Button Content="Add Global Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddCatalogItem_Click"/>
+                                    <Button Content="Edit Global Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditCatalogItem_Click"/>
+                                    <Button Content="Delete Global Item" Width="160" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteCatalogItem_Click"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White" Margin="0,0,0,20">
                                 <DataGrid x:Name="dgItems" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0" RowHeight="60">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="ID" Binding="{Binding ID}" Width="60"/>
@@ -315,6 +382,35 @@
                                         <DataGridTextColumn Header="Machines Using Item" Binding="{Binding Path='Machines Using Item'}" Width="120"/>
                                         <DataGridTextColumn Header="Dispense Message" Binding="{Binding Path='Dispense Message'}" Width="*"/>
                                         <DataGridTextColumn Header="Examine Message" Binding="{Binding Path='Examine Message'}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+
+                            <Grid Grid.Row="2" Margin="0,0,0,15">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="Recycle Catalog" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10" />
+                                <StackPanel Grid.Row="1" Orientation="Horizontal">
+                                    <Button Content="Add Recycle Item" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddRecycleItem_Click"/>
+                                    <Button Content="Edit Recycle Item" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditRecycleItem_Click"/>
+                                    <Button Content="Toggle Active" Width="140" Style="{StaticResource SidebarButtonStyle}" Click="BtnToggleRecycleItem_Click"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Grid.Row="3" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                <DataGrid x:Name="dgRecycleItems" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ID" Binding="{Binding Path='ID'}" Width="60"/>
+                                        <DataGridTextColumn Header="Display Name" Binding="{Binding Path='Display Name'}" Width="180"/>
+                                        <DataGridTextColumn Header="Material Type" Binding="{Binding Path='Material Type'}" Width="140"/>
+                                        <DataGridTextColumn Header="Unit" Binding="{Binding Path='Unit Label'}" Width="90"/>
+                                        <DataGridTextColumn Header="Points / Unit" Binding="{Binding Path='Points / Unit'}" Width="100"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Path='Active'}" Width="90"/>
+                                        <DataGridTextColumn Header="Sort" Binding="{Binding Path='Sort Order'}" Width="70"/>
+                                        <DataGridTextColumn Header="Description" Binding="{Binding Path='Description'}" Width="*"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Border>
@@ -365,48 +461,188 @@
                         <!-- Sales View -->
                         <Grid x:Name="viewSales" Visibility="Collapsed">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <Grid Grid.Row="0" Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="250"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                                <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
-                                    <StackPanel>
-                                        <TextBlock x:Name="txtSalesFilterLabel" Text="Sales (Today)" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
-                                        <TextBlock x:Name="txtSalesTotal" Text="₱ 0.00" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0"/>
-                                    </StackPanel>
-                                </Border>
+                                        <UniformGrid Grid.Column="0" Columns="4" Rows="1">
+                                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                                <StackPanel>
+                                                    <TextBlock x:Name="txtSalesFilterLabel" Text="Sales (Today)" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesTotal" Text="₱ 0.00" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="TRANSACTIONS" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesTransactions" Text="0" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="AVG SALE" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesAverage" Text="₱ 0.00" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Style="{StaticResource CardBorderStyle}">
+                                                <StackPanel>
+                                                    <TextBlock Text="BEST ITEM" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesBestItem" Text="-" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </UniformGrid>
 
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <TextBlock Text="Filter By:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
-                                    <ComboBox x:Name="cboSalesFilter" Width="100" Margin="0,0,10,0" SelectedIndex="0" SelectionChanged="SalesFilter_Changed" VerticalContentAlignment="Center">
-                                        <ComboBoxItem Content="Day"/>
-                                        <ComboBoxItem Content="Week"/>
-                                        <ComboBoxItem Content="Month"/>
-                                        <ComboBoxItem Content="Year"/>
-                                    </ComboBox>
-                                    <DatePicker x:Name="dpSalesDate" Width="130" SelectedDateChanged="SalesFilter_Changed" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0,0,0">
+                                            <TextBlock Text="Filter By:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
+                                            <ComboBox x:Name="cboSalesFilter" Width="105" Margin="0,0,10,0" SelectedIndex="0" SelectionChanged="SalesFilter_Changed" VerticalContentAlignment="Center">
+                                                <ComboBoxItem Content="Day"/>
+                                                <ComboBoxItem Content="Week"/>
+                                                <ComboBoxItem Content="Month"/>
+                                                <ComboBoxItem Content="Year"/>
+                                                <ComboBoxItem Content="All Time"/>
+                                            </ComboBox>
+                                            <DatePicker x:Name="dpSalesDate" Width="130" SelectedDateChanged="SalesFilter_Changed" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1.2*"/>
+                                            <ColumnDefinition Width="0.8*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Revenue Trend" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                                                <ItemsControl x:Name="icSalesTrend">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,9">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="70"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="90"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center">
+                                                                    <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="{Binding Fill}" CornerRadius="7"/>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Margin="10,0,0,0">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="Product Mix" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                                                <Canvas x:Name="canvasSalesPie" Grid.Row="1" Width="170" Height="170" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                                <ItemsControl x:Name="icSalesPieLegend" Grid.Row="2">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                                <Border Width="10" Height="10" Background="{Binding Fill}" CornerRadius="5" Margin="0,4,7,0"/>
+                                                                <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" Width="120" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Best-Selling Items" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                                                <ItemsControl x:Name="icTopItems">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,9">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="110"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="90"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center">
+                                                                    <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="#2FA66A" CornerRadius="7"/>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Margin="10,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Machine Revenue" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                                                <ItemsControl x:Name="icMachineRevenue">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,9">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="120"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="90"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center">
+                                                                    <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="#FFCE4A" CornerRadius="7"/>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <Border Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="260"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Text="Transaction Details" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                                            <DataGrid x:Name="dgSales" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="TX ID" Binding="{Binding Path='TX ID'}" Width="60"/>
+                                                    <DataGridTextColumn Header="Date" Binding="{Binding Path='Date'}" Width="150"/>
+                                                    <DataGridTextColumn Header="Machine" Binding="{Binding Path='Machine'}" Width="150"/>
+                                                    <DataGridTextColumn Header="Item" Binding="{Binding Path='Item'}" Width="120"/>
+                                                    <DataGridTextColumn Header="Qty" Binding="{Binding Path='Quantity'}" Width="40"/>
+                                                    <DataGridTextColumn Header="Price" Binding="{Binding Path='Price', StringFormat='₱{0:N2}'}" Width="80"/>
+                                                    <DataGridTextColumn Header="Total Paid" Binding="{Binding Path='Total Paid', StringFormat='₱{0:N2}'}" Width="*" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
-                            </Grid>
-
-                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
-                                <DataGrid x:Name="dgSales" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="TX ID" Binding="{Binding Path='TX ID'}" Width="60"/>
-                                        <DataGridTextColumn Header="Date" Binding="{Binding Path='Date'}" Width="150"/>
-                                        <DataGridTextColumn Header="Machine" Binding="{Binding Path='Machine'}" Width="150"/>
-                                        <DataGridTextColumn Header="Item" Binding="{Binding Path='Item'}" Width="100"/>
-                                        <DataGridTextColumn Header="Qty" Binding="{Binding Path='Quantity'}" Width="40"/>
-                                        <DataGridTextColumn Header="Price" Binding="{Binding Path='Price', StringFormat='₱{0:N2}'}" Width="80"/>
-                                        <DataGridTextColumn Header="Total Paid" Binding="{Binding Path='Total Paid', StringFormat='₱{0:N2}'}" Width="*" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Border>
+                            </ScrollViewer>
                         </Grid>
 
                         <!-- Machines View -->
@@ -416,14 +652,27 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
                             
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                <Button Content="Register Machine" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddMachine_Click"/>
+                            <DockPanel Grid.Row="0" Margin="0,0,0,15" LastChildFill="False">
+                                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                                <Button x:Name="btnAddMachine" Content="Register Machine" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddMachine_Click"/>
                                 <Button Content="Edit Machine" Width="160" Margin="0,0,10,0" Background="#F2F5FB" Foreground="#2E77E6" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditMachine_Click"/>
                                 <Button Content="Remove Machine" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteMachine_Click"/>
-                            </StackPanel>
+                                </StackPanel>
+                                <Border DockPanel.Dock="Right" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="12,8" Margin="14,0,0,0">
+                                    <TextBlock x:Name="txtMachineScope" Text="0 / 4 machines in use" Foreground="#475569" FontSize="12" FontWeight="SemiBold"/>
+                                </Border>
+                            </DockPanel>
 
                             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
-                                <DataGrid x:Name="dgMachines" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                                <DataGrid x:Name="dgMachines" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ID" Binding="{Binding [ID]}" Width="70"/>
+                                        <DataGridTextColumn Header="Name" Binding="{Binding [Name]}" Width="170"/>
+                                        <DataGridTextColumn Header="Address" Binding="{Binding [Address]}" Width="*"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding [Status]}" Width="120"/>
+                                        <DataGridTextColumn Header="Deployed" Binding="{Binding [Deployed], StringFormat={}{0:yyyy-MM-dd HH:mm}}" Width="150"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </Border>
                         </Grid>
 

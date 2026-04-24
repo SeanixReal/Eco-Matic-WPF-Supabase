@@ -1,51 +1,177 @@
-# Eco-Matic RFID Scanner with LCD and LEDs
+# Eco-Matic Hardware Sketches
 
-This folder contains the updated Arduino source code for the Eco-Matic Trash-to-Credit system's RFID module, complete with Visual Indicators (LCD & LEDs).
+This folder contains the hardware sketches for the Eco-Matic RFID/LCD module.
 
-## Hardware Requirements
-*   Arduino Uno (or Nano)
-*   RFID-RC522 Module (3.3V)
-*   I2C LCD Display (16x2, 5V)
-*   1x Red LED + 220 ohm resistor
-*   1x Green LED + 220 ohm resistor
-*   RFID Cards or Key Fobs (13.56 MHz)
+Recommended deadline target:
 
-## Wiring Guide
-### 1. RFID-RC522
-**WARNING:** The RC522 operates on 3.3V. Do NOT connect it to the 5V pin!
-*   **SDA (SS)** -> Pin 10
-*   **SCK** -> Pin 13
-*   **MOSI** -> Pin 11
-*   **MISO** -> Pin 12
-*   **IRQ** -> Unconnected
-*   **GND** -> GND
-*   **RST** -> Pin 9
-*   **3.3V** -> 3.3V
+- `RFID_Scanner/` for Arduino Uno/Nano, RC522 RFID, LCD1602 I2C, and green/red LEDs
 
-### 2. I2C LCD Display
-The I2C LCD requires only 4 pins. It uses the I2C bus pins strictly defined by your Arduino board.
-*   **VCC** -> 5V
-*   **GND** -> GND
-*   **SDA** -> A4 (Analog Pin 4)
-*   **SCL** -> A5 (Analog Pin 5)
+Experimental/future target:
 
-### 3. LED Confirmation Lights
-Always connect LEDs with a resistor (220 to 330 ohm) in series to prevent burning them out!
-*   **Green LED Anode (+)** -> Pin 6
-*   **Red LED Anode (+)** -> Pin 7
-*   **Both LED Cathodes (-)** -> GND
+- `ESP32S3_RFID_Scanner/` for ESP32-S3, RC522 RFID, LCD1602 I2C, LEDs, and MAX98357A speaker tones
+
+Your LCD1602 has been confirmed working on Arduino at `5V`, so the Arduino Uno/Nano path is the safer demo build.
+
+## Current Arduino Hardware
+
+- Arduino Uno or Nano
+- RC522 RFID module
+- LCD1602 I2C backpack
+- passive 5V buzzer
+- green LED and red LED with `220-330 ohm` resistors
+- optional SG90 micro servo for a lightweight trapdoor dispenser
+- RFID cards or key fobs
+
+## Arduino Uno/Nano Wiring
+
+### RC522 RFID
+
+The RC522 is a `3.3V` module. Do not connect its power pin to `5V`.
+
+- `RC522 SDA / SS` -> Arduino `D10`
+- `RC522 SCK` -> Arduino `D13`
+- `RC522 MOSI` -> Arduino `D11`
+- `RC522 MISO` -> Arduino `D12`
+- `RC522 RST` -> Arduino `D9`
+- `RC522 3.3V` -> Arduino `3.3V`
+- `RC522 GND` -> Arduino `GND`
+- `RC522 IRQ` -> not connected
+
+### LCD1602 I2C
+
+- `LCD VCC` -> Arduino `5V`
+- `LCD GND` -> Arduino `GND`
+- `LCD SDA` -> Arduino `A4`
+- `LCD SCL` -> Arduino `A5`
+
+The sketch scans for common LCD addresses `0x27` and `0x3F`.
+
+### LEDs
+
+- Arduino `D6` -> `220-330 ohm resistor` -> green LED anode
+- Arduino `D7` -> `220-330 ohm resistor` -> red LED anode
+- both LED cathodes -> `GND`
+
+### Passive Buzzer
+
+Use a passive buzzer if you want different tones for scan, success, error, dispense, and change feedback.
+
+- buzzer `+` -> Arduino `D4`
+- buzzer `-` -> Arduino `GND`
+
+Optional safer wiring:
+
+- Arduino `D4` -> `100 ohm resistor` -> buzzer `+`
+- buzzer `-` -> Arduino `GND`
+
+The sketch uses short tone patterns:
+
+- customer mode ready: rising two-tone beep
+- RFID scanned: quick tick
+- valid RFID: success beep
+- invalid/new RFID: low error buzz
+- dispense/lid open: playful rising tone
+- cash inserted: quick confirmation tick
+- receipt printing: light printer-style triple beep
+- change returned: fast coin-drop pattern
+- timeout/error: low warning buzz
+
+Passive buzzer loudness depends mostly on the buzzer itself and the frequency it resonates at. If it is too quiet, try mounting it to the cardboard box so the box acts like a small resonator, or try another passive buzzer with a louder rated sound output.
+
+### Optional SG90 Lid Servo
+
+Use the SG90 to open a lightweight cardboard side/top flap like a small hat lid. This is easier and safer than a real item dropper.
+
+- SG90 signal wire, usually orange/yellow -> Arduino `D5`
+- SG90 red wire -> external regulated `5V`
+- SG90 brown/black wire -> external supply `GND`
+- external supply `GND` -> Arduino `GND`
+
+Servo wiring diagram:
+
+```text
+Arduino Uno/Nano                  SG90 Servo
+----------------                  ----------
+D5 -----------------------------> orange/yellow signal
+
+External 5V + ------------------> red
+External 5V - / GND ------------> brown/black
+        |
+        +-----------------------> Arduino GND
+```
+
+If you do not have a separate 5V supply yet, you can test a tiny unloaded SG90 from Arduino `5V`, but use this only for quick testing:
+
+```text
+Arduino D5  -> SG90 orange/yellow signal
+Arduino 5V  -> SG90 red
+Arduino GND -> SG90 brown/black
+```
+
+If the LCD flickers, Arduino resets, or the servo jitters, move the servo red/brown wires to an external 5V supply and keep the external `GND` connected to Arduino `GND`.
+
+Optional capacitor for servo power:
+
+```text
+470uF capacitor + / longer leg      -> servo 5V / red wire rail
+470uF capacitor - / striped side    -> servo GND / brown-black wire rail
+```
+
+Important:
+
+- do not power the SG90 from the Arduino `5V` pin if it jitters or resets the Arduino
+- always connect the external servo power ground to Arduino ground
+- add a `470uF` or larger capacitor across the servo power supply `5V` and `GND` if the servo causes resets
+- the capacitor positive leg goes to `5V`; the striped negative side goes to `GND`
+
+Recommended horn:
+
+- use the single-arm horn for a simple cardboard lid because it is easier to tape or hot-glue to one flap
+- use the dual-arm horn only if you need a wider contact area or want to push the lid from the middle
+- mount the horn so the lid is closed at about `15 degrees` and opens at about `95 degrees`
+
+Simple lid mechanism:
+
+```text
+Closed box side/top:
+
+    cardboard lid
+    +----------+
+    |          |
+    +----------+
+         |
+      servo horn
+         |
+       SG90
+
+On purchase:
+
+    servo turns -> lid opens -> waits briefly -> lid closes
+```
+
+The Arduino sketch opens the lid automatically when the WPF app sends a purchase display message containing `DISPENSING` or `TAKE YOUR ITEM`.
+
+## WPF Serial Bridge
+
+- Default port: `COM5`
+- Default baud: `9600`
+- Optional `.env` overrides:
+  - `ECOMATIC_ARDUINO_PORT`
+  - `ECOMATIC_ARDUINO_BAUD`
+
+The Arduino sends RFID scans as `RFID:<UID>`. The WPF app sends `STATE:ACTIVE`, `STATE:AFK`, `VALID`, `INVALID`, and `MSG:<text>` commands back to the Arduino for LCD and LED feedback. A successful purchase opens the optional SG90 lid because the WPF app sends a `DISPENSING` message.
+
+RFID scans are accepted only while customer mode is open. Customers without RFID can still earn points during the session and see them on the receipt, but only a registered RFID card can save those points to Supabase `customers.eco_credits`.
+
+## Speaker Note
+
+The MAX98357A speaker module is an I2S amplifier, which is a good match for ESP32-S3 but not a practical Arduino Uno/Nano deadline feature. For the Arduino build, use the LCD, LEDs, and optional SG90 trapdoor as the customer-facing feedback. Add the speaker later if you return to ESP32-S3 or use a simpler buzzer module.
 
 ## Arduino IDE Setup
-You now need to install an extra library for the LCD display:
-1. Open the Arduino IDE.
-2. Go to **Sketch** -> **Include Library** -> **Manage Libraries...**
-3. Search for **"MFRC522"** (by GithubCommunity) and ensure it's installed.
-4. Search for **"LiquidCrystal I2C"** (by Frank de Brabander) and install it.
 
-## How it works with Eco-Matic
-1. The Arduino constantly polls for an RFID card and displays "Eco-Matic Ready" / "Please Tap Card" on the LCD.
-2. Once tapped, the LCD says "Checking...", and the RFID UID is sent to the PC via USB as `RFID:A1B2C3D4`.
-3. The C# WPF Application checks the database.
-4. **If the account exists:** The C# app sends the string `VALID` back to the Arduino. The Arduino turns on the Green LED and prints "Access Granted!".
-5. **If the account doesn't exist:** The C# app sends the string `INVALID` back to the Arduino. The Arduino turns on the Red LED and prints "Unknown Card".
-6. After 3 seconds, all lights turn off, the message clears, and it's ready for the next customer.
+Install:
+
+1. `MFRC522`
+2. `LiquidCrystal I2C`
+
+Then flash `Arduino/RFID_Scanner/RFID_Scanner.ino` and open Serial Monitor at `9600`.

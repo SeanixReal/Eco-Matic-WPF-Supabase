@@ -4,22 +4,44 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.ComponentModel;
+using System.Threading;
 using System.Windows.Threading;
+using Eco_Matic.Data;
 
 namespace Eco_Matic;
 
 public partial class CustomerWindow : Window
 {
+    private static readonly TimeSpan DefaultLiveInventoryRefreshInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan RetryLiveInventoryRefreshInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan CooldownLiveInventoryRefreshInterval = TimeSpan.FromSeconds(18);
+    private static readonly Random AnimationRandom = new();
+
     private readonly List<RecycleEntry> _recycleEntries = new();
     private readonly Dictionary<int, SlotControls> _slots = new();
+    private readonly List<Product> _products = new();
 
     private decimal _insertedMoney;
+    private decimal _totalMoneyInserted;
+    private decimal _totalChangeReturned;
+    private int _pendingPoints;
     private bool _isDispensing;
     private readonly Data.ArduinoService? _arduino;
+    private readonly int _machineId;
+    private readonly string _machineDisplayName;
+    private readonly string _machineAddress;
     private DispatcherTimer? _dispenseTimer;
     private DispatcherTimer? _blinkTimer;
     private int _blinkSlotId;
     private int _blinkCount;
+    private Transaction _activeSession = new();
+    private bool _isRefreshingInventory;
+    private CancellationTokenSource? _liveInventoryRefreshCts;
+    private int _consecutiveRefreshFailures;
+    private int _pendingBackendWrites;
+    private bool _allowWindowClose;
+    private bool _hardwareActivated;
 
     private static readonly Brush SlotDefault = CreateBrush(249, 251, 254);
     private static readonly Brush SlotEmpty = CreateBrush(238, 243, 249);
@@ -42,20 +64,53 @@ public partial class CustomerWindow : Window
 
     private sealed class VendingItemOption
     {
-        public int Id { get; set; }
+        public int CatalogItemId { get; set; }
         public string Name { get; set; } = string.Empty;
         public override string ToString() => Name;
     }
 
-    public CustomerWindow(Data.ArduinoService? arduino = null)
+    public CustomerWindow(
+        int machineId,
+        string machineDisplayName,
+        string machineAddress,
+        IEnumerable<Product> initialProducts,
+        Data.ArduinoService? arduino = null)
     {
         InitializeComponent();
+        _machineId = machineId;
+        _machineDisplayName = machineDisplayName;
+        _machineAddress = machineAddress;
         _arduino = arduino;
+        Loaded += CustomerWindow_Loaded;
+        StartNewSession();
         InitializeSlots();
         InitializeSelectors();
+        ReplaceProducts(initialProducts);
         RefreshProducts();
+        UpdateMachineHeader();
         UpdateMoneyDisplay();
+        UpdateDoneButtonState();
         SetDispenseStatus("INSERT MONEY TO START", StatusIdle);
+    }
+
+    private async void CustomerWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= CustomerWindow_Loaded;
+        await LoadRecycleCatalogAsync();
+        InitializeLiveInventoryRefresh();
+        ActivateHardwareSession();
+    }
+
+    private void ActivateHardwareSession()
+    {
+        if (_hardwareActivated)
+        {
+            return;
+        }
+
+        _hardwareActivated = true;
+        _arduino?.SendStateCommand("STATE:ACTIVE");
+        _arduino?.SendMessage("CUSTOMER MODE READY");
     }
 
     protected override void OnClosed(EventArgs e)
@@ -71,6 +126,13 @@ public partial class CustomerWindow : Window
         {
             _blinkTimer.Stop();
             _blinkTimer = null;
+        }
+
+        if (_liveInventoryRefreshCts != null)
+        {
+            _liveInventoryRefreshCts.Cancel();
+            _liveInventoryRefreshCts.Dispose();
+            _liveInventoryRefreshCts = null;
         }
     }
 
@@ -105,18 +167,27 @@ public partial class CustomerWindow : Window
     private void InitializeSelectors()
     {
         cboRecycleType.Items.Clear();
-        foreach (var material in Enum.GetValues<RecycleMaterial>())
-        {
-            cboRecycleType.Items.Add($"{material} ({DataStore.RecycleRates[material]} pts/pc)");
-        }
-
-        if (cboRecycleType.Items.Count > 0)
-        {
-            cboRecycleType.SelectedIndex = 0;
-        }
-
+        cboRecycleType.IsEnabled = false;
         txtRecycleQty.Text = "1";
         RefreshExamineOptions();
+    }
+
+    private async Task LoadRecycleCatalogAsync()
+    {
+        bool loaded = await Task.Run(DataStore.RefreshRecyclableCatalog);
+
+        cboRecycleType.ItemsSource = null;
+        cboRecycleType.Items.Clear();
+
+        if (!loaded || DataStore.RecyclableItems.Count == 0)
+        {
+            cboRecycleType.IsEnabled = false;
+            return;
+        }
+
+        cboRecycleType.ItemsSource = DataStore.RecyclableItems;
+        cboRecycleType.SelectedIndex = 0;
+        cboRecycleType.IsEnabled = true;
     }
 
     private void RefreshProducts()
@@ -126,7 +197,7 @@ public partial class CustomerWindow : Window
             int slotId = slotPair.Key;
             SlotControls slot = slotPair.Value;
 
-            var product = DataStore.Products.FirstOrDefault(p => p.Id == slotId);
+            var product = _products.FirstOrDefault(p => p.Id == slotId);
             if (product == null)
             {
                 slot.NameLabel.Text = "EMPTY";
@@ -177,11 +248,114 @@ public partial class CustomerWindow : Window
         RefreshExamineOptions();
     }
 
+    private void UpdateMachineHeader()
+    {
+        string machineName = string.IsNullOrWhiteSpace(_machineDisplayName)
+            ? $"Machine {_machineId}"
+            : _machineDisplayName;
+
+        txtMachineHeader.Text = string.IsNullOrWhiteSpace(_machineAddress)
+            ? machineName
+            : $"{machineName}  |  {_machineAddress}";
+    }
+
+    private void InitializeLiveInventoryRefresh()
+    {
+        if (OfflineSyncCoordinator.Instance.CurrentSource != SessionDataSource.Supabase)
+        {
+            return;
+        }
+
+        _liveInventoryRefreshCts?.Cancel();
+        _liveInventoryRefreshCts?.Dispose();
+        _liveInventoryRefreshCts = new CancellationTokenSource();
+        _ = RunLiveInventoryRefreshLoopAsync(_liveInventoryRefreshCts.Token);
+    }
+
+    private async Task RunLiveInventoryRefreshLoopAsync(CancellationToken cancellationToken)
+    {
+        TimeSpan delay = DefaultLiveInventoryRefreshInterval;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+
+            if (!IsLoaded || !IsVisible || _isDispensing || Volatile.Read(ref _pendingBackendWrites) > 0)
+            {
+                continue;
+            }
+
+            bool refreshed = await RefreshInventoryFromSourceAsync();
+            if (refreshed)
+            {
+                _consecutiveRefreshFailures = 0;
+                delay = DefaultLiveInventoryRefreshInterval;
+            }
+            else
+            {
+                _consecutiveRefreshFailures++;
+                delay = _consecutiveRefreshFailures >= 3
+                    ? CooldownLiveInventoryRefreshInterval
+                    : RetryLiveInventoryRefreshInterval;
+            }
+        }
+    }
+
+    private async Task<bool> RefreshInventoryFromSourceAsync()
+    {
+        if (_isRefreshingInventory ||
+            _isDispensing ||
+            OfflineSyncCoordinator.Instance.CurrentSource != SessionDataSource.Supabase)
+        {
+            return false;
+        }
+
+        _isRefreshingInventory = true;
+
+        try
+        {
+            var refreshedProducts = await Task.Run(() =>
+            {
+                return DataStore.TryGetProductsForMachine(_machineId, out var products)
+                    ? products
+                    : new List<Product>();
+            });
+
+            if (refreshedProducts.Count == 0)
+            {
+                return false;
+            }
+
+            await Dispatcher.InvokeAsync(() =>
+            {
+                ReplaceProducts(refreshedProducts);
+                RefreshProducts();
+                UpdateAllButtonStates();
+            });
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            _isRefreshingInventory = false;
+        }
+    }
+
     private void UpdateAllButtonStates()
     {
         foreach (var slotPair in _slots)
         {
-            var product = DataStore.Products.FirstOrDefault(p => p.Id == slotPair.Key);
+            var product = _products.FirstOrDefault(p => p.Id == slotPair.Key);
             if (product is { Stock: > 0 })
             {
                 UpdateButtonBuyability(slotPair.Value, product);
@@ -207,21 +381,29 @@ public partial class CustomerWindow : Window
 
     private void RefreshExamineOptions()
     {
-        int? selectedId = (cboExamineItem.SelectedItem as VendingItemOption)?.Id;
+        int? selectedCatalogItemId = (cboExamineItem.SelectedItem as VendingItemOption)?.CatalogItemId;
 
         cboExamineItem.Items.Clear();
-        foreach (var p in DataStore.Products.OrderBy(p => p.Id))
+        foreach (var product in _products
+                     .GroupBy(p => p.CatalogItemId > 0 ? p.CatalogItemId : p.Id)
+                     .Select(group => group
+                         .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(p => p.Id)
+                         .First())
+                     .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
         {
             cboExamineItem.Items.Add(new VendingItemOption
             {
-                Id = p.Id,
-                Name = p.Name
+                CatalogItemId = product.CatalogItemId > 0 ? product.CatalogItemId : product.Id,
+                Name = product.Name
             });
         }
 
-        if (selectedId.HasValue)
+        if (selectedCatalogItemId.HasValue)
         {
-            var same = cboExamineItem.Items.OfType<VendingItemOption>().FirstOrDefault(x => x.Id == selectedId.Value);
+            var same = cboExamineItem.Items
+                .OfType<VendingItemOption>()
+                .FirstOrDefault(x => x.CatalogItemId == selectedCatalogItemId.Value);
             if (same != null)
             {
                 cboExamineItem.SelectedItem = same;
@@ -237,7 +419,170 @@ public partial class CustomerWindow : Window
 
     private void UpdateMoneyDisplay()
     {
-        lblMoneyAmount.Text = $"P {_insertedMoney:F2} | Pts: {DataStore.PendingPoints}";
+        lblCashAmount.Text = $"P {_insertedMoney:F2}";
+        lblPointsAmount.Text = _pendingPoints.ToString(CultureInfo.InvariantCulture);
+    }
+
+    public void MarkPendingPointsSaved()
+    {
+        _pendingPoints = 0;
+        DataStore.PendingPoints = 0;
+        UpdateMoneyDisplay();
+        SetDispenseStatus("POINTS SAVED TO RFID", Brushes.MediumSeaGreen);
+        UpdateDoneButtonState();
+    }
+
+    private void StartNewSession()
+    {
+        DateTime now = DateTime.Now;
+        _totalMoneyInserted = 0m;
+        _totalChangeReturned = 0m;
+        _pendingPoints = 0;
+        DataStore.PendingPoints = 0;
+        _activeSession = new Transaction
+        {
+            Id = DataStore.AllocateTransactionId(),
+            ReceiptNumber = $"RCPT-{now:yyyyMMddHHmmssfff}",
+            MachineId = _machineId,
+            MachineDisplayName = _machineDisplayName,
+            MachineAddress = _machineAddress,
+            SessionStartedAt = now,
+            SessionEndedAt = now,
+            Date = now,
+            Source = DataStore.IsOffline ? "offline" : "online"
+        };
+    }
+
+    private bool HasSessionActivity()
+    {
+        return _activeSession.Items.Count > 0 ||
+               _recycleEntries.Count > 0 ||
+               _totalMoneyInserted > 0m ||
+               _totalChangeReturned > 0m ||
+               _insertedMoney > 0m;
+    }
+
+    private void UpdateDoneButtonState()
+    {
+        if (HasSessionActivity())
+        {
+            btnBack.Content = "DONE & RECEIPT";
+            btnBack.Background = new SolidColorBrush(Color.FromRgb(47, 166, 106));
+            btnBack.BorderBrush = new SolidColorBrush(Color.FromRgb(47, 166, 106));
+        }
+        else
+        {
+            btnBack.Content = "DONE";
+            btnBack.Background = new SolidColorBrush(Color.FromRgb(46, 119, 230));
+            btnBack.BorderBrush = new SolidColorBrush(Color.FromRgb(46, 119, 230));
+        }
+    }
+
+    private void QueueBackgroundStoreAction(Action action)
+    {
+        Interlocked.Increment(ref _pendingBackendWrites);
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                action();
+            }
+            catch
+            {
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _pendingBackendWrites);
+            }
+        });
+    }
+
+    private void ReplaceProducts(IEnumerable<Product> products)
+    {
+        _products.Clear();
+        _products.AddRange(products.Select(CloneProduct));
+    }
+
+    private static Product CloneProduct(Product source)
+    {
+        Product clone = Product.Create(
+            source.Type,
+            source.Id,
+            source.Name,
+            source.Price,
+            source.Stock,
+            source.FlavorText,
+            source is IHasCalories caloriesItem ? caloriesItem.Calories : 0,
+            source is IHasVolume volumeItem ? volumeItem.VolumeMl : 0,
+            source.ImagePath,
+            source.DispenseMessage,
+            source.ExamineMessage);
+
+        clone.DbInventoryId = source.DbInventoryId;
+        clone.CatalogItemId = source.CatalogItemId;
+        return clone;
+    }
+
+    private static Product CreateInventorySaveSnapshot(int inventoryId, int stockLevel)
+    {
+        return new MiscItem
+        {
+            DbInventoryId = inventoryId,
+            Stock = stockLevel
+        };
+    }
+
+    private void AddProductToActiveSession(VendingItem product)
+    {
+        string slotId = product.Id.ToString(CultureInfo.InvariantCulture);
+        TransactionItem? existingLine = _activeSession.Items.FirstOrDefault(item =>
+            item.ProductId == product.DbInventoryId &&
+            string.Equals(item.SlotId, slotId, StringComparison.Ordinal));
+
+        if (existingLine == null)
+        {
+            _activeSession.Items.Add(new TransactionItem
+            {
+                ProductId = product.DbInventoryId,
+                SlotId = slotId,
+                ProductName = product.Name,
+                Quantity = 1,
+                UnitPrice = product.Price
+            });
+        }
+        else
+        {
+            existingLine.Quantity++;
+        }
+
+        _activeSession.TotalAmount = _activeSession.Items.Sum(item => item.LineTotal);
+        _activeSession.AmountPaid = _totalMoneyInserted;
+        _activeSession.Change = _totalChangeReturned + _insertedMoney;
+    }
+
+    private Transaction FinalizeActiveSession()
+    {
+        _activeSession.RecycledItems = _recycleEntries
+            .Select(entry => new RecycleEntry
+            {
+                RecyclableItemId = entry.RecyclableItemId,
+                DisplayName = entry.DisplayName,
+                MaterialType = entry.MaterialType,
+                UnitLabel = entry.UnitLabel,
+                Pieces = entry.Pieces,
+                PointsPerUnit = entry.PointsPerUnit,
+                Description = entry.Description
+            })
+            .ToList();
+
+        _activeSession.TotalAmount = _activeSession.Items.Sum(item => item.LineTotal);
+        _activeSession.AmountPaid = _totalMoneyInserted;
+        _activeSession.Change = _totalChangeReturned + _insertedMoney;
+        _activeSession.SessionEndedAt = DateTime.Now;
+        _activeSession.Date = _activeSession.SessionEndedAt;
+        _activeSession.Source = DataStore.IsOffline ? "offline" : "online";
+        return _activeSession;
     }
 
     private void BtnMoney_Click(object sender, RoutedEventArgs e)
@@ -253,9 +598,44 @@ public partial class CustomerWindow : Window
         }
 
         _insertedMoney += amount;
+        _totalMoneyInserted += amount;
+        _arduino?.SendMessage("CASH INSERTED");
         UpdateMoneyDisplay();
-        lblRecycleStatus.Text = "Balance updated";
         UpdateAllButtonStates();
+        UpdateDoneButtonState();
+    }
+
+    private void BtnQrPay_Click(object sender, RoutedEventArgs e)
+    {
+        var qrPayment = new QrPaymentWindow(GetSuggestedQrPaymentAmount(), _machineId)
+        {
+            Owner = this
+        };
+
+        if (qrPayment.ShowDialog() != true)
+        {
+            return;
+        }
+
+        _insertedMoney += qrPayment.PaidAmount;
+        _totalMoneyInserted += qrPayment.PaidAmount;
+
+        SetDispenseStatus("QR PAYMENT OK", Brushes.MediumSeaGreen);
+        UpdateMoneyDisplay();
+        UpdateAllButtonStates();
+        UpdateDoneButtonState();
+    }
+
+    private decimal GetSuggestedQrPaymentAmount()
+    {
+        decimal cheapestAvailablePrice = _products
+            .Where(product => product.Stock > 0)
+            .Select(product => product.Price)
+            .DefaultIfEmpty(50m)
+            .Min();
+
+        decimal remainingForCheapestItem = cheapestAvailablePrice - _insertedMoney;
+        return remainingForCheapestItem > 0 ? remainingForCheapestItem : 20m;
     }
 
     private void BtnCoinReturn_Click(object sender, RoutedEventArgs e)
@@ -266,13 +646,13 @@ public partial class CustomerWindow : Window
         }
 
         decimal returned = _insertedMoney;
+        _totalChangeReturned += returned;
         _insertedMoney = 0;
-        _recycleEntries.Clear();
 
         UpdateMoneyDisplay();
-        lblRecycleStatus.Text = "Balance reset";
-        SetDispenseStatus("INSERT MONEY TO START", StatusIdle);
+        SetDispenseStatus("CHANGE RETURNED", StatusIdle);
         UpdateAllButtonStates();
+        UpdateDoneButtonState();
 
         MessageBox.Show(this,
             $"P{returned:F2} returned. Please collect your money.",
@@ -283,15 +663,14 @@ public partial class CustomerWindow : Window
 
     private void BtnRecycle_Click(object sender, RoutedEventArgs e)
     {
-        if (cboRecycleType.SelectedIndex < 0)
+        if (cboRecycleType.SelectedItem is not RecyclableItemDefinition recyclableItem)
         {
             return;
         }
 
-        var material = (RecycleMaterial)cboRecycleType.SelectedIndex;
-
         if (!int.TryParse(txtRecycleQty.Text, out int pieces) || pieces <= 0)
         {
+            SetDispenseStatus("RECYCLE QTY ERROR", SoldOutRed);
             MessageBox.Show(this,
                 "Enter a valid number of items (pieces) greater than zero.",
                 "Recycle Credit",
@@ -300,18 +679,22 @@ public partial class CustomerWindow : Window
             return;
         }
 
-        int ratePerPiece = DataStore.RecycleRates[material];
-        int points = ratePerPiece * pieces;
-        DataStore.PendingPoints += points;
+        int points = recyclableItem.PointsPerUnit * pieces;
+        _pendingPoints += points;
+        DataStore.PendingPoints = _pendingPoints;
 
-        var existing = _recycleEntries.FirstOrDefault(x => x.Material == material);
+        var existing = _recycleEntries.FirstOrDefault(x => x.RecyclableItemId == recyclableItem.Id);
         if (existing == null)
         {
             _recycleEntries.Add(new RecycleEntry
             {
-                Material = material,
+                RecyclableItemId = recyclableItem.Id,
+                DisplayName = recyclableItem.DisplayName,
+                MaterialType = recyclableItem.MaterialType,
+                UnitLabel = recyclableItem.UnitLabel,
                 Pieces = pieces,
-                PointsPerPiece = ratePerPiece
+                PointsPerUnit = recyclableItem.PointsPerUnit,
+                Description = recyclableItem.Description
             });
         }
         else
@@ -319,10 +702,13 @@ public partial class CustomerWindow : Window
             existing.Pieces += pieces;
         }
 
-        DataStore.LogEvent("RECYCLE", $"{pieces} pc(s) {material}", points);
-        lblRecycleStatus.Text = $"+{points} Pts";
+        string recycleLogDetails = $"{pieces} {recyclableItem.UnitLabel}(s) {recyclableItem.DisplayName}";
+        QueueBackgroundStoreAction(() => DataStore.LogEvent(_machineId, "RECYCLE", recycleLogDetails, points));
+        txtRecycleQty.Text = "1";
+        SetDispenseStatus($"+{points} POINTS TAP RFID TO SAVE", Brushes.MediumSeaGreen);
         UpdateMoneyDisplay();
         UpdateAllButtonStates();
+        UpdateDoneButtonState();
     }
 
     private void BtnExamine_Click(object sender, RoutedEventArgs e)
@@ -332,25 +718,26 @@ public partial class CustomerWindow : Window
             return;
         }
 
-        var product = DataStore.Products.FirstOrDefault(p => p.Id == option.Id);
-        if (product == null)
+        int targetCatalogItemId = option.CatalogItemId;
+        List<Product> matchingProducts = _products
+            .Where(product => (product.CatalogItemId > 0 ? product.CatalogItemId : product.Id) == targetCatalogItemId)
+            .OrderBy(product => product.Id)
+            .ToList();
+
+        if (matchingProducts.Count == 0)
         {
             RefreshProducts();
             return;
         }
 
-        MessageBox.Show(this,
-            $"{product.Name}\n" +
-            $"Type: {product.Type}\n" +
-            $"Price: P{product.Price:F2}\n" +
-            $"Stock: {product.Stock}\n\n" +
-            product.Examine(),
-            "Item Details",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        var detailsWindow = new ItemDetailsWindow(matchingProducts)
+        {
+            Owner = this
+        };
+        detailsWindow.ShowDialog();
     }
 
-    private void SelectButton_Click(object sender, RoutedEventArgs e)
+    private async void SelectButton_Click(object sender, RoutedEventArgs e)
     {
         if (_isDispensing)
         {
@@ -362,7 +749,16 @@ public partial class CustomerWindow : Window
             return;
         }
 
-        var product = DataStore.Products.FirstOrDefault(p => p.Id == slotId);
+        if (OfflineSyncCoordinator.Instance.CurrentSource == SessionDataSource.Supabase)
+        {
+            bool refreshed = await RefreshInventoryFromSourceAsync();
+            if (!refreshed)
+            {
+                SetDispenseStatus("LIVE STOCK DELAYED", Brushes.Khaki);
+            }
+        }
+
+        var product = _products.FirstOrDefault(p => p.Id == slotId);
         if (product == null)
         {
             return;
@@ -383,105 +779,81 @@ public partial class CustomerWindow : Window
 
         _insertedMoney -= product.Price;
         product.Stock--;
-        DataStore.SaveInventory();
+        AddProductToActiveSession(product);
 
-        var transaction = CreateTransaction(product);
-        DataStore.Transactions.Add(transaction);
-        DataStore.LastTransaction = transaction;
-        
+        int inventoryId = product.DbInventoryId;
+        int updatedStock = product.Stock;
         string logDetails = $"Item: {product.Name} | Quantity: 1 | Price: ₱{product.Price:0.00} | Total: ₱{product.Price:0.00}";
-        DataStore.LogEvent("PURCHASE", logDetails, product.Price);
-        DataStore.RecordSale(product.DbInventoryId, product.Price);
-
-        btnBack.Content = "DONE & RECEIPT";
-        btnBack.Background = new SolidColorBrush(Color.FromRgb(47, 166, 106));
-
-        StartDispenseFeedback(product);
-        UpdateMoneyDisplay();
-        RefreshProducts();
-    }
-
-    private Transaction CreateTransaction(VendingItem product)
-    {
-        var transaction = new Transaction
+        QueueBackgroundStoreAction(() =>
         {
-            Id = DataStore.NextTransactionId++,
-            Date = DateTime.Now,
-            TotalAmount = product.Price,
-            AmountPaid = product.Price,
-            Change = 0
-        };
-
-        transaction.Items.Add(new TransactionItem
-        {
-            ProductId = product.Id,
-            ProductName = product.Name,
-            Quantity = 1,
-            UnitPrice = product.Price
+            DataStore.SaveInventory(_machineId, CreateInventorySaveSnapshot(inventoryId, updatedStock));
+            DataStore.LogEvent(_machineId, "PURCHASE", logDetails, product.Price);
+            DataStore.RecordSale(_machineId, inventoryId, product.Price);
         });
 
-        foreach (var entry in _recycleEntries)
-        {
-            transaction.RecycledItems.Add(new RecycleEntry
-            {
-                Material = entry.Material,
-                Pieces = entry.Pieces,
-                PointsPerPiece = entry.PointsPerPiece
-            });
-        }
+        ImageSource? dispenseSource = _slots.TryGetValue(slotId, out SlotControls slotControls)
+            ? slotControls.VendingItemImage.Source
+            : null;
 
-        return transaction;
+        StartDispenseFeedback(product, dispenseSource);
+        UpdateMoneyDisplay();
+        RefreshProducts();
+        UpdateDoneButtonState();
     }
 
-    private void StartDispenseFeedback(VendingItem product)
+    private void StartDispenseFeedback(VendingItem product, ImageSource? dispenseSource)
     {
         _isDispensing = true;
-        imgDispense.Source = ImageLoader.LoadProductImage(product.ImagePath);
+        imgDispense.Source = dispenseSource ?? ImageLoader.LoadProductImage(product.ImagePath);
         imgDispense.Visibility = Visibility.Visible;
         imgDispense.Opacity = 1.0;
+        Panel.SetZIndex(imgDispense, 5);
 
         SetDispenseStatus("DISPENSING...", Brushes.Goldenrod);
 
-        // --- Randomized Dispense Animation ---
-        Random rand = new Random();
-        double targetX = rand.Next(-50, 50);
-        double targetAngle = rand.Next(-15, 15);
+        double trayWidth = pnlDispenseTray.ActualWidth > 0 ? pnlDispenseTray.ActualWidth : 280;
+        double trayHeight = pnlDispenseTray.ActualHeight > 0 ? pnlDispenseTray.ActualHeight : 150;
+        double maxHorizontalTravel = Math.Max(24, Math.Min(70, (trayWidth / 2) - 55));
+        double targetX = (AnimationRandom.NextDouble() * 2 - 1) * maxHorizontalTravel;
+        double startY = -Math.Max(120, trayHeight * 0.95);
+        double settleY = Math.Min(18, trayHeight * 0.14);
+        double landingAngle = (AnimationRandom.NextDouble() * 18) - 9;
+        double settleAngle = landingAngle * 0.35;
 
-        // Initial state: Center, but we animate Y from above
         imgDispenseTranslate.X = 0;
-        imgDispenseTranslate.Y = 0; 
-        imgDispenseRotate.Angle = 0;
+        imgDispenseTranslate.Y = startY;
+        imgDispenseRotate.Angle = -landingAngle * 0.45;
+        imgDispenseTranslate.BeginAnimation(TranslateTransform.XProperty, null);
+        imgDispenseTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+        imgDispenseRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+        imgDispense.BeginAnimation(UIElement.OpacityProperty, null);
 
-        Storyboard sb = new Storyboard();
-
-        // 1. Drop and Bounce (Y) - Animate FROM -300 TO 0
-        DoubleAnimationUsingKeyFrames dropAnim = new DoubleAnimationUsingKeyFrames();
-        dropAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(-300, KeyTime.FromTimeSpan(TimeSpan.Zero)));
-        dropAnim.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.8)), new BounceEase { Bounces = 3, Bounciness = 2 }));
-        Storyboard.SetTarget(dropAnim, imgDispenseTranslate);
-        Storyboard.SetTargetProperty(dropAnim, new PropertyPath(TranslateTransform.YProperty));
-        sb.Children.Add(dropAnim);
-
-        // 2. Horizontal Shift (X)
-        DoubleAnimation xAnim = new DoubleAnimation(0, targetX, TimeSpan.FromSeconds(0.8))
+        var dropAnim = new DoubleAnimationUsingKeyFrames();
+        dropAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(startY, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        dropAnim.KeyFrames.Add(new EasingDoubleKeyFrame(settleY, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.82)), new BounceEase
         {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        Storyboard.SetTarget(xAnim, imgDispenseTranslate);
-        Storyboard.SetTargetProperty(xAnim, new PropertyPath(TranslateTransform.XProperty));
-        sb.Children.Add(xAnim);
+            Bounces = 2,
+            Bounciness = 1.7,
+            EasingMode = EasingMode.EaseOut
+        }));
+        imgDispenseTranslate.BeginAnimation(TranslateTransform.YProperty, dropAnim);
 
-        // 3. Random Rotation (Angle)
-        DoubleAnimation rotAnim = new DoubleAnimation(0, targetAngle, TimeSpan.FromSeconds(0.8))
-        {
-            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-        };
-        Storyboard.SetTarget(rotAnim, imgDispenseRotate);
-        Storyboard.SetTargetProperty(rotAnim, new PropertyPath(RotateTransform.AngleProperty));
-        sb.Children.Add(rotAnim);
+        var xAnim = new DoubleAnimationUsingKeyFrames();
+        xAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        xAnim.KeyFrames.Add(new EasingDoubleKeyFrame(targetX * 0.82, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.54)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+        xAnim.KeyFrames.Add(new EasingDoubleKeyFrame(targetX, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.82)), new QuadraticEase { EasingMode = EasingMode.EaseOut }));
+        imgDispenseTranslate.BeginAnimation(TranslateTransform.XProperty, xAnim);
 
-        sb.Begin(); // Start with default name scope
-        // -------------------------------------
+        var rotAnim = new DoubleAnimationUsingKeyFrames();
+        rotAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(-landingAngle * 0.45, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        rotAnim.KeyFrames.Add(new EasingDoubleKeyFrame(landingAngle, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.46)), new SineEase { EasingMode = EasingMode.EaseOut }));
+        rotAnim.KeyFrames.Add(new EasingDoubleKeyFrame(settleAngle, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.82)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+        imgDispenseRotate.BeginAnimation(RotateTransform.AngleProperty, rotAnim);
+
+        var opacityAnim = new DoubleAnimationUsingKeyFrames();
+        opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        opacityAnim.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.18)), new QuadraticEase { EasingMode = EasingMode.EaseOut }));
+        imgDispense.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
 
         if (_dispenseTimer != null)
         {
@@ -490,16 +862,25 @@ public partial class CustomerWindow : Window
 
         _dispenseTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromSeconds(3.0)
+            Interval = TimeSpan.FromSeconds(1.75)
         };
         _dispenseTimer.Tick += (_, _) =>
         {
             _dispenseTimer?.Stop();
             _dispenseTimer = null;
             _isDispensing = false;
+            imgDispenseOpacityReset();
             SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
         };
         _dispenseTimer.Start();
+    }
+
+    private void imgDispenseOpacityReset()
+    {
+        imgDispense.Opacity = 1.0;
+        imgDispenseTranslate.X = 0;
+        imgDispenseTranslate.Y = 0;
+        imgDispenseRotate.Angle = 0;
     }
 
     private void StartBlink(int slotId)
@@ -530,7 +911,7 @@ public partial class CustomerWindow : Window
             _blinkTimer?.Stop();
             _blinkTimer = null;
 
-            var product = DataStore.Products.FirstOrDefault(p => p.Id == _blinkSlotId);
+            var product = _products.FirstOrDefault(p => p.Id == _blinkSlotId);
             slot.Panel.Background = product is { Stock: > 0 } ? SlotDefault : SlotEmpty;
             return;
         }
@@ -544,6 +925,7 @@ public partial class CustomerWindow : Window
         if (lblLcdDisplay != null)
         {
             lblLcdDisplay.Text = text.ToUpper().Replace("\n", " ");
+            lblLcdDisplay.Foreground = color;
         }
 
         // Sync with the physical Arduino LCD display
@@ -564,17 +946,23 @@ public partial class CustomerWindow : Window
             MessageBoxImage.Information);
     }
 
-    private void BtnBack_Click(object sender, RoutedEventArgs e)
+    private async void BtnBack_Click(object sender, RoutedEventArgs e)
     {
-        // Show receipt first if a transaction exists
-        if (DataStore.LastTransaction != null)
+        Transaction? completedSession = null;
+        ReceiptPrintResult? printResult = null;
+        if (HasSessionActivity())
         {
-            var receipt = new ReceiptWindow(DataStore.LastTransaction)
+            completedSession = FinalizeActiveSession();
+            await Task.Run(() => DataStore.SaveCompletedReceipt(completedSession));
+            _arduino?.SendMessage("PRINTING RECEIPT");
+            printResult = await Task.Run(() => ReceiptPrinterService.Instance.TryPrintReceipt(completedSession));
+            _arduino?.SendMessage(printResult.Success ? "RECEIPT COMPLETE" : "RECEIPT FAILED");
+
+            var receipt = new ReceiptWindow(completedSession, printResult)
             {
                 Owner = this
             };
             receipt.ShowDialog();
-            DataStore.LastTransaction = null;
         }
 
         // Automatically return change
@@ -591,6 +979,7 @@ public partial class CustomerWindow : Window
                 MessageBoxImage.Information);
         }
 
+        _allowWindowClose = true;
         Close();
     }
 
@@ -614,6 +1003,22 @@ public partial class CustomerWindow : Window
         this.Close();
     }
 
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (!_allowWindowClose && HasSessionActivity())
+        {
+            e.Cancel = true;
+            MessageBox.Show(this,
+                "This kiosk session already has activity. Use DONE & RECEIPT to finish the session instead of closing the window.",
+                "Finish Current Session",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        base.OnClosing(e);
+    }
+
     private void WindowFrame_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ButtonState == MouseButtonState.Pressed)
@@ -624,11 +1029,11 @@ public partial class CustomerWindow : Window
 
     private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(this,
-            "Eco-Matic Vending Machine\nVersion 1.0\n\nCopyright 2026 Seanix",
-            "About",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        var about = new AboutWindow
+        {
+            Owner = this
+        };
+        about.ShowDialog();
     }
 
     private void OpenReadmeMenuItem_Click(object sender, RoutedEventArgs e)

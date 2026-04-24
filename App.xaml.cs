@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using Eco_Matic.Data;
 
@@ -12,13 +13,23 @@ namespace Eco_Matic
 
             try
             {
-                OfflineSyncCoordinator.Instance.InitializeApplication();
+                AppEnvironment.Initialize();
+            }
+            catch (AppConfigurationException ex)
+            {
+                MessageBox.Show(
+                    $"Eco-Matic could not start because the local configuration is missing or invalid.\n\n{ex.Message}\n\nCreate a .env file in the project root based on .env.example, then restart the app.",
+                    "Configuration Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                Shutdown();
+                return;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Eco-Matic could not initialize the local offline database.\n\n{ex.Message}\n\nMake sure MySQL is running locally before starting the app.",
-                    "Offline Bootstrap Failed",
+                    $"Eco-Matic could not finish startup.\n\n{ex.Message}",
+                    "Startup Failed",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 Shutdown();
@@ -28,6 +39,19 @@ namespace Eco_Matic
             var mainWindow = new MainWindow();
             MainWindow = mainWindow;
             mainWindow.Show();
+
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    OfflineSyncCoordinator.Instance.InitializeApplication();
+                }
+                catch
+                {
+                    // Customer-mode source availability is checked on demand.
+                    // Startup should stay responsive even if MySQL or Supabase is slow/unavailable.
+                }
+            });
         }
     }
 }

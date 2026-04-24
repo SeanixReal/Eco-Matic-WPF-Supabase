@@ -41,12 +41,14 @@ Say that the project is divided into four parts:
 
 - centered around `SupabaseStore`
 - hides all backend operations behind simple methods
+- also includes `OfflineSyncCoordinator` for customer-mode cache and replay
 - also includes `ArduinoService` for hardware communication and `ImageLoader` for safe image loading
 
 ### D. Data Layer
 
-- relational tables such as `users`, `items`, `machine_inventory`, and `sales_transactions`
+- live relational tables such as `users`, `items`, `machine_inventory`, `sales_transactions`, and `receipt_sessions`
 - accessed through `SupabaseClient` using HTTP requests to Supabase
+- customer mode also keeps a durable local MySQL cache through `OfflineMySqlStore`
 
 ## 4. How to Explain the ERD
 
@@ -56,7 +58,7 @@ When you show the ERD, focus on the meaning of each table and the reason the rel
 
 - `roles` defines the allowed system roles.
 - `users` stores admin and inventory manager accounts.
-- `vending_machines` stores each physical machine.
+- `vending_machines` stores each physical machine, including its machine name, editable address, and optional map coordinates.
 - `items` is the master catalog of products.
 - `machine_inventory` is the most important bridge table because it tells us which machine contains which item in which slot, at what stock level, and at what machine-specific override price if needed.
 - `sales_transactions` stores every purchase.
@@ -72,6 +74,10 @@ That is a good database normalization argument.
 You can extend it with:
 
 > I also allow an optional machine-specific price override, so one global item can still be sold at different prices depending on the machine location.
+
+You can also say:
+
+> I extended the machine table so the admin can save both a readable machine name and a physical address. The address can be typed manually or selected from a map and reverse-geocoded into text.
 
 ### Important clarification
 
@@ -101,11 +107,13 @@ Then explain the classes in groups instead of one by one.
 - `AdminWindow` handles management features
 - `CatalogItemWindow` handles shared item catalog editing
 - `InventoryItemWindow` handles machine-slot assignment and stock editing
+- `MapPickerWindow` helps the admin choose a machine site visually and auto-fill the address
 
 ### C. Shared Services
 
 - `SupabaseStore` is the main data access service used by the windows
 - `SupabaseClient` is the lower-level HTTP helper used by `SupabaseStore`
+- `MapLocationService` reverse-geocodes the selected map coordinates into a physical address
 - `ArduinoService` handles serial communication
 - `ImageLoader` makes image loading more fault-tolerant
 
@@ -128,14 +136,16 @@ Then explain the classes in groups instead of one by one.
 The easiest runtime flow to defend is the vending flow:
 
 1. `MainWindow` opens machine selection
-2. `DataStore.Initialize()` loads the chosen machine inventory from the backend
-3. `CustomerWindow` displays products from `DataStore.Products`
-4. the user inserts money and selects an item
-5. stock is reduced in memory
-6. `DataStore.SaveInventory()` updates the backend
-7. `DataStore.LogEvent()` writes an event log
-8. `DataStore.RecordSale()` stores the sale
-9. `ReceiptWindow` can display the transaction summary
+2. the machine selection screen shows the machine name and address so the user can identify the correct kiosk
+3. `DataStore.Initialize()` loads the chosen machine inventory through the offline-sync layer
+4. `CustomerWindow` displays products from `DataStore.Products`
+5. the user inserts money and selects an item
+6. stock is reduced in memory
+7. `DataStore.SaveInventory()` updates the local cache and sync pipeline
+8. `DataStore.LogEvent()` writes or queues an event log
+9. `DataStore.RecordSale()` stores or queues the sale
+10. `ReceiptWindow` can show the selected machine name and address on-screen
+11. the printed receipt can include the selected machine name and address
 
 This flow shows UI, application state, backend, and business logic all working together.
 
@@ -145,6 +155,15 @@ You can also explain the admin inventory flow:
 2. admin assigns that product to a specific machine slot in the `Inventory` tab
 3. that slot stores machine-specific stock and optional price override
 4. customer mode reads the configured slot and shows the correct item for that machine
+
+You can also explain the machine-location setup flow:
+
+1. admin opens `AddMachineWindow` or `EditMachineWindow`
+2. admin enters a machine name
+3. admin can open `MapPickerWindow` and click the machine position on a map
+4. `MapLocationService` reverse-geocodes that point into a readable address
+5. admin can still manually edit the address before saving
+6. `SupabaseStore` saves the machine name, address, and coordinates into `vending_machines`
 
 ## 6.1 Honest Current Limitations
 
@@ -193,13 +212,19 @@ Suggested answer:
 
 Suggested answer:
 
-> `SupabaseStore` handles persistence and backend communication, while `DataStore` holds temporary in-memory state for the active vending session. That lets the customer UI react quickly without re-querying the backend on every small interaction.
+> `SupabaseStore` handles cloud persistence, `OfflineSyncCoordinator` handles the durable local cache and replay path, and `DataStore` holds temporary in-memory state for the active vending session. That lets the customer UI react quickly while still supporting customer-mode offline behavior.
 
 ### Does the app support offline sync?
 
 Suggested answer:
 
-> Not yet. The current version is still online-first. It uses live Supabase calls plus an in-memory session cache, but it does not yet keep a durable local database copy and replay queued changes automatically when Wi-Fi comes back.
+> Yes, but only for customer mode after one successful online sync. The current build keeps a durable local MySQL cache of machine and inventory data, writes customer-mode changes into that cache first, and then replays queued sales, logs, and receipt sessions back to Supabase when connectivity returns. Admin mode and RFID account persistence are still online-only.
+
+### Why add map-based machine location if there is already a text field?
+
+Suggested answer:
+
+> The text field keeps the feature practical because the address can always be edited manually, while the map improves speed and accuracy by letting the admin point to the actual machine site and auto-fill the nearest address.
 
 ## 8. Files to Open During Defense
 
@@ -212,7 +237,9 @@ If you want a strong live walkthrough, open these files:
 - `Data/SupabaseStore.cs`
 - `Data/SupabaseStore_Customers.cs`
 - `Data/SupabaseClient.cs`
+- `Data/MapLocationService.cs`
 - `Data/ArduinoService.cs`
+- `MapPickerWindow.xaml.cs`
 - `Models/VendingItem.cs`
 - `Models/Product.cs`
 - `Models/Transaction.cs`

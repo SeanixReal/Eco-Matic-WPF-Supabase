@@ -72,3 +72,6 @@ Use `docs/` as the single source of truth.
   all need to stay aligned.
 - Do not move product images to a cloud-only dependency unless offline behavior is intentionally redesigned.
 - If touching authentication or customer storage, note that passwords are currently stored and compared directly; avoid silently documenting them as hashed when they are not.
+- Do not run Supabase/database/network calls directly on the WPF UI thread. RFID customer lookup, RFID registration, dashboard credit loading, admin saves, and receipt/customer sync work must be async or explicitly moved to a background task before updating UI controls.
+- For RFID flows, always send a hardware response (`VALID`, `INVALID`, or a clear `MSG:` error) promptly enough for the Arduino timeout. Avoid opening modal windows or doing slow Supabase work before the Arduino receives its validation response.
+- When adding modal save/register actions, disable the action buttons and show busy text while the background operation runs so the app does not appear hung.

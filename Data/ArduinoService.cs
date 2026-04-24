@@ -1,30 +1,67 @@
 using System;
 using System.IO.Ports;
 using System.Diagnostics;
+using System.Text;
 
 namespace Eco_Matic.Data
 {
     public class ArduinoService
     {
+        private const string PortSettingKey = "ECOMATIC_ARDUINO_PORT";
+        private const string BaudSettingKey = "ECOMATIC_ARDUINO_BAUD";
+        private const string DefaultPortName = "COM5";
+        private const int DefaultBaudRate = 9600;
+
+        private readonly object _writeLock = new();
         private SerialPort _serialPort;
         public event EventHandler<string>? OnCardScanned;
+        public string PortName => _serialPort.PortName;
+        public int BaudRate => _serialPort.BaudRate;
+        public bool IsOpen => _serialPort?.IsOpen == true;
 
-        public ArduinoService(string portName = "COM5", int baudRate = 9600)
+        public ArduinoService(string portName = DefaultPortName, int baudRate = DefaultBaudRate)
         {
-            _serialPort = new SerialPort(portName, baudRate);
+            _serialPort = new SerialPort(portName, baudRate)
+            {
+                NewLine = "\n",
+                Encoding = Encoding.ASCII,
+                ReadTimeout = 1000,
+                WriteTimeout = 1000
+            };
             _serialPort.DataReceived += SerialPort_DataReceived;
         }
 
-        public void Start()
+        public static ArduinoService FromEnvironment()
+        {
+            string portName = AppEnvironment.GetOptional(PortSettingKey) ?? DefaultPortName;
+            int baudRate = DefaultBaudRate;
+
+            string? configuredBaud = AppEnvironment.GetOptional(BaudSettingKey);
+            if (!string.IsNullOrWhiteSpace(configuredBaud) &&
+                (!int.TryParse(configuredBaud, out baudRate) || baudRate <= 0))
+            {
+                baudRate = DefaultBaudRate;
+                Debug.WriteLine($"{BaudSettingKey} is invalid. Falling back to {DefaultBaudRate}.");
+            }
+
+            return new ArduinoService(portName, baudRate);
+        }
+
+        public bool Start()
         {
             try
             {
                 if (!_serialPort.IsOpen)
+                {
                     _serialPort.Open();
+                }
+
+                return _serialPort.IsOpen;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Arduino not connected or port busy: " + ex.Message);
+                return false;
             }
         }
 
@@ -41,36 +78,78 @@ namespace Eco_Matic.Data
             try
             {
                 string data = _serialPort.ReadLine().Trim();
-                if (data.StartsWith("RFID:"))
+                if (data.StartsWith("RFID:", StringComparison.Ordinal) &&
+                    data.Length > 5 &&
+                    IsLikelyRfidUid(data[5..]))
                 {
                     string rfid = data.Substring(5);
+                    Debug.WriteLine("RFID scanned: " + rfid);
                     OnCardScanned?.Invoke(this, rfid);
                 }
             }
-            catch { }
+            catch (TimeoutException) { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Arduino serial read failed: " + ex.Message);
+            }
+        }
+
+        private static bool IsLikelyRfidUid(string value)
+        {
+            if (value.Length < 4 || value.Length > 20)
+            {
+                return false;
+            }
+
+            foreach (char c in value)
+            {
+                bool isHex =
+                    (c >= '0' && c <= '9') ||
+                    (c >= 'A' && c <= 'F') ||
+                    (c >= 'a' && c <= 'f');
+                if (!isHex)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public void SendResponse(bool isValid)
         {
-            if (_serialPort != null && _serialPort.IsOpen)
-            {
-                _serialPort.WriteLine(isValid ? "VALID" : "INVALID");
-            }
+            WriteLine(isValid ? "VALID" : "INVALID");
         }
 
         public void SendStateCommand(string state)
         {
-            if (_serialPort != null && _serialPort.IsOpen)
-            {
-                _serialPort.WriteLine(state);
-            }
+            WriteLine(state);
         }
+
         public void SendMessage(string message)
+        {
+            WriteLine("MSG:" + CleanMessage(message));
+        }
+
+        private void WriteLine(string message)
         {
             if (_serialPort != null && _serialPort.IsOpen)
             {
-                _serialPort.WriteLine("MSG:" + message);
+                lock (_writeLock)
+                {
+                    _serialPort.WriteLine(message);
+                }
             }
+        }
+
+        private static string CleanMessage(string message)
+        {
+            string compact = (message ?? string.Empty)
+                .Replace("\r", " ", StringComparison.Ordinal)
+                .Replace("\n", " ", StringComparison.Ordinal)
+                .Trim();
+
+            return compact.Length <= 32 ? compact : compact[..32];
         }
     }
 }

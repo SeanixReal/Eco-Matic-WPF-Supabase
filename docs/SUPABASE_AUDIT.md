@@ -1,8 +1,10 @@
 # Supabase Audit
 
-Audit date: `2026-04-22`
+Audit date: `2026-04-23`
 
-This document records the live Supabase state that was verified against the current Eco-Matic repo.
+This document records the live Supabase state verified through Supabase MCP against:
+
+- project URL: `https://woyadcahjkutrowkzryv.supabase.co`
 
 ## Live Schema Snapshot
 
@@ -14,43 +16,57 @@ Verified live public tables:
 - `event_logs`
 - `items`
 - `machine_inventory`
+- `receipt_session_lines`
+- `receipt_sessions`
 - `roles`
 - `sales_transactions`
 - `users`
 - `vending_machines`
 
-Observed live row counts during the audit:
+Observed live row counts during this audit:
 
+- `items`: `12`
+- `machine_inventory`: `24`
 - `roles`: `3`
 - `users`: `1`
-- all other audited tables: `0`
+- `vending_machines`: `2`
+- `customers`: `0`
+- `esp32_commands`: `0`
+- `esp32_telemetry`: `0`
+- `event_logs`: `0`
+- `receipt_session_lines`: `0`
+- `receipt_sessions`: `0`
+- `sales_transactions`: `0`
 
-Live schema drift found at the start of the audit:
+Live machine data observed:
 
-- `public.machine_inventory` was missing `slot_price`
-- `public.sales_transactions` was missing `client_sync_id`
-- `public.event_logs` was missing `client_sync_id`
+- machine `5`: `IT Park Green Hub`
+- machine `6`: `Fuente Eco Stop`
+- both machines are `Active`
+- both machines currently have a human-readable address plus latitude and longitude
+- both machines currently have all `12` canonical slots populated
+- current `slot_id` values are normalized as `1` through `12`
+- all current machine inventory rows have a non-null `slot_price`
 
-Those gaps were fixed during this audit pass.
+## Live Migrations
 
-Current live migrations after remediation:
+Current live migrations reported by Supabase MCP:
 
 1. `20260419131253 create_ecomatic_schema`
 2. `20260419131307 enable_rls_policies`
 3. `20260422095901 add_slot_price_and_normalize_slot_ids`
 4. `20260422095906 add_client_sync_id_for_offline_replay`
+5. `20260422151624 add_receipt_session_history`
+6. `20260423085816 add_vending_machine_address_and_coordinates`
 
-## Required Live Migrations
+Practical interpretation:
 
-Live schema alignment completed in this pass by applying:
+- the live project now includes the slot-price refactor
+- the live project now includes offline replay deduplication columns for sales and event logs
+- the live project now includes receipt session history tables
+- the live project now includes machine address and map-coordinate columns
 
-1. `docs/sql/migrations/supabase/migration_increment3.sql`
-2. `docs/sql/migrations/supabase/migration_increment4.sql`
-
-What each migration does:
-
-- `migration_increment3.sql`: adds `machine_inventory.slot_price` and normalizes legacy `S1` slot IDs into canonical numeric strings
-- `migration_increment4.sql`: adds nullable `client_sync_id` columns plus unique partial indexes for offline replay deduplication on `sales_transactions` and `event_logs`
+No schema drift was found in those audited areas relative to the current repo migrations.
 
 ## Authentication Reality
 
@@ -70,15 +86,15 @@ Relevant code paths:
 
 This means:
 
-- there is no session-backed identity model from Supabase Auth
+- there is no Supabase Auth session model in the current desktop app
 - there is no password hashing yet
-- login currently depends on direct password equality filtering against PostgREST
+- login still depends on direct password equality filtering through PostgREST
 
 ## RLS Audit Result
 
 RLS is enabled on the audited public tables, but it is not effectively protecting data right now.
 
-The live database currently has an anon policy equivalent to `Allow all for anon` on every audited public table, with permissive `USING (true)` and `WITH CHECK (true)` behavior for `ALL`.
+Supabase advisor findings show an anon policy equivalent to `Allow all for anon` on every audited application table, with permissive `USING (true)` and `WITH CHECK (true)` behavior for `ALL`.
 
 Tables affected by that finding:
 
@@ -88,6 +104,8 @@ Tables affected by that finding:
 - `event_logs`
 - `items`
 - `machine_inventory`
+- `receipt_session_lines`
+- `receipt_sessions`
 - `roles`
 - `sales_transactions`
 - `users`
@@ -95,32 +113,39 @@ Tables affected by that finding:
 
 Important blocker:
 
-- the current desktop app uses the anon key to directly read and write most of these tables
-- safely tightening RLS would require either a trusted backend path or a different auth architecture
-- because of that, this repo documents the blocker instead of applying partial policy changes that would break the app
+- the current desktop app directly uses the anon key for most reads and writes
+- safe least-privilege RLS tightening would require a backend or auth redesign
+- tightening those policies in isolation would break the current app
 
 ## Advisor Findings
 
 Security advisor findings:
 
-- overly permissive anon RLS policies on the audited public tables
+- overly permissive anon RLS policies across the public application tables
 - remediation reference: <https://supabase.com/docs/guides/database/database-linter?lint=0024_permissive_rls_policy>
 
 Performance advisor findings:
 
-- missing covering indexes on several foreign keys, including `event_logs.machine_id`, `machine_inventory.item_id`, `sales_transactions.machine_id`, `sales_transactions.item_id`, `users.assigned_machine_id`, and `users.role_id`
-- several existing indexes are currently unused in the live project, which is unsurprising while the live tables are mostly empty
+- missing covering indexes on `event_logs.machine_id`
+- missing covering indexes on `machine_inventory.item_id`
+- missing covering indexes on `sales_transactions.machine_id`
+- missing covering indexes on `sales_transactions.item_id`
+- missing covering indexes on `users.assigned_machine_id`
+- missing covering indexes on `users.role_id`
+- `idx_receipt_session_lines_session_order` is currently unused, which is unsurprising while receipt tables are empty
 - remediation reference: <https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys>
 
 ## Practical Conclusion
 
 What is working:
 
-- the table set exists
-- the core foreign keys exist
-- the repo now matches the live schema for `slot_price` and offline replay `client_sync_id`
+- the live table set matches the repo for the audited application features
+- the live project contains the slot-price, offline replay, receipt-session, and machine-location migrations
+- current live inventory data is aligned with the 12-slot customer UI
 
 What is still incomplete or risky:
 
 - authentication is still custom-table auth with plain-text password handling
 - RLS is effectively open to anon because of the current direct-client architecture
+- live activity tables are mostly empty, so receipt history, ESP32 integrations, and replay paths have schema support but very little production data coverage yet
+- several foreign keys still need supporting indexes

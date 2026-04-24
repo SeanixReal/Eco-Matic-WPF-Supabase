@@ -1,23 +1,29 @@
 using System.Data;
 using MySqlConnector;
+using Eco_Matic;
 
 namespace Eco_Matic.Data;
 
 public sealed class OfflineMySqlStore
 {
-    private const int CurrentSchemaVersion = 1;
-    private readonly OfflineStoreSettings _settings = OfflineStoreSettings.Load();
+    private const int CurrentSchemaVersion = 3;
+    private readonly OfflineStoreSettings? _settings = OfflineStoreSettings.TryLoad();
+
+    public bool IsConfigured => _settings != null;
+
+    private OfflineStoreSettings Settings => _settings ?? throw new InvalidOperationException(
+        "Local offline MySQL is not configured for this device.");
 
     public void EnsureCreated()
     {
-        ValidateSchemaName(_settings.Schema);
+        ValidateSchemaName(Settings.Schema);
 
         using var serverConnection = OpenServerConnection();
         serverConnection.Open();
 
         using (var createSchema = serverConnection.CreateCommand())
         {
-            createSchema.CommandText = $"CREATE DATABASE IF NOT EXISTS `{_settings.Schema}`;";
+            createSchema.CommandText = $"CREATE DATABASE IF NOT EXISTS `{Settings.Schema}`;";
             createSchema.ExecuteNonQuery();
         }
 
@@ -29,10 +35,18 @@ public sealed class OfflineMySqlStore
             CREATE TABLE IF NOT EXISTS cached_vending_machines (
                 machine_id INT NOT NULL PRIMARY KEY,
                 location_name VARCHAR(100) NOT NULL,
+                address_text TEXT NULL,
                 status VARCHAR(50) NOT NULL,
                 last_synced_utc DATETIME NOT NULL
             );
             """);
+
+        EnsureNullableTextColumn(
+            schemaConnection,
+            transaction,
+            "cached_vending_machines",
+            "address_text",
+            "TEXT NULL AFTER location_name");
 
         ExecuteNonQuery(schemaConnection, transaction, """
             CREATE TABLE IF NOT EXISTS cached_machine_inventory (
@@ -84,6 +98,46 @@ public sealed class OfflineMySqlStore
                 metadata_key VARCHAR(64) NOT NULL PRIMARY KEY,
                 metadata_value TEXT NULL,
                 updated_utc DATETIME NOT NULL
+            );
+            """);
+
+        ExecuteNonQuery(schemaConnection, transaction, """
+            CREATE TABLE IF NOT EXISTS receipt_sessions (
+                client_sync_id CHAR(36) NOT NULL PRIMARY KEY,
+                receipt_number VARCHAR(40) NOT NULL,
+                machine_id INT NOT NULL,
+                session_started_at DATETIME NOT NULL,
+                session_ended_at DATETIME NOT NULL,
+                total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+                amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0,
+                change_amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+                recycle_points_total INT NOT NULL DEFAULT 0,
+                source VARCHAR(16) NOT NULL DEFAULT 'online',
+                sync_status VARCHAR(16) NOT NULL DEFAULT 'Pending',
+                synced_utc DATETIME NULL,
+                saved_utc DATETIME NOT NULL,
+                INDEX idx_receipt_sessions_status_ended (sync_status, session_ended_at)
+            );
+            """);
+
+        ExecuteNonQuery(schemaConnection, transaction, """
+            CREATE TABLE IF NOT EXISTS receipt_session_lines (
+                receipt_session_line_id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                client_sync_id CHAR(36) NOT NULL,
+                line_order INT NOT NULL,
+                entry_type VARCHAR(16) NOT NULL,
+                slot_id VARCHAR(10) NULL,
+                item_name VARCHAR(100) NULL,
+                quantity INT NULL,
+                unit_price DECIMAL(10, 2) NULL,
+                line_total DECIMAL(10, 2) NULL,
+                recycle_material VARCHAR(32) NULL,
+                recycle_pieces INT NULL,
+                recycle_points INT NULL,
+                INDEX idx_receipt_session_lines_sync_line (client_sync_id, line_order),
+                CONSTRAINT fk_receipt_session_lines_session
+                    FOREIGN KEY (client_sync_id) REFERENCES receipt_sessions(client_sync_id)
+                    ON DELETE CASCADE
             );
             """);
 
@@ -148,13 +202,14 @@ public sealed class OfflineMySqlStore
         var dt = new DataTable();
         dt.Columns.Add("machine_id", typeof(int));
         dt.Columns.Add("location_name", typeof(string));
+        dt.Columns.Add("address_text", typeof(string));
         dt.Columns.Add("status", typeof(string));
 
         using var connection = OpenSchemaConnection();
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT machine_id, location_name, status
+            SELECT machine_id, location_name, address_text, status
             FROM cached_vending_machines
             ORDER BY machine_id;
             """;
@@ -165,6 +220,7 @@ public sealed class OfflineMySqlStore
             dt.Rows.Add(
                 reader.GetInt32("machine_id"),
                 reader.GetString("location_name"),
+                reader.IsDBNull("address_text") ? string.Empty : reader.GetString("address_text"),
                 reader.GetString("status"));
         }
 
@@ -245,11 +301,16 @@ public sealed class OfflineMySqlStore
             using var machineCommand = connection.CreateCommand();
             machineCommand.Transaction = transaction;
             machineCommand.CommandText = """
-                INSERT INTO cached_vending_machines (machine_id, location_name, status, last_synced_utc)
-                VALUES (@machine_id, @location_name, @status, @last_synced_utc);
+                INSERT INTO cached_vending_machines (machine_id, location_name, address_text, status, last_synced_utc)
+                VALUES (@machine_id, @location_name, @address_text, @status, @last_synced_utc);
                 """;
             machineCommand.Parameters.AddWithValue("@machine_id", Convert.ToInt32(machineRow["machine_id"]));
             machineCommand.Parameters.AddWithValue("@location_name", machineRow["location_name"]?.ToString() ?? "Unknown");
+            machineCommand.Parameters.AddWithValue(
+                "@address_text",
+                machineRow.Table.Columns.Contains("address_text")
+                    ? machineRow["address_text"] == DBNull.Value ? DBNull.Value : machineRow["address_text"]?.ToString()
+                    : DBNull.Value);
             machineCommand.Parameters.AddWithValue("@status", machineRow["status"]?.ToString() ?? "Unknown");
             machineCommand.Parameters.AddWithValue("@last_synced_utc", syncedUtc);
             machineCommand.ExecuteNonQuery();
@@ -374,6 +435,132 @@ public sealed class OfflineMySqlStore
         command.ExecuteNonQuery();
     }
 
+    public void SaveReceiptSession(Transaction transaction, string? payloadJson, DateTime savedUtc)
+    {
+        using var connection = OpenSchemaConnection();
+        connection.Open();
+        using var dbTransaction = connection.BeginTransaction();
+
+        using (var sessionCommand = connection.CreateCommand())
+        {
+            sessionCommand.Transaction = dbTransaction;
+            sessionCommand.CommandText = """
+                INSERT INTO receipt_sessions (
+                    client_sync_id, receipt_number, machine_id, session_started_at, session_ended_at,
+                    total_amount, amount_paid, change_amount, recycle_points_total, source,
+                    sync_status, synced_utc, saved_utc)
+                VALUES (
+                    @client_sync_id, @receipt_number, @machine_id, @session_started_at, @session_ended_at,
+                    @total_amount, @amount_paid, @change_amount, @recycle_points_total, @source,
+                    'Pending', NULL, @saved_utc)
+                ON DUPLICATE KEY UPDATE
+                    receipt_number = VALUES(receipt_number),
+                    machine_id = VALUES(machine_id),
+                    session_started_at = VALUES(session_started_at),
+                    session_ended_at = VALUES(session_ended_at),
+                    total_amount = VALUES(total_amount),
+                    amount_paid = VALUES(amount_paid),
+                    change_amount = VALUES(change_amount),
+                    recycle_points_total = VALUES(recycle_points_total),
+                    source = VALUES(source),
+                    saved_utc = VALUES(saved_utc);
+                """;
+            sessionCommand.Parameters.AddWithValue("@client_sync_id", transaction.ClientSyncId);
+            sessionCommand.Parameters.AddWithValue("@receipt_number", transaction.ReceiptNumber);
+            sessionCommand.Parameters.AddWithValue("@machine_id", transaction.MachineId);
+            sessionCommand.Parameters.AddWithValue("@session_started_at", transaction.SessionStartedAt);
+            sessionCommand.Parameters.AddWithValue("@session_ended_at", transaction.SessionEndedAt);
+            sessionCommand.Parameters.AddWithValue("@total_amount", transaction.TotalAmount);
+            sessionCommand.Parameters.AddWithValue("@amount_paid", transaction.AmountPaid);
+            sessionCommand.Parameters.AddWithValue("@change_amount", transaction.Change);
+            sessionCommand.Parameters.AddWithValue("@recycle_points_total", transaction.RecyclePointsTotal);
+            sessionCommand.Parameters.AddWithValue("@source", transaction.Source);
+            sessionCommand.Parameters.AddWithValue("@saved_utc", savedUtc);
+            sessionCommand.ExecuteNonQuery();
+        }
+
+        using (var deleteLinesCommand = connection.CreateCommand())
+        {
+            deleteLinesCommand.Transaction = dbTransaction;
+            deleteLinesCommand.CommandText = "DELETE FROM receipt_session_lines WHERE client_sync_id = @client_sync_id;";
+            deleteLinesCommand.Parameters.AddWithValue("@client_sync_id", transaction.ClientSyncId);
+            deleteLinesCommand.ExecuteNonQuery();
+        }
+
+        int lineOrder = 1;
+        foreach (var item in transaction.Items)
+        {
+            using var lineCommand = connection.CreateCommand();
+            lineCommand.Transaction = dbTransaction;
+            lineCommand.CommandText = """
+                INSERT INTO receipt_session_lines (
+                    client_sync_id, line_order, entry_type, slot_id, item_name, quantity,
+                    unit_price, line_total, recycle_material, recycle_pieces, recycle_points)
+                VALUES (
+                    @client_sync_id, @line_order, 'sale', @slot_id, @item_name, @quantity,
+                    @unit_price, @line_total, NULL, NULL, NULL);
+                """;
+            lineCommand.Parameters.AddWithValue("@client_sync_id", transaction.ClientSyncId);
+            lineCommand.Parameters.AddWithValue("@line_order", lineOrder++);
+            lineCommand.Parameters.AddWithValue("@slot_id", item.SlotId);
+            lineCommand.Parameters.AddWithValue("@item_name", item.ProductName);
+            lineCommand.Parameters.AddWithValue("@quantity", item.Quantity);
+            lineCommand.Parameters.AddWithValue("@unit_price", item.UnitPrice);
+            lineCommand.Parameters.AddWithValue("@line_total", item.LineTotal);
+            lineCommand.ExecuteNonQuery();
+        }
+
+        foreach (var recycle in transaction.RecycledItems)
+        {
+            using var lineCommand = connection.CreateCommand();
+            lineCommand.Transaction = dbTransaction;
+            lineCommand.CommandText = """
+                INSERT INTO receipt_session_lines (
+                    client_sync_id, line_order, entry_type, slot_id, item_name, quantity,
+                    unit_price, line_total, recycle_material, recycle_pieces, recycle_points)
+                VALUES (
+                    @client_sync_id, @line_order, 'recycle', NULL, NULL, NULL,
+                    NULL, NULL, @recycle_material, @recycle_pieces, @recycle_points);
+                """;
+            lineCommand.Parameters.AddWithValue("@client_sync_id", transaction.ClientSyncId);
+            lineCommand.Parameters.AddWithValue("@line_order", lineOrder++);
+            lineCommand.Parameters.AddWithValue("@recycle_material", recycle.DisplayName);
+            lineCommand.Parameters.AddWithValue("@recycle_pieces", recycle.Pieces);
+            lineCommand.Parameters.AddWithValue("@recycle_points", recycle.TotalPoints);
+            lineCommand.ExecuteNonQuery();
+        }
+
+        using (var queueCommand = connection.CreateCommand())
+        {
+            queueCommand.Transaction = dbTransaction;
+            queueCommand.CommandText = """
+                INSERT INTO sync_queue (
+                    queue_type, client_sync_id, machine_id, inventory_id, item_id, amount_paid,
+                    event_type, description, occurred_utc, payload_json, sync_status, synced_utc)
+                VALUES (
+                    'receipt_session', @client_sync_id, @machine_id, NULL, NULL, @amount_paid,
+                    NULL, @description, @occurred_utc, @payload_json, 'Pending', NULL)
+                ON DUPLICATE KEY UPDATE
+                    machine_id = VALUES(machine_id),
+                    amount_paid = VALUES(amount_paid),
+                    description = VALUES(description),
+                    occurred_utc = VALUES(occurred_utc),
+                    payload_json = VALUES(payload_json),
+                    sync_status = 'Pending',
+                    synced_utc = NULL;
+                """;
+            queueCommand.Parameters.AddWithValue("@client_sync_id", transaction.ClientSyncId);
+            queueCommand.Parameters.AddWithValue("@machine_id", transaction.MachineId);
+            queueCommand.Parameters.AddWithValue("@amount_paid", transaction.AmountPaid);
+            queueCommand.Parameters.AddWithValue("@description", transaction.ReceiptNumber);
+            queueCommand.Parameters.AddWithValue("@occurred_utc", transaction.SessionEndedAt);
+            queueCommand.Parameters.AddWithValue("@payload_json", payloadJson ?? string.Empty);
+            queueCommand.ExecuteNonQuery();
+        }
+
+        dbTransaction.Commit();
+    }
+
     public List<PendingSyncQueueItem> GetPendingQueue()
     {
         var items = new List<PendingSyncQueueItem>();
@@ -455,6 +642,22 @@ public sealed class OfflineMySqlStore
         command.ExecuteNonQuery();
     }
 
+    public void MarkReceiptSessionSynced(string clientSyncId, DateTime syncedUtc)
+    {
+        using var connection = OpenSchemaConnection();
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE receipt_sessions
+            SET sync_status = 'Synced',
+                synced_utc = @synced_utc
+            WHERE client_sync_id = @client_sync_id;
+            """;
+        command.Parameters.AddWithValue("@synced_utc", syncedUtc);
+        command.Parameters.AddWithValue("@client_sync_id", clientSyncId);
+        command.ExecuteNonQuery();
+    }
+
     public int? GetItemIdForInventory(int inventoryId)
     {
         using var connection = OpenSchemaConnection();
@@ -505,7 +708,7 @@ public sealed class OfflineMySqlStore
     private MySqlConnection OpenSchemaConnection()
     {
         var builder = CreateBaseConnectionStringBuilder();
-        builder.Database = _settings.Schema;
+        builder.Database = Settings.Schema;
         return new MySqlConnection(builder.ConnectionString);
     }
 
@@ -513,10 +716,10 @@ public sealed class OfflineMySqlStore
     {
         return new MySqlConnectionStringBuilder
         {
-            Server = _settings.Host,
-            Port = _settings.Port,
-            UserID = _settings.Username,
-            Password = _settings.Password,
+            Server = Settings.Host,
+            Port = Settings.Port,
+            UserID = Settings.Username,
+            Password = Settings.Password,
             SslMode = MySqlSslMode.None,
             AllowUserVariables = true,
             ConnectionTimeout = 5,
@@ -530,6 +733,37 @@ public sealed class OfflineMySqlStore
         command.Transaction = transaction;
         command.CommandText = sql;
         command.ExecuteNonQuery();
+    }
+
+    private static void EnsureNullableTextColumn(
+        MySqlConnection connection,
+        MySqlTransaction transaction,
+        string tableName,
+        string columnName,
+        string columnDefinition)
+    {
+        using var existsCommand = connection.CreateCommand();
+        existsCommand.Transaction = transaction;
+        existsCommand.CommandText = """
+            SELECT COUNT(*)
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = @table_name
+              AND column_name = @column_name;
+            """;
+        existsCommand.Parameters.AddWithValue("@table_name", tableName);
+        existsCommand.Parameters.AddWithValue("@column_name", columnName);
+
+        bool columnExists = Convert.ToInt32(existsCommand.ExecuteScalar()) > 0;
+        if (columnExists)
+        {
+            return;
+        }
+
+        using var alterCommand = connection.CreateCommand();
+        alterCommand.Transaction = transaction;
+        alterCommand.CommandText = $"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` {columnDefinition};";
+        alterCommand.ExecuteNonQuery();
     }
 
     private static void SetMetadata(MySqlConnection connection, MySqlTransaction transaction, string key, string? value, DateTime updatedUtc)

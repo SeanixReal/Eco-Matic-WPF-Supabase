@@ -1,0 +1,99 @@
+<Window x:Class="Eco_Matic.MapPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Pick Machine Location"
+        Height="680"
+        Width="980"
+        WindowStartupLocation="CenterOwner"
+        Background="White">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="0,0,0,12">
+            <TextBlock Text="Pick Machine Location"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Foreground="#1E293B"/>
+            <TextBlock Text="Click the map to capture coordinates and automatically fill the nearest address. You can still edit the address manually before saving."
+                       Margin="0,6,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="#475569"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2.1*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0"
+                    BorderBrush="#CBD5E1"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    ClipToBounds="True">
+                <wv2:WebView2 x:Name="mapView"/>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Background="#F8FAFC"
+                    BorderBrush="#E2E8F0"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="14">
+                <StackPanel>
+                    <TextBlock Text="Selected Coordinates"
+                               FontWeight="SemiBold"
+                               Foreground="#334155"/>
+                    <TextBlock x:Name="txtCoordinates"
+                               Margin="0,6,0,14"
+                               Text="No location selected yet."
+                               TextWrapping="Wrap"
+                               Foreground="#64748B"/>
+
+                    <TextBlock Text="Resolved Address"
+                               FontWeight="SemiBold"
+                               Foreground="#334155"/>
+                    <TextBox x:Name="txtResolvedAddress"
+                             Margin="0,6,0,14"
+                             MinHeight="120"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"/>
+
+                    <TextBlock x:Name="txtMapStatus"
+                               Margin="0,0,0,14"
+                               Text="Click anywhere on the map to choose the machine location."
+                               TextWrapping="Wrap"
+                               Foreground="#64748B"/>
+
+                    <Button Content="Use This Location"
+                            Height="38"
+                            Background="#2E77E6"
+                            Foreground="White"
+                            BorderBrush="#2E77E6"
+                            Click="BtnUseLocation_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,14,0,0">
+            <Button Content="Cancel"
+                    Width="120"
+                    Height="38"
+                    Margin="0,0,10,0"
+                    Background="#E2E8F0"
+                    Foreground="#1E293B"
+                    BorderBrush="#CBD5E1"
+                    Click="BtnCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

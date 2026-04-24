@@ -12,13 +12,15 @@ erDiagram
     ITEMS ||--o{ MACHINE_INVENTORY : stocked_in
     VENDING_MACHINES ||--o{ SALES_TRANSACTIONS : records
     ITEMS ||--o{ SALES_TRANSACTIONS : sold_as
-    USERS o|--o{ EVENT_LOGS : triggers
     VENDING_MACHINES o|--o{ EVENT_LOGS : logs_for
+    VENDING_MACHINES ||--o{ RECEIPT_SESSIONS : issues
+    RECEIPT_SESSIONS ||--o{ RECEIPT_SESSION_LINES : contains
+    VENDING_MACHINES ||--o{ ESP32_TELEMETRY : reports
+    VENDING_MACHINES ||--o{ ESP32_COMMANDS : receives
 
     ROLES {
         int role_id PK
         string role_name
-        string description
     }
 
     USERS {
@@ -33,6 +35,9 @@ erDiagram
     VENDING_MACHINES {
         int machine_id PK
         string location_name
+        string address_text
+        float latitude
+        float longitude
         string status
         datetime created_at
     }
@@ -64,15 +69,16 @@ erDiagram
         int item_id FK
         decimal amount_paid
         datetime transaction_date
+        uuid client_sync_id
     }
 
     EVENT_LOGS {
         int log_id PK
-        int user_id FK
-        int machine_id FK
         string event_type
         string description
+        int machine_id FK
         datetime log_date
+        uuid client_sync_id
     }
 
     CUSTOMERS {
@@ -82,17 +88,70 @@ erDiagram
         int eco_credits
         datetime registered_date
     }
+
+    RECEIPT_SESSIONS {
+        bigint receipt_session_id PK
+        uuid client_sync_id
+        string receipt_number
+        int machine_id FK
+        datetime session_started_at
+        datetime session_ended_at
+        decimal total_amount
+        decimal amount_paid
+        decimal change_amount
+        int recycle_points_total
+        string source
+        datetime created_at
+    }
+
+    RECEIPT_SESSION_LINES {
+        bigint receipt_session_line_id PK
+        bigint receipt_session_id FK
+        int line_order
+        string entry_type
+        string slot_id
+        string item_name
+        int quantity
+        decimal unit_price
+        decimal line_total
+        string recycle_material
+        int recycle_pieces
+        int recycle_points
+    }
+
+    ESP32_TELEMETRY {
+        int telemetry_id PK
+        int machine_id FK
+        string device_id
+        decimal temperature
+        decimal humidity
+        bool door_open
+        string power_status
+        datetime recorded_at
+    }
+
+    ESP32_COMMANDS {
+        int command_id PK
+        int machine_id FK
+        string command_type
+        json payload
+        string status
+        datetime created_at
+        datetime executed_at
+    }
 ```
 
 ## How to Explain the ERD
 
 - `roles` and `users` implement role-based access control.
-- `vending_machines` allows the system to scale beyond one physical machine.
+- `vending_machines` allows the system to scale beyond one physical machine and now stores machine name plus optional physical location data.
 - `items` is the master catalog of products.
 - `machine_inventory` is the junction table that connects a machine to an item and stores slot, stock, capacity, and optional machine-specific price.
 - `sales_transactions` stores every completed sale.
 - `event_logs` stores audit-style system activity such as purchases and recycling actions.
 - `customers` stores RFID users and eco-credit balances.
+- `receipt_sessions` and `receipt_session_lines` store receipt-level history for completed vending sessions.
+- `esp32_telemetry` and `esp32_commands` extend the schema for machine-side telemetry and command delivery.
 
 Important clarification:
 
@@ -140,6 +199,18 @@ classDiagram
         +RecordSale(int, decimal)
     }
 
+    class OfflineSyncCoordinator {
+        <<singleton>>
+        +InitializeApplication()
+        +TrySyncIfOnline()
+        +GetMachineLookupForCustomer()
+        +GetMachineInventory(int)
+        +SaveInventorySnapshot(...)
+        +QueueEventLog(...)
+        +QueueSale(...)
+        +QueueReceiptSession(...)
+    }
+
     class SupabaseStore {
         +AuthenticateUser(string, string)
         +GetVendingMachines()
@@ -153,6 +224,25 @@ classDiagram
         +GetFilteredSales(DateTime, string)
         +GetCustomers()
         +UpdateCustomerCredits(string, int)
+    }
+
+    class OfflineMySqlStore {
+        +EnsureCreated()
+        +GetCachedVendingMachinesLookup()
+        +GetCachedMachineInventory(int)
+        +SaveInventorySnapshot(...)
+        +GetPendingQueue()
+        +ReplaceCache(...)
+    }
+
+    class MapLocationService {
+        +ReverseGeocodeAsync(double, double)
+    }
+
+    class MapPickerWindow {
+        +SelectedAddress : string
+        +SelectedLatitude : double?
+        +SelectedLongitude : double?
     }
 
     class SupabaseClient {
@@ -244,6 +334,7 @@ classDiagram
     class CustomerDashboardWindow
     class InventoryItemWindow
     class CatalogItemWindow
+    class MapPickerWindow
     class ReceiptWindow
 
     MainWindow --> ArduinoService : listens_for_RFID
@@ -257,6 +348,7 @@ classDiagram
     AdminWindow --> SupabaseStore : CRUD_and_reports
     AdminWindow ..> InventoryItemWindow
     AdminWindow ..> CatalogItemWindow
+    AdminWindow ..> MapPickerWindow
 
     CustomerWindow --> DataStore : uses_session_state
     CustomerWindow --> ArduinoService : updates_LCD
@@ -265,7 +357,10 @@ classDiagram
 
     CustomerRegistrationWindow --> SupabaseStore : register_customer
     CustomerDashboardWindow --> SupabaseStore : load_and_save_credits
-    DataStore --> SupabaseStore : sync_inventory_logs_sales
+    MapPickerWindow --> MapLocationService : reverse_geocodes
+    DataStore --> OfflineSyncCoordinator : caches_and_replays
+    OfflineSyncCoordinator --> OfflineMySqlStore : local_cache
+    OfflineSyncCoordinator --> SupabaseStore : cloud_sync
     SupabaseStore --> SupabaseClient : REST_calls
 
     VendingItem <|-- Product
@@ -287,6 +382,7 @@ classDiagram
 - `MainWindow` is the entry controller of the application.
 - `AdminWindow` and `CustomerWindow` are the two major use-case windows.
 - `DataStore` manages temporary in-memory session state for customer mode.
+- `OfflineSyncCoordinator` bridges customer-mode local caching with Supabase replay.
 - `SupabaseStore` is the application service that hides backend details from the UI.
 - `SupabaseClient` is the low-level HTTP client.
 - `ArduinoService` handles event-driven hardware communication.
@@ -314,8 +410,8 @@ graph TD
     F --> G{Item in stock?}
     G -- No --> F
     G -- Yes --> H[Decrease in-memory stock]
-    H --> I[Save inventory to backend]
-    I --> J[Log event and record sale]
+    H --> I[Save inventory to local cache or Supabase]
+    I --> J[Queue or write sale and event records]
     J --> K[Show dispense feedback and receipt]
     K --> L[Return remaining change]
     L --> M[End session]
@@ -325,6 +421,6 @@ graph TD
 
 - `DataStore.Initialize()` loads the selected machine inventory before vending begins.
 - `CustomerWindow` manages balance checking and stock validation in the UI.
-- `DataStore.SaveInventory()` persists stock changes.
-- `DataStore.LogEvent()` and `DataStore.RecordSale()` persist the business event.
+- `DataStore.SaveInventory()` persists stock changes through the sync layer.
+- `DataStore.LogEvent()` and `DataStore.RecordSale()` either write immediately or queue replay work, depending on connectivity.
 - `ReceiptWindow` finishes the customer-facing flow.

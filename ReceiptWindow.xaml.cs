@@ -1,13 +1,18 @@
 using System.Windows;
+using Eco_Matic.Data;
 
 namespace Eco_Matic;
 
 public partial class ReceiptWindow : Window
 {
-    public ReceiptWindow(Transaction? transaction)
+    private readonly Transaction? _transaction;
+
+    public ReceiptWindow(Transaction? transaction, ReceiptPrintResult? printResult = null)
     {
         InitializeComponent();
+        _transaction = transaction;
         PopulateReceipt(transaction);
+        ApplyPrintResult(printResult);
     }
 
     private void PopulateReceipt(Transaction? transaction)
@@ -16,27 +21,73 @@ public partial class ReceiptWindow : Window
 
         if (transaction == null)
         {
+            lblReceiptMeta.Text = "No session data";
+            lblMachineName.Text = "Machine: -";
+            lblMachineAddress.Text = "Address: -";
             lblTotal.Text = "Total:  PHP 0.00";
             lblPaid.Text = "Paid:   PHP 0.00";
             lblChange.Text = "Change: PHP 0.00";
             return;
         }
 
+        lblReceiptMeta.Text = $"{transaction.ReceiptNumber}  |  {transaction.SessionEndedAt:yyyy-MM-dd HH:mm:ss}";
+        string machineName = string.IsNullOrWhiteSpace(transaction.MachineDisplayName)
+            ? $"Machine {transaction.MachineId}"
+            : transaction.MachineDisplayName;
+        lblMachineName.Text = $"Machine: {machineName}";
+        lblMachineAddress.Text = string.IsNullOrWhiteSpace(transaction.MachineAddress)
+            ? "Address: -"
+            : $"Address: {transaction.MachineAddress}";
+
         foreach (var item in transaction.Items)
         {
-            string line = $"{item.Quantity}x  {item.ProductName,-20} PHP {item.LineTotal:F2}";
+            string slotLabel = string.IsNullOrWhiteSpace(item.SlotId) ? "" : $"[S{item.SlotId}] ";
+            string line = $"{item.Quantity}x  {slotLabel}{item.ProductName,-16} PHP {item.LineTotal:F2}";
             itemsList.Items.Add(line);
         }
 
         foreach (var recycle in transaction.RecycledItems)
         {
-            string line = $"Recycle {recycle.Material,-8} {recycle.Pieces,5}pcs +{recycle.TotalPoints} Pts";
+            string unitLabel = string.IsNullOrWhiteSpace(recycle.UnitLabel) ? "item" : recycle.UnitLabel;
+            string line = $"Recycle {recycle.DisplayName,-16} {recycle.Pieces,3} {unitLabel}(s) +{recycle.TotalPoints} Pts";
             itemsList.Items.Add(line);
+        }
+
+        if (itemsList.Items.Count == 0)
+        {
+            itemsList.Items.Add("No purchased or recycled items in this session.");
         }
 
         lblTotal.Text = $"Total:  PHP {transaction.TotalAmount:F2}";
         lblPaid.Text = $"Paid:   PHP {transaction.AmountPaid:F2}";
         lblChange.Text = $"Change: PHP {transaction.Change:F2}";
+    }
+
+    private void ApplyPrintResult(ReceiptPrintResult? printResult)
+    {
+        if (printResult == null)
+        {
+            lblPrintStatus.Text = "Printer status unavailable.";
+            btnPrint.Content = "Print";
+            return;
+        }
+
+        lblPrintStatus.Text = printResult.Message;
+        btnPrint.Content = printResult.Success ? "Reprint" : "Print Again";
+    }
+
+    private async void BtnPrint_Click(object sender, RoutedEventArgs e)
+    {
+        if (_transaction == null)
+        {
+            lblPrintStatus.Text = "No transaction data is available to print.";
+            return;
+        }
+
+        btnPrint.IsEnabled = false;
+        var printResult = await Task.Run(() => ReceiptPrinterService.Instance.TryPrintReceipt(_transaction));
+        btnPrint.IsEnabled = true;
+        ApplyPrintResult(printResult);
     }
 
     private void BtnClose_Click(object sender, RoutedEventArgs e)

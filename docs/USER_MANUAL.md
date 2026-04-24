@@ -23,6 +23,7 @@ The customer flow is centered on the vending machine UI.
 
 - choose an active machine
 - insert money
+- enter a QR payment amount in the app, scan the QR code, and wait for automatic confirmation
 - examine items
 - buy available products
 - add recycle points during the session
@@ -30,9 +31,10 @@ The customer flow is centered on the vending machine UI.
 
 ### Important current behavior
 
-- purchases are still cash-based
+- purchases can use cash buttons or the QR payment modal
 - recycle points are tracked separately from inserted cash
 - RFID is used for saving recycle points to a customer account, not for paying for products
+- QR payment uses a Supabase Edge Function to mark the scanned payment intent as paid; the phone shows a simple confirmation message after scanning
 
 ## 3. RFID Customer Flow
 
@@ -51,8 +53,10 @@ The admin side is controlled through `AdminWindow`.
 - view dashboard metrics
 - manage the global item catalog
 - manage machine inventory
+- monitor low-stock and out-of-stock slots
 - restock items
 - view logs and sales
+- review sales reports with revenue trends, product mix, best-selling items, and machine revenue
 - manage vending machines
 - manage users
 - manage RFID customers

@@ -10,22 +10,95 @@ namespace Eco_Matic
 {
     public partial class InventoryItemWindow : Window
     {
+        public string SlotId { get; private set; } = string.Empty;
+        public int InitialStock { get; private set; }
+        public int MaxCapacity { get; private set; } = DataStore.MaxStockPerItem;
+        public decimal? SlotPriceOverride { get; private set; }
+        public int? SelectedItemId { get; private set; }
+        private readonly int? _initialItemId;
+        private readonly bool _isRequiredSetupMode;
+        private readonly int _minimumRequiredSlots;
+        private readonly int _completedSlots;
+
         public InventoryItemWindow()
         {
             InitializeComponent();
-            LoadCatalog();
+            btnSave.IsEnabled = false;
+            cboExistingItem.IsEnabled = false;
         }
 
-        private void LoadCatalog()
+        public InventoryItemWindow(string suggestedSlotId, int completedSlots, int minimumRequiredSlots) : this()
         {
-            var store = new Data.SupabaseStore();
-            cboExistingItem.ItemsSource = store.GetAllItems().DefaultView;
+            _isRequiredSetupMode = true;
+            _minimumRequiredSlots = minimumRequiredSlots;
+            _completedSlots = completedSlots;
+            TitleContent.Text = "Required Machine Setup";
+            txtSlotId.Text = SlotIdHelper.Normalize(suggestedSlotId) ?? suggestedSlotId;
+            txtSetupSummary.Text = $"Assign slot {completedSlots + 1} of at least {minimumRequiredSlots} required slots for this new vending machine.";
+            btnSave.Content = "Save Slot";
+        }
+
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            await LoadCatalogAsync();
+        }
+
+        private async Task LoadCatalogAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataView view = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.GetAllItems().DefaultView;
+                });
+
+                cboExistingItem.ItemsSource = view;
+
+                if (_initialItemId.HasValue)
+                {
+                    foreach (DataRowView rowView in cboExistingItem.Items)
+                    {
+                        if (Convert.ToInt32(rowView.Row["item_id"]) == _initialItemId.Value)
+                        {
+                            cboExistingItem.SelectedItem = rowView;
+                            break;
+                        }
+                    }
+                }
+
+                txtCatalogStatus.Text = view.Count == 0
+                    ? "No global items found yet. Add items in the Global Items view first."
+                    : "Choose a global item to preview and assign to this slot.";
+
+                if (_isRequiredSetupMode && view.Count > 0)
+                {
+                    txtCatalogStatus.Text = $"Required setup in progress: {_completedSlots}/{_minimumRequiredSlots} slots completed.";
+                }
+            }
+            catch (Exception ex)
+            {
+                txtCatalogStatus.Text = "Failed to load global items.";
+                MessageBox.Show(this,
+                    $"Could not load the global item catalog.\n\n{ex.Message}",
+                    "Catalog Load Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                cboExistingItem.IsEnabled = true;
+                btnSave.IsEnabled = true;
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private void CboExistingItem_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (cboExistingItem.SelectedItem is not DataRowView rowView)
             {
+                SelectedItemId = null;
                 txtName.Text = "";
                 txtType.Text = "";
                 txtDefaultPrice.Text = "";
@@ -36,6 +109,7 @@ namespace Eco_Matic
             }
 
             var row = rowView.Row;
+            SelectedItemId = Convert.ToInt32(row["item_id"]);
             txtName.Text = row["name"].ToString() ?? "";
             txtType.Text = row["type"].ToString() ?? "";
             txtDefaultPrice.Text = Convert.ToDecimal(row["price"]).ToString("0.00", CultureInfo.InvariantCulture);
@@ -46,19 +120,12 @@ namespace Eco_Matic
 
         public InventoryItemWindow(string slotId, int itemId, int stock, decimal? slotPrice) : this()
         {
+            _initialItemId = itemId;
             TitleContent.Text = "Edit Machine Slot";
+            txtSetupSummary.Text = "Update the assigned slot while keeping the same 12-slot and 15-stock limits.";
             txtSlotId.Text = SlotIdHelper.Normalize(slotId) ?? slotId;
             txtStock.Text = stock.ToString(CultureInfo.InvariantCulture);
             txtSlotPrice.Text = slotPrice.HasValue ? slotPrice.Value.ToString("0.00", CultureInfo.InvariantCulture) : "";
-
-            foreach (DataRowView rowView in cboExistingItem.Items)
-            {
-                if (Convert.ToInt32(rowView.Row["item_id"]) == itemId)
-                {
-                    cboExistingItem.SelectedItem = rowView;
-                    break;
-                }
-            }
         }
 
         private void WindowFrame_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -77,15 +144,23 @@ namespace Eco_Matic
                 return;
             }
 
-            if (SelectedItemId == null)
+            if (cboExistingItem.SelectedItem is not DataRowView selectedRowView)
             {
                 MessageBox.Show("Please select a global item for this slot.", "Missing Item", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            SelectedItemId = Convert.ToInt32(selectedRowView.Row["item_id"]);
+
             if (!int.TryParse(txtStock.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int stock) || stock < 0)
             {
                 MessageBox.Show("Stock must be a valid non-negative integer.", "Invalid Stock", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (stock > DataStore.MaxStockPerItem)
+            {
+                MessageBox.Show($"Stock cannot exceed {DataStore.MaxStockPerItem}.", "Invalid Stock", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -96,6 +171,15 @@ namespace Eco_Matic
                 return;
             }
 
+            SlotId = SlotIdHelper.Normalize(txtSlotId.Text) ?? txtSlotId.Text.Trim();
+            InitialStock = int.TryParse(txtStock.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedStock) ? parsedStock : 0;
+            MaxCapacity = DataStore.MaxStockPerItem;
+            SlotPriceOverride = string.IsNullOrWhiteSpace(txtSlotPrice.Text)
+                ? null
+                : decimal.TryParse(txtSlotPrice.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal price)
+                    ? price
+                    : null;
+
             DialogResult = true;
             Close();
         }
@@ -104,40 +188,6 @@ namespace Eco_Matic
         {
             DialogResult = false;
             Close();
-        }
-
-        public string SlotId => SlotIdHelper.Normalize(txtSlotId.Text) ?? txtSlotId.Text.Trim();
-
-        public int InitialStock => int.TryParse(txtStock.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int stock) ? stock : 0;
-
-        public int MaxCapacity => 15;
-
-        public decimal? SlotPriceOverride
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(txtSlotPrice.Text))
-                {
-                    return null;
-                }
-
-                return decimal.TryParse(txtSlotPrice.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal price)
-                    ? price
-                    : null;
-            }
-        }
-
-        public int? SelectedItemId
-        {
-            get
-            {
-                if (cboExistingItem.SelectedItem is DataRowView rowView)
-                {
-                    return Convert.ToInt32(rowView.Row["item_id"]);
-                }
-
-                return null;
-            }
         }
     }
 }

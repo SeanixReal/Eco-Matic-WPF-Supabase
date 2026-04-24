@@ -1,5 +1,13 @@
 namespace Eco_Matic.Data;
 
+public enum SessionDataSource
+{
+    Unresolved = 0,
+    Supabase = 1,
+    LocalMySql = 2,
+    Unavailable = 3
+}
+
 public sealed class OfflineSyncMetadata
 {
     public bool HasCompletedInitialSync { get; init; }
@@ -29,30 +37,93 @@ public sealed class DirtyInventoryRecord
     public int StockLevel { get; init; }
 }
 
+public sealed class OfflineReceiptSessionRecord
+{
+    public string ClientSyncId { get; init; } = string.Empty;
+    public string ReceiptNumber { get; init; } = string.Empty;
+    public int MachineId { get; init; }
+    public DateTime SessionStartedAt { get; init; }
+    public DateTime SessionEndedAt { get; init; }
+    public decimal TotalAmount { get; init; }
+    public decimal AmountPaid { get; init; }
+    public decimal ChangeAmount { get; init; }
+    public int RecyclePointsTotal { get; init; }
+    public string Source { get; init; } = "online";
+    public DateTime SavedUtc { get; init; }
+}
+
+public sealed class OfflineReceiptSessionLineRecord
+{
+    public string ClientSyncId { get; init; } = string.Empty;
+    public int LineOrder { get; init; }
+    public string EntryType { get; init; } = string.Empty;
+    public string? SlotId { get; init; }
+    public string? ItemName { get; init; }
+    public int? Quantity { get; init; }
+    public decimal? UnitPrice { get; init; }
+    public decimal? LineTotal { get; init; }
+    public string? RecycleMaterial { get; init; }
+    public int? RecyclePieces { get; init; }
+    public int? RecyclePoints { get; init; }
+}
+
 public sealed class OfflineStoreSettings
 {
-    public string Host { get; init; } = "localhost";
-    public uint Port { get; init; } = 3306;
-    public string Username { get; init; } = "root";
-    public string Password { get; init; } = "admin123";
-    public string Schema { get; init; } = "eco_matic_latest";
+    public string Host { get; init; } = string.Empty;
+    public uint Port { get; init; }
+    public string Username { get; init; } = string.Empty;
+    public string Password { get; init; } = string.Empty;
+    public string Schema { get; init; } = string.Empty;
 
     public static OfflineStoreSettings Load()
     {
-        uint port = 3306;
-        string? portValue = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_PORT");
-        if (!string.IsNullOrWhiteSpace(portValue) && uint.TryParse(portValue, out uint parsedPort))
+        return TryLoad() ?? throw new AppConfigurationException(
+            "Local offline MySQL is not fully configured. Either provide all ECOMATIC_LOCAL_MYSQL_* settings or remove them to run online-only.");
+    }
+
+    public static OfflineStoreSettings? TryLoad()
+    {
+        string? host = AppEnvironment.GetOptional("ECOMATIC_LOCAL_MYSQL_HOST");
+        string? portValue = AppEnvironment.GetOptional("ECOMATIC_LOCAL_MYSQL_PORT");
+        string? username = AppEnvironment.GetOptional("ECOMATIC_LOCAL_MYSQL_USER");
+        string? password = AppEnvironment.GetOptional("ECOMATIC_LOCAL_MYSQL_PASSWORD");
+        string? schema = AppEnvironment.GetOptional("ECOMATIC_LOCAL_MYSQL_SCHEMA");
+
+        bool anyValueProvided =
+            !string.IsNullOrWhiteSpace(host) ||
+            !string.IsNullOrWhiteSpace(portValue) ||
+            !string.IsNullOrWhiteSpace(username) ||
+            !string.IsNullOrWhiteSpace(password) ||
+            !string.IsNullOrWhiteSpace(schema);
+
+        if (!anyValueProvided)
         {
-            port = parsedPort;
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(host) ||
+            string.IsNullOrWhiteSpace(portValue) ||
+            string.IsNullOrWhiteSpace(username) ||
+            string.IsNullOrWhiteSpace(password) ||
+            string.IsNullOrWhiteSpace(schema))
+        {
+            throw new AppConfigurationException(
+                "Local offline MySQL configuration is incomplete. Fill in all ECOMATIC_LOCAL_MYSQL_* settings or remove them all to run online-only.");
+        }
+
+        if (!uint.TryParse(portValue, out uint port) || port == 0)
+        {
+            throw new AppConfigurationException(
+                "ECOMATIC_LOCAL_MYSQL_PORT must be a valid positive integer.");
         }
 
         return new OfflineStoreSettings
         {
-            Host = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_HOST") ?? "localhost",
+            Host = host,
             Port = port,
-            Username = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_USER") ?? "root",
-            Password = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_PASSWORD") ?? "admin123",
-            Schema = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_SCHEMA") ?? "eco_matic_latest"
+            Username = username,
+            Password = password,
+            Schema = schema
         };
     }
 }

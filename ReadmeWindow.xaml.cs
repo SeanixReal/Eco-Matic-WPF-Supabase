@@ -79,6 +79,15 @@ Copyright 2026 Seanix";
         Close();
     }
 
+    private void BtnOpenAbout_Click(object sender, RoutedEventArgs e)
+    {
+        var about = new AboutWindow
+        {
+            Owner = Owner ?? this
+        };
+        about.ShowDialog();
+    }
+
     private void BtnMinimize_Click(object sender, RoutedEventArgs e)
     {
         this.WindowState = WindowState.Minimized;
@@ -86,5 +95,13 @@ Copyright 2026 Seanix";
     private void BtnMaximize_Click(object sender, RoutedEventArgs e)
     {
         this.WindowState = this.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void WindowFrame_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
     }
 }

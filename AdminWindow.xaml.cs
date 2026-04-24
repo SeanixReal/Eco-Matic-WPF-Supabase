@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Controls;
+using System.Data;
+using System.Windows.Shapes;
 
 namespace Eco_Matic
 {
@@ -20,6 +22,26 @@ namespace Eco_Matic
         
         // If the user is an Inventory Manager, this locks them to a specific machine. Null means master access.
         private readonly int? _assignedMachineId;
+        private readonly string _initialViewName;
+        private int _inventoryGridLoadVersion;
+        private static readonly Brush[] ChartPalette =
+        [
+            CreateBrush(46, 119, 230),
+            CreateBrush(47, 166, 106),
+            CreateBrush(255, 206, 74),
+            CreateBrush(214, 90, 90),
+            CreateBrush(126, 87, 194),
+            CreateBrush(20, 184, 166)
+        ];
+
+        private sealed class ChartDatum
+        {
+            public string Label { get; init; } = string.Empty;
+            public string ValueText { get; init; } = string.Empty;
+            public double BarWidth { get; init; }
+            public decimal Value { get; init; }
+            public Brush Fill { get; init; } = Brushes.SteelBlue;
+        }
 
         /// <summary>
         /// Initializes the application, sets up the current role context, and routes the user to the correct default view.
@@ -34,9 +56,39 @@ namespace Eco_Matic
             
             // Start at the respective active view
             if (_currentUserRole == "Inventory Manager")
-                SetActiveView("Inventory");
+            {
+                _initialViewName = "Inventory";
+            }
             else
-                SetActiveView("Dashboard");
+            {
+                // Start full admins in Machines so first-time setup can add a kiosk immediately.
+                _initialViewName = "Machines";
+            }
+
+            Loaded += AdminWindow_Loaded;
+        }
+
+        private void AdminWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            Loaded -= AdminWindow_Loaded;
+            _ = LoadInitialViewAsync();
+        }
+
+        private async Task LoadInitialViewAsync()
+        {
+            try
+            {
+                await Task.Yield();
+                await SetActiveViewAsync(_initialViewName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    $"The login succeeded, but the first staff view could not finish loading.\n\n{ex.Message}",
+                    "Staff View Load Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
 
         /// <summary>
@@ -67,14 +119,14 @@ namespace Eco_Matic
         }
 
         // Navigation Sidebar Logic
-        private void Nav_Click(object sender, RoutedEventArgs e)
+        private async void Nav_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button clickedBtn)
             {
                 string? target = clickedBtn.Tag?.ToString();
                 if (target != null)
                 {
-                    SetActiveView(target);
+                    await SetActiveViewAsync(target);
                 }
             }
         }
@@ -85,7 +137,7 @@ namespace Eco_Matic
         /// This keeps performance fast and maintains a modern Single-Page Application (SPA) feel in a Desktop Client.
         ///  : Demonstrates efficient memory usage by reusing the single shell framework.
         /// </summary>
-        private void SetActiveView(string viewName)
+        private async Task SetActiveViewAsync(string viewName)
         {
             // Reset all buttons to default styling
             navDashboard.Style = (Style)FindResource("SidebarButtonStyle");
@@ -113,69 +165,270 @@ namespace Eco_Matic
                 case "Dashboard":
                     navDashboard.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewDashboard.Visibility = Visibility.Visible;
-                    LoadDashboardMetrics();
                     txtViewTitle.Text = "Dashboard";
                     txtViewSubtitle.Text = "System Overview";
+                    await LoadDashboardMetricsAsync();
                     break;
                 case "Inventory":
                     navInventory.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewInventory.Visibility = Visibility.Visible;
-                    LoadInventoryMachines();
                     txtViewTitle.Text = "Inventory Management";
                     txtViewSubtitle.Text = "Assign global items to machine slots and manage stock.";
+                    await LoadInventoryMachinesAsync();
                     break;
                 case "Items":
                     navItems.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewItems.Visibility = Visibility.Visible;
-                    LoadCatalogItems();
-                    txtViewTitle.Text = "Global Item Catalog";
-                    txtViewSubtitle.Text = "Manage shared item details used across machines.";
+                    txtViewTitle.Text = "Catalog Management";
+                    txtViewSubtitle.Text = "Manage shared sale items and customer recycle entries.";
+                    await Task.WhenAll(LoadCatalogItemsAsync(), LoadRecycleCatalogAsync());
                     break;
                 case "Logs":
                     navLogs.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewLogs.Visibility = Visibility.Visible;
-                    LoadEventLogs();
                     txtViewTitle.Text = "Event Logs";
                     txtViewSubtitle.Text = "Track system activity.";
+                    await LoadEventLogsAsync();
                     break;
                 case "Sales":
                     navSales.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewSales.Visibility = Visibility.Visible;
-                    LoadSalesData();
                     txtViewTitle.Text = "Sales Report";
                     txtViewSubtitle.Text = "Analyze transaction history.";
+                    await LoadSalesDataAsync();
                     break;
                 case "Machines":
                     navMachines.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewMachines.Visibility = Visibility.Visible;
-                    LoadMachinesData();
                     txtViewTitle.Text = "Vending Machines";
                     txtViewSubtitle.Text = "Manage interconnected machine instances.";
+                    await LoadMachinesDataAsync();
                     break;
                 case "Users":
                     navUsers.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewUsers.Visibility = Visibility.Visible;
-                    LoadUsersData();
                     txtViewTitle.Text = "System Admin Users";
                     txtViewSubtitle.Text = "Manage admins and inventory workers.";
+                    await LoadUsersDataAsync();
                     break;
                 case "Customers":
                     navCustomers.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewCustomers.Visibility = Visibility.Visible;
-                    LoadCustomersData();
                     txtViewTitle.Text = "Customers CRM";
                     txtViewSubtitle.Text = "Manage RFID user accounts and credit balances.";
+                    await LoadCustomersDataAsync();
                     break;
             }
         }
 
-        private void CboInventoryMachine_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void CboInventoryMachine_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (cboInventoryMachine.SelectedValue is int machineId)
             {
-                var store = new Data.SupabaseStore();
-                LoadInventoryGrid(machineId);
+                await LoadInventoryGridAsync(machineId);
             }
+        }
+
+        private async Task<bool> RunStoreMutationAsync(Func<bool> mutation, string actionName)
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                return await Task.Run(mutation);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    $"{actionName} failed.\n\n{ex.Message}",
+                    "Operation Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return false;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private async Task<T?> RunStoreOperationAsync<T>(Func<T> operation, string actionName)
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                return await Task.Run(operation);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    $"{actionName} failed.\n\n{ex.Message}",
+                    "Operation Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return default;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private async Task RefreshSelectedInventoryAsync()
+        {
+            if (cboInventoryMachine.SelectedValue is int machineId)
+            {
+                await LoadInventoryGridAsync(machineId);
+            }
+        }
+
+        private async Task RefreshMachinesAndInventoryAsync()
+        {
+            await LoadMachinesDataAsync();
+            await LoadInventoryMachinesAsync();
+        }
+
+        private async Task RefreshCatalogAndSelectedInventoryAsync()
+        {
+            await LoadCatalogItemsAsync();
+            await RefreshSelectedInventoryAsync();
+        }
+
+        private async Task<int> GetGlobalItemCountAsync()
+        {
+            int? count = await RunStoreOperationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.GetAllItems().Rows.Count;
+            }, "Load global item catalog");
+
+            return count ?? 0;
+        }
+
+        private async Task<string?> GetNextAvailableSlotIdAsync(int machineId)
+        {
+            return await RunStoreOperationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.GetNextAvailableSlotId(machineId);
+            }, "Load next available slot");
+        }
+
+        private async Task<int> GetAssignedSlotCountAsync(int machineId)
+        {
+            int? count = await RunStoreOperationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.GetAssignedSlotCount(machineId);
+            }, "Load assigned slot count");
+
+            return count ?? 0;
+        }
+
+        private async Task<bool> RollbackIncompleteMachineSetupAsync(int machineId, string locationName)
+        {
+            bool deleted = await RunStoreMutationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.DeleteMachine(machineId);
+            }, "Rollback incomplete machine setup");
+
+            await RefreshMachinesAndInventoryAsync();
+
+            if (!deleted)
+            {
+                MessageBox.Show(this,
+                    $"The new machine at '{locationName}' could not be rolled back automatically. Please remove it manually.",
+                    "Rollback Needed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+
+            return deleted;
+        }
+
+        private async Task<bool> RunRequiredMachineSetupAsync(int machineId, string locationName)
+        {
+            int assignedSlots = await GetAssignedSlotCountAsync(machineId);
+
+            while (assignedSlots < DataStore.MaxItemSlots)
+            {
+                if (assignedSlots >= 5)
+                {
+                    var addMoreChoice = MessageBox.Show(this,
+                        $"Machine '{locationName}' now has {assignedSlots} assigned slots.\n\nDo you want to add another slot now?",
+                        "Continue Slot Setup",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (addMoreChoice != MessageBoxResult.Yes)
+                    {
+                        break;
+                    }
+                }
+
+                string suggestedSlotId = await GetNextAvailableSlotIdAsync(machineId) ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(suggestedSlotId))
+                {
+                    break;
+                }
+
+                var setupWindow = new InventoryItemWindow(suggestedSlotId, assignedSlots, 5)
+                {
+                    Owner = this
+                };
+
+                if (setupWindow.ShowDialog() != true)
+                {
+                    if (assignedSlots < 5)
+                    {
+                        await RollbackIncompleteMachineSetupAsync(machineId, locationName);
+                        MessageBox.Show(this,
+                            "A new vending machine must be configured with at least 5 assigned slots. The incomplete machine setup was canceled.",
+                            "Machine Setup Incomplete",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return false;
+                    }
+
+                    break;
+                }
+
+                int? selectedItemId = setupWindow.SelectedItemId;
+                string slotId = setupWindow.SlotId;
+                int initialStock = setupWindow.InitialStock;
+                decimal? slotPriceOverride = setupWindow.SlotPriceOverride;
+
+                if (!selectedItemId.HasValue)
+                {
+                    continue;
+                }
+
+                bool added = await RunStoreMutationAsync(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.AddItemToMachineSlot(machineId, slotId, selectedItemId.Value, initialStock, slotPriceOverride);
+                }, "Assign setup slot");
+
+                if (!added)
+                {
+                    continue;
+                }
+
+                assignedSlots++;
+            }
+
+            if (assignedSlots < 5)
+            {
+                await RollbackIncompleteMachineSetupAsync(machineId, locationName);
+                MessageBox.Show(this,
+                    "The new machine was removed because it did not reach the minimum 5 assigned slots.",
+                    "Machine Setup Incomplete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -183,7 +436,7 @@ namespace Eco_Matic
         ///  : Note the proper usage of `Owner = this` attached to the pop-up (InventoryItemWindow) to ensure 
         /// modal focus, avoiding multi-window 'z-fighting' logic issues on the user's OS.
         /// </summary>
-        private void BtnAddItem_Click(object sender, RoutedEventArgs e)
+        private async void BtnAddItem_Click(object sender, RoutedEventArgs e)
         {
             if (cboInventoryMachine.SelectedValue is int machineId)
             {
@@ -191,13 +444,22 @@ namespace Eco_Matic
                 addWindow.Owner = this;
                 if (addWindow.ShowDialog() == true)
                 {
-                    var store = new Data.SupabaseStore();
+                    int? selectedItemId = addWindow.SelectedItemId;
+                    string slotId = addWindow.SlotId;
+                    int initialStock = addWindow.InitialStock;
+                    decimal? slotPriceOverride = addWindow.SlotPriceOverride;
 
-                    if (addWindow.SelectedItemId.HasValue)
+                    if (selectedItemId.HasValue)
                     {
-                        if (store.AddItemToMachineSlot(machineId, addWindow.SlotId, addWindow.SelectedItemId.Value, addWindow.InitialStock, addWindow.SlotPriceOverride))
+                        bool added = await RunStoreMutationAsync(() =>
                         {
-                            LoadInventoryGrid(machineId);
+                            var store = new Data.SupabaseStore();
+                            return store.AddItemToMachineSlot(machineId, slotId, selectedItemId.Value, initialStock, slotPriceOverride);
+                        }, "Assign item to machine slot");
+
+                        if (added)
+                        {
+                            await LoadInventoryGridAsync(machineId);
                         }
                     }
                 }
@@ -208,7 +470,7 @@ namespace Eco_Matic
             }
         }
 
-        private void BtnRestock_Click(object sender, RoutedEventArgs e)
+        private async void BtnRestock_Click(object sender, RoutedEventArgs e)
         {
             if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
             {
@@ -217,10 +479,16 @@ namespace Eco_Matic
                 restockWindow.Owner = this;
                 if (restockWindow.ShowDialog() == true)
                 {
-                    var store = new Data.SupabaseStore();
-                    if (store.RestockInventoryItem(inventoryId, restockWindow.RestockQuantity))
+                    int restockQuantity = restockWindow.RestockQuantity;
+                    bool restocked = await RunStoreMutationAsync(() =>
                     {
-                        LoadInventoryGrid(machineId);
+                        var store = new Data.SupabaseStore();
+                        return store.RestockInventoryItem(inventoryId, restockQuantity);
+                    }, "Restock inventory item");
+
+                    if (restocked)
+                    {
+                        await LoadInventoryGridAsync(machineId);
                     }
                 }
             }
@@ -230,7 +498,7 @@ namespace Eco_Matic
             }
         }
 
-        private void BtnEditItem_Click(object sender, RoutedEventArgs e)
+        private async void BtnEditItem_Click(object sender, RoutedEventArgs e)
         {
             if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
             {
@@ -249,11 +517,24 @@ namespace Eco_Matic
 
                 if (editWindow.ShowDialog() == true)
                 {
-                    var store = new Data.SupabaseStore();
-                    if (editWindow.SelectedItemId.HasValue &&
-                        store.UpdateMachineInventoryAssignment(inventoryId, machineId, editWindow.SlotId, editWindow.SelectedItemId.Value, editWindow.InitialStock, editWindow.MaxCapacity, editWindow.SlotPriceOverride))
+                    int? selectedItemId = editWindow.SelectedItemId;
+                    string updatedSlotId = editWindow.SlotId;
+                    int updatedStock = editWindow.InitialStock;
+                    int maxCapacity = editWindow.MaxCapacity;
+                    decimal? updatedSlotPrice = editWindow.SlotPriceOverride;
+
+                    if (selectedItemId.HasValue)
                     {
-                        LoadInventoryGrid(machineId);
+                        bool updated = await RunStoreMutationAsync(() =>
+                        {
+                            var store = new Data.SupabaseStore();
+                            return store.UpdateMachineInventoryAssignment(inventoryId, machineId, updatedSlotId, selectedItemId.Value, updatedStock, maxCapacity, updatedSlotPrice);
+                        }, "Update machine slot");
+
+                        if (updated)
+                        {
+                            await LoadInventoryGridAsync(machineId);
+                        }
                     }
                 }
             }
@@ -263,7 +544,7 @@ namespace Eco_Matic
             }
         }
 
-        private void BtnDeleteItem_Click(object sender, RoutedEventArgs e)
+        private async void BtnDeleteItem_Click(object sender, RoutedEventArgs e)
         {
             if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
             {
@@ -272,10 +553,15 @@ namespace Eco_Matic
 
                 if (MessageBox.Show($"Are you sure you want to permanently delete '{name}'?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.SupabaseStore();
-                    if (store.DeleteInventoryItem(inventoryId))
+                    bool deleted = await RunStoreMutationAsync(() =>
                     {
-                        LoadInventoryGrid(machineId);
+                        var store = new Data.SupabaseStore();
+                        return store.DeleteInventoryItem(inventoryId);
+                    }, "Delete machine slot");
+
+                    if (deleted)
+                    {
+                        await LoadInventoryGridAsync(machineId);
                     }
                 }
             }
@@ -291,6 +577,69 @@ namespace Eco_Matic
             var view = store.GetMachineInventory(machineId).DefaultView;
             view.Sort = "[_SlotSort] ASC";
             dgInventory.ItemsSource = view;
+        }
+
+        private async Task LoadInventoryGridAsync(int machineId)
+        {
+            int loadVersion = System.Threading.Interlocked.Increment(ref _inventoryGridLoadVersion);
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataView view = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    var inventoryView = store.GetMachineInventory(machineId).DefaultView;
+                    inventoryView.Sort = "[_SlotSort] ASC";
+                    return inventoryView;
+                });
+
+                if (loadVersion != _inventoryGridLoadVersion)
+                {
+                    return;
+                }
+
+                dgInventory.ItemsSource = view;
+            }
+            finally
+            {
+                if (loadVersion == _inventoryGridLoadVersion)
+                {
+                    Mouse.OverrideCursor = null;
+                }
+            }
+        }
+
+        private async void BtnRandomizeStocks_Click(object sender, RoutedEventArgs e)
+        {
+            if (cboInventoryMachine.SelectedValue is not int machineId)
+            {
+                MessageBox.Show("Please select a vending machine first.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (MessageBox.Show(
+                    $"Randomize stock values for the currently assigned slots in machine {machineId}?",
+                    "Randomize Stocks",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            bool randomized = await RunStoreMutationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.RandomizeMachineStocks(machineId);
+            }, "Randomize machine stocks");
+
+            if (randomized)
+            {
+                await LoadInventoryGridAsync(machineId);
+            }
+            else
+            {
+                MessageBox.Show("Failed to randomize stock levels.", "Randomize Stocks", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         /// <summary>
@@ -323,6 +672,45 @@ namespace Eco_Matic
                 dgInventory.ItemsSource = null;
         }
 
+        private async Task LoadInventoryMachinesAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataTable dt = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.GetVendingMachinesLookup();
+                });
+
+                if (_currentUserRole == "Inventory Manager" && _assignedMachineId.HasValue)
+                {
+                    var filteredView = new DataView(dt)
+                    {
+                        RowFilter = $"machine_id = {_assignedMachineId.Value}"
+                    };
+                    cboInventoryMachine.ItemsSource = filteredView;
+                }
+                else
+                {
+                    cboInventoryMachine.ItemsSource = dt.DefaultView;
+                }
+
+                if (cboInventoryMachine.Items.Count > 0)
+                {
+                    cboInventoryMachine.SelectedIndex = 0;
+                }
+                else
+                {
+                    dgInventory.ItemsSource = null;
+                }
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
         private void BtnLogout_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
@@ -348,11 +736,11 @@ namespace Eco_Matic
 
         private void AboutMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(this,
-                "Eco-Matic Vending Machine Admin Console\nVersion 1.0\n\nCopyright 2026 Seanix",
-                "About",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            var about = new AboutWindow
+            {
+                Owner = this
+            };
+            about.ShowDialog();
         }
 
         private void OpenReadmeMenuItem_Click(object sender, RoutedEventArgs e)
@@ -398,6 +786,53 @@ namespace Eco_Matic
             }
         }
 
+        private async Task LoadDashboardMetricsAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                var result = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    store.GetDashboardMetrics(out decimal totalSales, out int totalItemsSold, out int lowStockAlerts, out int activeMachines);
+                    var logs = store.GetEventLogs();
+                    var weeklySales = store.GetFilteredSales(DateTime.Today, "Week").Data;
+                    var stockMonitoring = store.GetStockMonitoring();
+                    return (totalSales, totalItemsSold, lowStockAlerts, activeMachines, logs, weeklySales, stockMonitoring);
+                });
+
+                txtTotalSales.Text = $"₱{result.totalSales:F2}";
+                txtItemsSold.Text = result.totalItemsSold.ToString();
+                txtLowStock.Text = result.lowStockAlerts.ToString();
+                txtActiveMachines.Text = result.activeMachines.ToString();
+                txtLowStock.Foreground = result.lowStockAlerts > 0
+                    ? new SolidColorBrush(Color.FromRgb(214, 90, 90))
+                    : new SolidColorBrush(Color.FromRgb(47, 166, 106));
+
+                if (result.logs.Rows.Count > 0)
+                {
+                    var view = result.logs.DefaultView;
+                    view.Sort = "[Timestamp] DESC";
+                    dgRecentActivity.ItemsSource = view;
+                }
+                else
+                {
+                    dgRecentActivity.ItemsSource = null;
+                }
+
+                icDashboardSalesTrend.ItemsSource = BuildTrendData(result.weeklySales, 280);
+
+                DataView stockView = result.stockMonitoring.DefaultView;
+                stockView.RowFilter = "[Status] = 'OUT OF STOCK' OR [Status] = 'LOW STOCK' OR [Status] = 'WATCH'";
+                stockView.Sort = "[Stock] ASC, [Item] ASC";
+                dgDashboardLowStock.ItemsSource = stockView;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
         private void LoadEventLogs()
         {
             if (cboLogsFilter == null || dpLogsDate == null) return;
@@ -409,21 +844,56 @@ namespace Eco_Matic
             dgLogs.ItemsSource = store.GetFilteredEventLogs(targetDate, filterType).DefaultView;
         }
 
-        private void LogsFilter_Changed(object sender, SelectionChangedEventArgs e)
+        private async Task LoadEventLogsAsync()
         {
-            if (viewLogs != null && viewLogs.Visibility == Visibility.Visible)
+            if (cboLogsFilter == null || dpLogsDate == null)
             {
-                LoadEventLogs();
+                return;
+            }
+
+            string filterType = (cboLogsFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
+            DateTime targetDate = dpLogsDate.SelectedDate ?? DateTime.Today;
+
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataView view = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.GetFilteredEventLogs(targetDate, filterType).DefaultView;
+                });
+
+                dgLogs.ItemsSource = view;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
             }
         }
 
-        private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
+        private async void LogsFilter_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (viewLogs != null && viewLogs.Visibility == Visibility.Visible)
+            {
+                await LoadEventLogsAsync();
+            }
+        }
+
+        private async void BtnClearLogs_Click(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Are you sure you want to clear all event logs?", "Clear Logs", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                var store = new Data.SupabaseStore();
-                store.ClearEventLogs();
-                LoadEventLogs();
+                bool cleared = await RunStoreMutationAsync(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    store.ClearEventLogs();
+                    return true;
+                }, "Clear event logs");
+
+                if (cleared)
+                {
+                    await LoadEventLogsAsync();
+                }
             }
         }
 
@@ -442,6 +912,7 @@ namespace Eco_Matic
 
             var result = store.GetFilteredSales(targetDate, filterType);
             dgSales.ItemsSource = result.Data.DefaultView;
+            UpdateSalesReportVisuals(result.Data, result.Total, filterType);
             
             if (txtSalesFilterLabel != null) 
                 txtSalesFilterLabel.Text = $"Sales ({filterType})";
@@ -450,47 +921,393 @@ namespace Eco_Matic
                 txtSalesTotal.Text = $"₱ {result.Total:0.00}";
         }
 
-        private void SalesFilter_Changed(object sender, SelectionChangedEventArgs e)
+        private async Task LoadSalesDataAsync()
+        {
+            if (cboSalesFilter == null || dpSalesDate == null)
+            {
+                return;
+            }
+
+            string filterType = (cboSalesFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
+            DateTime targetDate = dpSalesDate.SelectedDate ?? DateTime.Today;
+
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                var result = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.GetFilteredSales(targetDate, filterType);
+                });
+
+                dgSales.ItemsSource = result.Data.DefaultView;
+                UpdateSalesReportVisuals(result.Data, result.Total, filterType);
+
+                if (txtSalesFilterLabel != null)
+                    txtSalesFilterLabel.Text = $"Sales ({filterType})";
+
+                if (txtSalesTotal != null)
+                    txtSalesTotal.Text = $"₱ {result.Total:0.00}";
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private void UpdateSalesReportVisuals(DataTable salesTable, decimal total, string filterType)
+        {
+            int transactions = salesTable.Rows.Count;
+            int itemsSold = salesTable.Rows.Cast<DataRow>().Sum(row => Convert.ToInt32(row["Quantity"]));
+            decimal averageSale = transactions > 0 ? total / transactions : 0m;
+
+            var itemGroups = salesTable.Rows.Cast<DataRow>()
+                .GroupBy(row => row["Item"]?.ToString() ?? "Unknown")
+                .Select(group => new
+                {
+                    Label = group.Key,
+                    Revenue = group.Sum(row => Convert.ToDecimal(row["Total Paid"])),
+                    Quantity = group.Sum(row => Convert.ToInt32(row["Quantity"]))
+                })
+                .OrderByDescending(group => group.Revenue)
+                .ToList();
+
+            var machineGroups = salesTable.Rows.Cast<DataRow>()
+                .GroupBy(row => row["Machine"]?.ToString() ?? "Machine")
+                .Select(group => new
+                {
+                    Label = group.Key,
+                    Revenue = group.Sum(row => Convert.ToDecimal(row["Total Paid"])),
+                    Quantity = group.Sum(row => Convert.ToInt32(row["Quantity"]))
+                })
+                .OrderByDescending(group => group.Revenue)
+                .ToList();
+
+            txtSalesTransactions.Text = transactions.ToString();
+            txtSalesAverage.Text = $"₱ {averageSale:0.00}";
+            txtSalesBestItem.Text = itemGroups.Count > 0 ? $"{itemGroups[0].Label} ({itemGroups[0].Quantity})" : "-";
+
+            icSalesTrend.ItemsSource = BuildTrendData(salesTable, 390);
+            icTopItems.ItemsSource = BuildGroupBars(itemGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00} / {x.Quantity} sold")), 320, 5, ChartPalette[1]);
+            icMachineRevenue.ItemsSource = BuildGroupBars(machineGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00}")), 300, 5, ChartPalette[2]);
+
+            var pieData = BuildPieData(itemGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00}")), 5);
+            icSalesPieLegend.ItemsSource = pieData;
+            DrawPieChart(canvasSalesPie, pieData);
+        }
+
+        private static List<ChartDatum> BuildTrendData(DataTable salesTable, double maxBarWidth)
+        {
+            var groups = salesTable.Rows.Cast<DataRow>()
+                .GroupBy(row => row["Period"]?.ToString() ?? "")
+                .Select(group => new
+                {
+                    Label = string.IsNullOrWhiteSpace(group.Key) ? "No period" : group.Key,
+                    FirstDate = group.Min(row => Convert.ToDateTime(row["Date"])),
+                    Revenue = group.Sum(row => Convert.ToDecimal(row["Total Paid"]))
+                })
+                .OrderBy(group => group.FirstDate)
+                .ToList();
+
+            if (groups.Count == 0)
+            {
+                return [new ChartDatum { Label = "No sales", ValueText = "₱ 0.00", BarWidth = 0, Value = 0, Fill = ChartPalette[0] }];
+            }
+
+            decimal maxValue = Math.Max(1m, groups.Max(group => group.Revenue));
+            return groups.Select((group, index) => new ChartDatum
+            {
+                Label = group.Label,
+                Value = group.Revenue,
+                ValueText = $"₱ {group.Revenue:0.00}",
+                BarWidth = CalculateBarWidth(group.Revenue, maxValue, maxBarWidth),
+                Fill = ChartPalette[index % ChartPalette.Length]
+            }).ToList();
+        }
+
+        private static List<ChartDatum> BuildGroupBars(IEnumerable<(string Label, decimal Value, string ValueText)> source, double maxBarWidth, int limit, Brush fill)
+        {
+            var groups = source
+                .Where(item => item.Value > 0)
+                .Take(limit)
+                .ToList();
+
+            if (groups.Count == 0)
+            {
+                return [new ChartDatum { Label = "No data", ValueText = "₱ 0.00", BarWidth = 0, Value = 0, Fill = fill }];
+            }
+
+            decimal maxValue = Math.Max(1m, groups.Max(item => item.Value));
+            return groups.Select(item => new ChartDatum
+            {
+                Label = item.Label,
+                Value = item.Value,
+                ValueText = item.ValueText,
+                BarWidth = CalculateBarWidth(item.Value, maxValue, maxBarWidth),
+                Fill = fill
+            }).ToList();
+        }
+
+        private static List<ChartDatum> BuildPieData(IEnumerable<(string Label, decimal Value, string ValueText)> source, int limit)
+        {
+            var groups = source
+                .Where(item => item.Value > 0)
+                .Take(limit)
+                .ToList();
+
+            if (groups.Count == 0)
+            {
+                return [new ChartDatum { Label = "No sales", ValueText = "₱ 0.00", Value = 1, Fill = CreateBrush(226, 232, 240) }];
+            }
+
+            return groups.Select((item, index) => new ChartDatum
+            {
+                Label = item.Label,
+                Value = item.Value,
+                ValueText = item.ValueText,
+                Fill = ChartPalette[index % ChartPalette.Length]
+            }).ToList();
+        }
+
+        private static double CalculateBarWidth(decimal value, decimal maxValue, double maxBarWidth)
+        {
+            if (maxValue <= 0 || value <= 0)
+            {
+                return 0;
+            }
+
+            return Math.Max(8, (double)(value / maxValue) * maxBarWidth);
+        }
+
+        private static void DrawPieChart(Canvas canvas, IReadOnlyList<ChartDatum> data)
+        {
+            canvas.Children.Clear();
+            if (data.Count == 0)
+            {
+                return;
+            }
+
+            double width = canvas.Width;
+            double height = canvas.Height;
+            double radius = Math.Min(width, height) / 2d - 4d;
+            Point center = new(width / 2d, height / 2d);
+            decimal total = Math.Max(1m, data.Sum(item => item.Value));
+            double currentAngle = -90d;
+
+            foreach (ChartDatum item in data)
+            {
+                double sweepAngle = (double)(item.Value / total) * 360d;
+                bool isLargeArc = sweepAngle > 180d;
+                Point start = PointOnCircle(center, radius, currentAngle);
+                Point end = PointOnCircle(center, radius, currentAngle + sweepAngle);
+
+                var figure = new PathFigure { StartPoint = center, IsClosed = true };
+                figure.Segments.Add(new LineSegment(start, true));
+                figure.Segments.Add(new ArcSegment(end, new Size(radius, radius), 0, isLargeArc, SweepDirection.Clockwise, true));
+                figure.Segments.Add(new LineSegment(center, true));
+
+                var geometry = new PathGeometry();
+                geometry.Figures.Add(figure);
+                canvas.Children.Add(new Path
+                {
+                    Data = geometry,
+                    Fill = item.Fill,
+                    Stroke = Brushes.White,
+                    StrokeThickness = 2
+                });
+
+                currentAngle += sweepAngle;
+            }
+        }
+
+        private static Point PointOnCircle(Point center, double radius, double angleDegrees)
+        {
+            double angleRadians = angleDegrees * Math.PI / 180d;
+            return new Point(
+                center.X + radius * Math.Cos(angleRadians),
+                center.Y + radius * Math.Sin(angleRadians));
+        }
+
+        private static SolidColorBrush CreateBrush(byte r, byte g, byte b)
+        {
+            var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
+        private async void SalesFilter_Changed(object sender, SelectionChangedEventArgs e)
         {
             if (viewSales != null && viewSales.Visibility == Visibility.Visible)
             {
-                LoadSalesData();
+                await LoadSalesDataAsync();
             }
         }
 
         private void LoadMachinesData()
         {
             var store = new Data.SupabaseStore();
-            dgMachines.ItemsSource = store.GetVendingMachines().DefaultView;
+            DataTable dt = store.GetVendingMachines();
+            dgMachines.ItemsSource = dt.DefaultView;
+            UpdateMachineScopeUi(dt.Rows.Count);
         }
 
-        private void BtnAddMachine_Click(object sender, RoutedEventArgs e)
+        private void DgMachines_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
         {
+            if (e.PropertyName.StartsWith("_", StringComparison.Ordinal))
+            {
+                e.Cancel = true;
+            }
+        }
+
+        private async Task LoadMachinesDataAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataTable dt = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.GetVendingMachines();
+                });
+                var view = dt.DefaultView;
+                view.Sort = "[ID] ASC";
+                dgMachines.ItemsSource = view;
+                UpdateMachineScopeUi(dt.Rows.Count);
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private async void BtnAddMachine_Click(object sender, RoutedEventArgs e)
+        {
+            int existingMachineCount = await Task.Run(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.GetVendingMachinesLookup().Rows.Count;
+            });
+
+            if (existingMachineCount >= 4)
+            {
+                MessageBox.Show(this,
+                    "The current project scope allows a maximum of 4 vending machines.",
+                    "Machine Limit Reached",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                UpdateMachineScopeUi(existingMachineCount);
+                return;
+            }
+
+            int globalItemCount = await GetGlobalItemCountAsync();
+            if (globalItemCount == 0)
+            {
+                MessageBox.Show(this,
+                    "Add at least one global item first. A new vending machine now requires at least 5 assigned slots during setup.",
+                    "Global Items Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                await SetActiveViewAsync("Items");
+                return;
+            }
+
             var addMach = new AddMachineWindow { Owner = this };
             if (addMach.ShowDialog() == true)
             {
-                var store = new Data.SupabaseStore();
-                if (store.AddMachine(addMach.LocationName))
+                string locationName = addMach.LocationName;
+                string address = addMach.Address;
+                double? latitude = addMach.Latitude;
+                double? longitude = addMach.Longitude;
+
+                int? machineId = await RunStoreOperationAsync(() =>
                 {
-                    LoadMachinesData();
-                    LoadInventoryMachines(); // refresh dropdowns
+                    var store = new Data.SupabaseStore();
+                    return store.CreateMachine(locationName, address, latitude, longitude);
+                }, "Create vending machine");
+
+                if (machineId.HasValue)
+                {
+                    bool setupCompleted = await RunRequiredMachineSetupAsync(machineId.Value, locationName);
+                    await RefreshMachinesAndInventoryAsync();
+
+                    if (!setupCompleted)
+                    {
+                        return;
+                    }
+
+                    await SetActiveViewAsync("Inventory");
+                    cboInventoryMachine.SelectedValue = machineId.Value;
                 }
             }
         }
 
-        private void BtnDeleteMachine_Click(object sender, RoutedEventArgs e)
+        private void UpdateMachineScopeUi(int machineCount)
+        {
+            if (txtMachineScope != null)
+            {
+                txtMachineScope.Text = $"{machineCount} / 4 machines in use";
+                txtMachineScope.Foreground = machineCount >= 4
+                    ? new SolidColorBrush(Color.FromRgb(214, 90, 90))
+                    : new SolidColorBrush(Color.FromRgb(71, 85, 105));
+            }
+
+            if (btnAddMachine != null)
+            {
+                bool canAddMachine = machineCount < 4;
+                btnAddMachine.IsEnabled = canAddMachine;
+                btnAddMachine.Opacity = canAddMachine ? 1.0 : 0.6;
+                btnAddMachine.ToolTip = canAddMachine
+                    ? "Register a new vending machine"
+                    : "Maximum of 4 vending machines reached for the current project scope";
+            }
+        }
+
+        private async Task PromptToAddGlobalItemsAsync()
+        {
+            bool hasGlobalItems = await Task.Run(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.GetAllItems().Rows.Count > 0;
+            });
+
+            if (hasGlobalItems)
+            {
+                return;
+            }
+
+            var choice = MessageBox.Show(this,
+                "This vending machine was created, but the global item catalog is still empty.\n\nAdd global items now so you can assign them to machine slots next.",
+                "Add Global Items",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (choice == MessageBoxResult.Yes)
+            {
+                await SetActiveViewAsync("Items");
+            }
+        }
+
+        private async void BtnDeleteMachine_Click(object sender, RoutedEventArgs e)
         {
             if (dgMachines.SelectedItem is System.Data.DataRowView row)
             {
                 int machineId = Convert.ToInt32(row["ID"]);
-                string loc = row["Location"].ToString() ?? "";
-                if (MessageBox.Show($"Are you sure you want to delete Machine {machineId} at '{loc}'? This removes its inventory and sales history.", "Delete Machine", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                string machineName = row["Name"].ToString() ?? "";
+                if (MessageBox.Show($"Are you sure you want to delete Machine {machineId} '{machineName}'? This removes its inventory and sales history.", "Delete Machine", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.SupabaseStore();
-                    if (store.DeleteMachine(machineId))
+                    bool deleted = await RunStoreMutationAsync(() =>
                     {
-                        LoadMachinesData();
-                        LoadInventoryMachines();
+                        var store = new Data.SupabaseStore();
+                        return store.DeleteMachine(machineId);
+                    }, "Delete vending machine");
+
+                    if (deleted)
+                    {
+                        await RefreshMachinesAndInventoryAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show(this, "Failed to delete the machine.", "Delete Machine", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -500,22 +1317,34 @@ namespace Eco_Matic
             }
         }
 
-        private void BtnEditMachine_Click(object sender, RoutedEventArgs e)
+        private async void BtnEditMachine_Click(object sender, RoutedEventArgs e)
         {
             if (dgMachines.SelectedItem is System.Data.DataRowView row)
             {
                 int machineId = Convert.ToInt32(row["ID"]);
-                string loc = row["Location"].ToString() ?? "";
+                string loc = row["Name"].ToString() ?? "";
+                string address = row["Address"].ToString() ?? "";
                 string status = row["Status"].ToString() ?? "Active";
+                double? latitude = row.Row.Table.Columns.Contains("_Latitude") && row["_Latitude"] != DBNull.Value ? Convert.ToDouble(row["_Latitude"]) : null;
+                double? longitude = row.Row.Table.Columns.Contains("_Longitude") && row["_Longitude"] != DBNull.Value ? Convert.ToDouble(row["_Longitude"]) : null;
 
-                var editMach = new EditMachineWindow(loc, status) { Owner = this };
+                var editMach = new EditMachineWindow(loc, address, status, latitude, longitude) { Owner = this };
                 if (editMach.ShowDialog() == true)
                 {
-                    var store = new Data.SupabaseStore();
-                    if (store.UpdateMachine(machineId, editMach.LocationName, editMach.Status))
+                    string updatedLocationName = editMach.LocationName;
+                    string updatedAddress = editMach.Address;
+                    string updatedStatus = editMach.Status;
+                    double? updatedLatitude = editMach.Latitude;
+                    double? updatedLongitude = editMach.Longitude;
+                    bool updated = await RunStoreMutationAsync(() =>
                     {
-                        LoadMachinesData();
-                        LoadInventoryMachines(); // Refresh inventory dropdowns if name changed
+                        var store = new Data.SupabaseStore();
+                        return store.UpdateMachine(machineId, updatedLocationName, updatedAddress, updatedStatus, updatedLatitude, updatedLongitude);
+                    }, "Update vending machine");
+
+                    if (updated)
+                    {
+                        await RefreshMachinesAndInventoryAsync();
                         MessageBox.Show("Machine updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     else
@@ -536,26 +1365,114 @@ namespace Eco_Matic
             dgUsers.ItemsSource = store.GetUsers().DefaultView;
         }
 
+        private async Task LoadUsersDataAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataView view = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.GetUsers().DefaultView;
+                });
+                dgUsers.ItemsSource = view;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
         private void LoadCatalogItems()
         {
             var store = new Data.SupabaseStore();
-            dgItems.ItemsSource = store.GetCatalogItems().DefaultView;
+            var view = store.GetCatalogItems().DefaultView;
+            view.Sort = "[ID] ASC";
+            dgItems.ItemsSource = view;
         }
 
-        private void BtnAddCatalogItem_Click(object sender, RoutedEventArgs e)
+        private async Task LoadCatalogItemsAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataView view = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    var catalogView = store.GetCatalogItems().DefaultView;
+                    catalogView.Sort = "[ID] ASC";
+                    return catalogView;
+                });
+                dgItems.ItemsSource = view;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private async Task LoadRecycleCatalogAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataView view = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    var recycleView = store.GetRecyclableCatalog().DefaultView;
+                    recycleView.Sort = "[Sort Order] ASC, [Display Name] ASC";
+                    return recycleView;
+                });
+                dgRecycleItems.ItemsSource = view;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private static RecyclableItemDefinition? BuildRecyclableItemFromRow(DataRowView row)
+        {
+            return new RecyclableItemDefinition
+            {
+                Id = Convert.ToInt32(row["ID"]),
+                DisplayName = row["Display Name"]?.ToString() ?? string.Empty,
+                MaterialType = row["Material Type"]?.ToString() ?? string.Empty,
+                UnitLabel = row["Unit Label"]?.ToString() ?? "piece",
+                PointsPerUnit = Convert.ToInt32(row["Points / Unit"]),
+                Description = row["Description"]?.ToString() ?? string.Empty,
+                IsActive = string.Equals(row["Active"]?.ToString(), "Active", StringComparison.OrdinalIgnoreCase),
+                SortOrder = Convert.ToInt32(row["Sort Order"])
+            };
+        }
+
+        private async void BtnAddCatalogItem_Click(object sender, RoutedEventArgs e)
         {
             var editor = new CatalogItemWindow { Owner = this };
             if (editor.ShowDialog() == true)
             {
-                var store = new Data.SupabaseStore();
-                if (store.AddCatalogItem(editor.ItemName, editor.ItemType, editor.Price, editor.Calories, editor.ImagePath, editor.DispenseMessage, editor.ExamineMessage))
+                string itemName = editor.ItemName;
+                string itemType = editor.ItemType;
+                decimal price = editor.Price;
+                int calories = editor.Calories;
+                string imagePath = editor.ImagePath;
+                string dispenseMessage = editor.DispenseMessage;
+                string examineMessage = editor.ExamineMessage;
+
+                bool added = await RunStoreMutationAsync(() =>
                 {
-                    LoadCatalogItems();
+                    var store = new Data.SupabaseStore();
+                    return store.AddCatalogItem(itemName, itemType, price, calories, imagePath, dispenseMessage, examineMessage);
+                }, "Create global item");
+
+                if (added)
+                {
+                    await LoadCatalogItemsAsync();
                 }
             }
         }
 
-        private void BtnEditCatalogItem_Click(object sender, RoutedEventArgs e)
+        private async void BtnEditCatalogItem_Click(object sender, RoutedEventArgs e)
         {
             if (dgItems.SelectedItem is not System.Data.DataRowView row)
             {
@@ -578,19 +1495,28 @@ namespace Eco_Matic
 
             if (editor.ShowDialog() == true)
             {
-                var store = new Data.SupabaseStore();
-                if (store.UpdateCatalogItem(itemId, editor.ItemName, editor.ItemType, editor.Price, editor.Calories, editor.ImagePath, editor.DispenseMessage, editor.ExamineMessage))
+                string updatedItemName = editor.ItemName;
+                string updatedItemType = editor.ItemType;
+                decimal updatedPrice = editor.Price;
+                int updatedCalories = editor.Calories;
+                string updatedImagePath = editor.ImagePath;
+                string updatedDispenseMessage = editor.DispenseMessage;
+                string updatedExamineMessage = editor.ExamineMessage;
+
+                bool updated = await RunStoreMutationAsync(() =>
                 {
-                    LoadCatalogItems();
-                    if (cboInventoryMachine.SelectedValue is int machineId)
-                    {
-                        LoadInventoryGrid(machineId);
-                    }
+                    var store = new Data.SupabaseStore();
+                    return store.UpdateCatalogItem(itemId, updatedItemName, updatedItemType, updatedPrice, updatedCalories, updatedImagePath, updatedDispenseMessage, updatedExamineMessage);
+                }, "Update global item");
+
+                if (updated)
+                {
+                    await RefreshCatalogAndSelectedInventoryAsync();
                 }
             }
         }
 
-        private void BtnDeleteCatalogItem_Click(object sender, RoutedEventArgs e)
+        private async void BtnDeleteCatalogItem_Click(object sender, RoutedEventArgs e)
         {
             if (dgItems.SelectedItem is not System.Data.DataRowView row)
             {
@@ -605,26 +1531,141 @@ namespace Eco_Matic
                 return;
             }
 
-            var store = new Data.SupabaseStore();
-            if (store.DeleteCatalogItem(itemId))
+            bool deleted = await RunStoreMutationAsync(() =>
             {
-                LoadCatalogItems();
-                if (cboInventoryMachine.SelectedValue is int machineId)
-                {
-                    LoadInventoryGrid(machineId);
-                }
+                var store = new Data.SupabaseStore();
+                return store.DeleteCatalogItem(itemId);
+            }, "Delete global item");
+
+            if (deleted)
+            {
+                await RefreshCatalogAndSelectedInventoryAsync();
             }
         }
 
-        private void BtnAddUser_Click(object sender, RoutedEventArgs e)
+        private async void BtnAddRecycleItem_Click(object sender, RoutedEventArgs e)
+        {
+            var editor = new RecyclableItemWindow { Owner = this };
+            if (editor.ShowDialog() != true)
+            {
+                return;
+            }
+
+            bool added = await RunStoreMutationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.AddRecyclableItem(
+                    editor.DisplayNameValue,
+                    editor.MaterialType,
+                    editor.UnitLabel,
+                    editor.PointsPerUnit,
+                    editor.DescriptionValue,
+                    editor.IsActiveValue,
+                    editor.SortOrder);
+            }, "Create recyclable item");
+
+            if (added)
+            {
+                await LoadRecycleCatalogAsync();
+            }
+        }
+
+        private async void BtnEditRecycleItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgRecycleItems.SelectedItem is not DataRowView row)
+            {
+                MessageBox.Show("Please select a recycle item to edit.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            RecyclableItemDefinition? recyclableItem = BuildRecyclableItemFromRow(row);
+            if (recyclableItem == null)
+            {
+                return;
+            }
+
+            var editor = new RecyclableItemWindow(recyclableItem) { Owner = this };
+            if (editor.ShowDialog() != true)
+            {
+                return;
+            }
+
+            bool updated = await RunStoreMutationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.UpdateRecyclableItem(
+                    recyclableItem.Id,
+                    editor.DisplayNameValue,
+                    editor.MaterialType,
+                    editor.UnitLabel,
+                    editor.PointsPerUnit,
+                    editor.DescriptionValue,
+                    editor.IsActiveValue,
+                    editor.SortOrder);
+            }, "Update recyclable item");
+
+            if (updated)
+            {
+                await LoadRecycleCatalogAsync();
+            }
+        }
+
+        private async void BtnToggleRecycleItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgRecycleItems.SelectedItem is not DataRowView row)
+            {
+                MessageBox.Show("Please select a recycle item to activate or deactivate.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            RecyclableItemDefinition? recyclableItem = BuildRecyclableItemFromRow(row);
+            if (recyclableItem == null)
+            {
+                return;
+            }
+
+            bool targetState = !recyclableItem.IsActive;
+            string actionLabel = targetState ? "activate" : "deactivate";
+            if (MessageBox.Show(
+                    $"Are you sure you want to {actionLabel} '{recyclableItem.DisplayName}'?",
+                    "Update Recycle Item Status",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            bool updated = await RunStoreMutationAsync(() =>
+            {
+                var store = new Data.SupabaseStore();
+                return store.SetRecyclableItemActive(recyclableItem.Id, targetState);
+            }, "Update recyclable item status");
+
+            if (updated)
+            {
+                await LoadRecycleCatalogAsync();
+            }
+        }
+
+        private async void BtnAddUser_Click(object sender, RoutedEventArgs e)
         {
             var editor = new UserEditorWindow { Owner = this };
             if (editor.ShowDialog() == true)
             {
-                var store = new Data.SupabaseStore();
-                if (store.AddUser(editor.Username, editor.Password, editor.RoleId, editor.AssignedMachineId))
+                string username = editor.Username;
+                string password = editor.Password;
+                int roleId = editor.RoleId;
+                int? assignedMachineId = editor.AssignedMachineId;
+
+                bool added = await RunStoreMutationAsync(() =>
                 {
-                    LoadUsersData();
+                    var store = new Data.SupabaseStore();
+                    return store.AddUser(username, password, roleId, assignedMachineId);
+                }, "Create staff account");
+
+                if (added)
+                {
+                    await LoadUsersDataAsync();
                 }
                 else
                 {
@@ -633,7 +1674,7 @@ namespace Eco_Matic
             }
         }
 
-        private void BtnDeleteUser_Click(object sender, RoutedEventArgs e)
+        private async void BtnDeleteUser_Click(object sender, RoutedEventArgs e)
         {
             if (dgUsers.SelectedItem is System.Data.DataRowView row)
             {
@@ -647,10 +1688,19 @@ namespace Eco_Matic
 
                 if (MessageBox.Show($"Are you sure you want to delete user '{user}'?", "Delete User", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.SupabaseStore();
-                    if (store.DeleteUser(userId))
+                    bool deleted = await RunStoreMutationAsync(() =>
                     {
-                        LoadUsersData();
+                        var store = new Data.SupabaseStore();
+                        return store.DeleteUser(userId);
+                    }, "Delete staff account");
+
+                    if (deleted)
+                    {
+                        await LoadUsersDataAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Failed to delete the user.", "Delete User", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -666,7 +1716,25 @@ namespace Eco_Matic
             dgCustomers.ItemsSource = store.GetCustomers().DefaultView;
         }
 
-        private void BtnEditCustomerCredits_Click(object sender, RoutedEventArgs e)
+        private async Task LoadCustomersDataAsync()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                DataView view = await Task.Run(() =>
+                {
+                    var store = new Data.SupabaseStore();
+                    return store.GetCustomers().DefaultView;
+                });
+                dgCustomers.ItemsSource = view;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        private async void BtnEditCustomerCredits_Click(object sender, RoutedEventArgs e)
         {
             if (dgCustomers.SelectedItem is System.Data.DataRowView row)
             {
@@ -677,9 +1745,20 @@ namespace Eco_Matic
                 // In a production app, you'd open a Dialog Box here asking for the exact amount.
                 if (MessageBox.Show($"Are you sure you want to add 10 Eco-Credits to {rfid}?", "Modify Credit", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.SupabaseStore();
-                    store.UpdateCustomerCredits(rfid, currentPoints + 10);
-                    LoadCustomersData();
+                    bool updated = await RunStoreMutationAsync(() =>
+                    {
+                        var store = new Data.SupabaseStore();
+                        return store.UpdateCustomerCredits(rfid, currentPoints + 10);
+                    }, "Update customer credits");
+
+                    if (updated)
+                    {
+                        await LoadCustomersDataAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Failed to update customer credits.", "Modify Credit", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
                 }
             }
             else
@@ -688,17 +1767,26 @@ namespace Eco_Matic
             }
         }
 
-        private void BtnDeleteCustomer_Click(object sender, RoutedEventArgs e)
+        private async void BtnDeleteCustomer_Click(object sender, RoutedEventArgs e)
         {
             if (dgCustomers.SelectedItem is System.Data.DataRowView row)
             {
                 string rfid = row["RFID"].ToString() ?? "";
                 if (MessageBox.Show($"Are you sure you want to permanently delete customer with RFID '{rfid}'?", "Delete Customer", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
-                    var store = new Data.SupabaseStore();
-                    if (store.DeleteCustomer(rfid))
+                    bool deleted = await RunStoreMutationAsync(() =>
                     {
-                        LoadCustomersData();
+                        var store = new Data.SupabaseStore();
+                        return store.DeleteCustomer(rfid);
+                    }, "Delete customer");
+
+                    if (deleted)
+                    {
+                        await LoadCustomersDataAsync();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Failed to delete the customer.", "Delete Customer", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -709,4 +1797,3 @@ namespace Eco_Matic
         }
     }
 }
-// temp

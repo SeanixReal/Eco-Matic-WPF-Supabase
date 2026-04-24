@@ -97,8 +97,8 @@
         </Style>
 
         <Style x:Key="MoneyButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="24" />
-            <Setter Property="MinWidth" Value="60" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="64" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="2" />
             <Setter Property="Background" Value="#FFCE4A" />
@@ -111,7 +111,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="MoneyBorder"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="3">
+                                CornerRadius="5">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -169,7 +169,6 @@
             </StackPanel>
         </Grid>
 
-        <!-- Main Card Border -->
         <Border Grid.Row="1"
                 Background="White"
                 BorderBrush="#C5D3EB"
@@ -181,478 +180,534 @@
             </Border.Effect>
 
             <Border CornerRadius="15" ClipToBounds="True">
-                <Grid x:Name="RootScene" Margin="12">
+                <Grid>
+                    <Grid x:Name="RootScene" Margin="12">
 
-                    <Grid.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#F2F6FC" Offset="0" />
-                            <GradientStop Color="#EBF1FA" Offset="0.52" />
-                            <GradientStop Color="#E5ECF7" Offset="1" />
-                        </LinearGradientBrush>
-                    </Grid.Background>
+                        <Grid.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#F2F6FC" Offset="0" />
+                                <GradientStop Color="#EBF1FA" Offset="0.52" />
+                                <GradientStop Color="#E5ECF7" Offset="1" />
+                            </LinearGradientBrush>
+                        </Grid.Background>
 
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="160" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="160" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0"
+                        <Border Grid.Row="0"
                             Padding="10"
                             CornerRadius="18"
                             BorderBrush="#B8C8DF"
                             BorderThickness="2"
                             Background="{StaticResource CabinetBrush}">
-                        <Border.Effect>
-                            <DropShadowEffect Color="#18000000" BlurRadius="22" ShadowDepth="6" Opacity="0.5" />
-                        </Border.Effect>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#18000000" BlurRadius="22" ShadowDepth="6" Opacity="0.5" />
+                            </Border.Effect>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2.3*" />
-                                <ColumnDefinition Width="1*" />
-                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2.3*" />
+                                    <ColumnDefinition Width="1*" />
+                                </Grid.ColumnDefinitions>
 
-                            <Grid Grid.Column="0" Margin="0,0,10,0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
+                                <Grid Grid.Column="0" Margin="0,0,10,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0"
+                                    <Border Grid.Row="0"
                                     Padding="10"
                                     Margin="0,0,0,8"
                                     CornerRadius="8"
                                     BorderBrush="#C5D5EC"
                                     BorderThickness="1">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#FFFFFF" Offset="0" />
-                                        <GradientStop Color="#F1F6FD" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="ECO-MATIC"
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Color="#FFFFFF" Offset="0" />
+                                                <GradientStop Color="#F1F6FD" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="ECO-MATIC"
                                                FontSize="28"
                                                FontWeight="Bold"
                                                Foreground="#2E77E6"
                                                HorizontalAlignment="Center" />
-                                    <TextBlock Text="Eco Vending Machine"
+                                            <TextBlock Text="Eco Vending Machine"
                                                Margin="0,1,0,0"
                                                Foreground="#6A7891"
                                                FontSize="11"
                                                HorizontalAlignment="Center" />
-                                </StackPanel>
-                            </Border>
+                                            <TextBlock x:Name="txtMachineHeader"
+                                               Margin="0,6,0,0"
+                                               Foreground="#44546F"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Border>
 
-                            <Border Grid.Row="1"
+                                    <Border Grid.Row="1"
                                     Padding="7"
                                     CornerRadius="10"
                                     BorderBrush="#C5D5EC"
                                     BorderThickness="2"
                                     Background="#F2F6FC">
-                                <Grid>
-                                    <UniformGrid Rows="3" Columns="4" MinHeight="350">
-                                        <Border x:Name="pnlSlot1" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot1" Stretch="Uniform" />
+                                        <Grid>
+                                            <UniformGrid Rows="3" Columns="4" MinHeight="350">
+                                                <Border x:Name="pnlSlot1" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot1" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName1" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice1" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel1" Grid.Row="2" Content="SELECT" Tag="1" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName1" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice1" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel1" Grid.Row="2" Content="SELECT" Tag="1" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot2" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot2" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot2" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot2" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName2" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice2" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel2" Grid.Row="2" Content="SELECT" Tag="2" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName2" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice2" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel2" Grid.Row="2" Content="SELECT" Tag="2" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot3" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot3" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot3" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot3" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName3" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice3" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel3" Grid.Row="2" Content="SELECT" Tag="3" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName3" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice3" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel3" Grid.Row="2" Content="SELECT" Tag="3" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot4" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot4" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot4" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot4" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName4" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice4" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel4" Grid.Row="2" Content="SELECT" Tag="4" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName4" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice4" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel4" Grid.Row="2" Content="SELECT" Tag="4" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot5" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot5" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot5" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot5" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName5" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice5" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel5" Grid.Row="2" Content="SELECT" Tag="5" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName5" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice5" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel5" Grid.Row="2" Content="SELECT" Tag="5" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot6" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot6" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot6" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot6" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName6" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice6" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel6" Grid.Row="2" Content="SELECT" Tag="6" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName6" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice6" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel6" Grid.Row="2" Content="SELECT" Tag="6" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot7" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot7" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot7" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot7" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName7" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice7" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel7" Grid.Row="2" Content="SELECT" Tag="7" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName7" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice7" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel7" Grid.Row="2" Content="SELECT" Tag="7" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot8" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot8" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot8" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot8" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName8" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice8" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel8" Grid.Row="2" Content="SELECT" Tag="8" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName8" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice8" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel8" Grid.Row="2" Content="SELECT" Tag="8" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot9" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot9" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot9" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot9" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName9" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice9" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel9" Grid.Row="2" Content="SELECT" Tag="9" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName9" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice9" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel9" Grid.Row="2" Content="SELECT" Tag="9" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot10" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot10" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot10" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot10" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName10" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice10" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel10" Grid.Row="2" Content="SELECT" Tag="10" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName10" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice10" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel10" Grid.Row="2" Content="SELECT" Tag="10" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot11" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot11" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot11" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot11" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName11" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice11" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel11" Grid.Row="2" Content="SELECT" Tag="11" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName11" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice11" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel11" Grid.Row="2" Content="SELECT" Tag="11" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                        <Border x:Name="pnlSlot12" Style="{StaticResource SlotCellStyle}">
-                                            <Grid>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-                                                <Border Style="{StaticResource SlotImageWellStyle}">
-                                                    <Image x:Name="imgSlot12" Stretch="Uniform" />
+                                                <Border x:Name="pnlSlot12" Style="{StaticResource SlotCellStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="*" />
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border Style="{StaticResource SlotImageWellStyle}">
+                                                            <Image x:Name="imgSlot12" Stretch="Uniform" />
+                                                        </Border>
+                                                        <StackPanel Grid.Row="1" Margin="0,7,0,0">
+                                                            <TextBlock x:Name="lblName12" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
+                                                            <TextBlock x:Name="lblPrice12" Style="{StaticResource SlotPriceStyle}" />
+                                                        </StackPanel>
+                                                        <Button x:Name="btnSel12" Grid.Row="2" Content="SELECT" Tag="12" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
+                                                    </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Row="1" Margin="0,7,0,0">
-                                                    <TextBlock x:Name="lblName12" Text="EMPTY" Style="{StaticResource SlotNameStyle}" />
-                                                    <TextBlock x:Name="lblPrice12" Style="{StaticResource SlotPriceStyle}" />
-                                                </StackPanel>
-                                                <Button x:Name="btnSel12" Grid.Row="2" Content="SELECT" Tag="12" Style="{StaticResource SlotButtonStyle}" Click="SelectButton_Click" />
-                                            </Grid>
-                                        </Border>
-                                    </UniformGrid>
+                                            </UniformGrid>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
-                            </Border>
-                            </Grid>
 
-                            <!-- RIGHT SIDE: Control Panel -->
-                            <Border Grid.Column="1"
-                                    CornerRadius="8"
+                                <!-- RIGHT SIDE: Control Panel -->
+                                <Border Grid.Column="1"
+                                    CornerRadius="10"
                                     BorderBrush="#C7D5E9"
                                     BorderThickness="1"
                                     Padding="10">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#FFFFFF" Offset="0" />
-                                        <GradientStop Color="#F4F8FD" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#FFFFFF" Offset="0" />
+                                            <GradientStop Color="#F4F8FD" Offset="1" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
 
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Inserted Money -->
-                                    <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,10">
-                                        <StackPanel>
-                                            <TextBlock Text="INSERTED" Foreground="#6A7891" FontSize="12" />
-                                            <Viewbox Height="55" HorizontalAlignment="Right" StretchDirection="DownOnly" Margin="0,4,0,0">
-                                                <TextBlock x:Name="lblMoneyAmount"
-                                                           Text="P 0.00"
-                                                           FontFamily="Consolas"
-                                                           FontSize="48"
-                                                           FontWeight="Bold"
-                                                           Foreground="#2FA66A" />
-                                            </Viewbox>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Insert Bills -->
-                                    <Border Grid.Row="1" Background="#F5FAFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,10">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Text="INSERT BILLS" FontWeight="Bold" Foreground="#B98900" />
-                                            <WrapPanel Grid.Row="1" Margin="0,6,0,0" HorizontalAlignment="Center">
-                                                <Button Tag="20" Content="P20" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
-                                                <Button Tag="50" Content="P50" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
-                                                <Button Tag="100" Content="P100" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
-                                                <Button Tag="200" Content="P200" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
-                                                <Button Tag="500" Content="P500" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
-                                                <Button Tag="1000" Content="P1000" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
-                                            </WrapPanel>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Recycle -->
-                                    <Border Grid.Row="2" Background="#F5FAFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,10">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Text="RECYCLE FOR CREDIT" FontWeight="Bold" Foreground="#2F9C63" />
-                                            <StackPanel Grid.Row="1" Margin="0,6,0,0">
-                                                <ComboBox x:Name="cboRecycleType" HorizontalAlignment="Stretch" Margin="0,0,0,6" />
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="txtRecycleQty" Grid.Column="0" Width="40" Text="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" />
-                                                    <TextBlock x:Name="lblRecycleStatus" Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="#4C7A67" Text="Ready" />
-                                                    <Button Grid.Column="2" Width="60" Content="ADD" Background="#2FA66A" Foreground="White" BorderBrush="#2FA66A" BorderThickness="0" Click="BtnRecycle_Click" />
-                                                </Grid>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Examine -->
-                                    <Border Grid.Row="3" Background="#F5FAFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,10">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Text="EXAMINE ITEM" FontWeight="Bold" Foreground="#2E77E6" />
-                                            <StackPanel Grid.Row="1" Margin="0,6,0,0">
-                                                <ComboBox x:Name="cboExamineItem" HorizontalAlignment="Stretch" Margin="0,0,0,6" />
-                                                <Button Content="EXAMINE" HorizontalAlignment="Right" Width="80" Background="#2E77E6" Foreground="White" BorderBrush="#2E77E6" BorderThickness="0" Click="BtnExamine_Click" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- LCD Display (Arduino/LCD Emulator) -->
-                                    <Border Grid.Row="4" 
-                                            Margin="0,0,0,10" 
-                                            Background="#0A1208" 
-                                            BorderBrush="#1A2B18" 
-                                            BorderThickness="2" 
-                                            CornerRadius="4" 
-                                            Padding="12" 
-                                            Height="110">
-                                        <Grid>
-                                            <TextBlock x:Name="lblLcdDisplay" 
-                                                       Text="ECO-MATIC v1.1&#x0a;SYSTEM READY..." 
-                                                       Foreground="#42FF42" 
-                                                       FontFamily="Consolas" 
-                                                       FontSize="15" 
-                                                       TextWrapping="Wrap">
-                                                <TextBlock.Effect>
-                                                    <DropShadowEffect BlurRadius="5" Color="#33FF33" ShadowDepth="0" Opacity="0.7" />
-                                                </TextBlock.Effect>
-                                            </TextBlock>
-                                            <!-- Scanlines -->
-                                            <Rectangle Opacity="0.05" IsHitTestVisible="False">
-                                                <Rectangle.Fill>
-                                                    <VisualBrush TileMode="Tile" Viewport="0,0,1,3" ViewportUnits="Absolute">
-                                                        <VisualBrush.Visual>
-                                                            <Rectangle Width="1" Height="1" Fill="Black" />
-                                                        </VisualBrush.Visual>
-                                                    </VisualBrush>
-                                                </Rectangle.Fill>
-                                            </Rectangle>
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- Actions -->
-                                    <Grid Grid.Row="6" VerticalAlignment="Bottom">
+                                    <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
-                                        
-                                        <Grid Grid.Row="1">
+
+                                        <!-- Inserted Cash and Eco Points -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <Button Content="HELP" Grid.Column="0" Margin="0,0,4,0" Click="BtnHelp_Click" Height="40" />
-                                            <Button x:Name="btnBack" Grid.Column="1" Margin="4,0,0,0" Content="DONE" Background="#2E77E6" Foreground="White" BorderBrush="#2E77E6" BorderThickness="0" Click="BtnBack_Click" Height="40" />
+
+                                            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="CASH INSERTED" Foreground="#6A7891" FontSize="12" FontWeight="SemiBold" />
+                                                    <Viewbox Height="34" HorizontalAlignment="Right" StretchDirection="DownOnly" Margin="0,4,0,0">
+                                                        <TextBlock x:Name="lblCashAmount"
+                                                               Text="P 0.00"
+                                                               FontFamily="Consolas"
+                                                               FontSize="42"
+                                                               FontWeight="Bold"
+                                                               Foreground="#2FA66A" />
+                                                    </Viewbox>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="10" Padding="8" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="ECO POINTS" Foreground="#6A7891" FontSize="12" FontWeight="SemiBold" />
+                                                    <Viewbox Height="34" HorizontalAlignment="Right" StretchDirection="DownOnly" Margin="0,4,0,0">
+                                                        <TextBlock x:Name="lblPointsAmount"
+                                                               Text="0"
+                                                               FontFamily="Consolas"
+                                                               FontSize="42"
+                                                               FontWeight="Bold"
+                                                               Foreground="#2E77E6" />
+                                                    </Viewbox>
+                                                </StackPanel>
+                                            </Border>
                                         </Grid>
+
+                                        <!-- Insert Bills -->
+                                        <Border Grid.Row="1" Background="#F5FAFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="INSERT BILLS" FontWeight="Bold" Foreground="#B98900" />
+                                                <StackPanel Grid.Row="1" Margin="0,4,0,0">
+                                                    <UniformGrid Rows="2" Columns="3" HorizontalAlignment="Center">
+                                                        <Button Tag="20" Content="P20" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
+                                                        <Button Tag="50" Content="P50" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
+                                                        <Button Tag="100" Content="P100" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
+                                                        <Button Tag="200" Content="P200" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
+                                                        <Button Tag="500" Content="P500" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
+                                                        <Button Tag="1000" Content="P1000" Style="{StaticResource MoneyButtonStyle}" Click="BtnMoney_Click" Margin="0,0,4,4" />
+                                                    </UniformGrid>
+                                                    <Button Content="PAY BY QR"
+                                                            Height="28"
+                                                            Margin="24,0,24,0"
+                                                            Background="#2E77E6"
+                                                            Foreground="White"
+                                                            BorderBrush="#2E77E6"
+                                                            BorderThickness="0"
+                                                            FontWeight="Bold"
+                                                            Click="BtnQrPay_Click" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Recycle -->
+                                        <Border Grid.Row="2" Background="#F5FAFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="RECYCLE FOR ECO POINTS" FontWeight="Bold" Foreground="#2F9C63" />
+                                                <StackPanel Grid.Row="1" Margin="0,4,0,0">
+                                                    <ComboBox x:Name="cboRecycleType" Height="28" HorizontalAlignment="Stretch" Margin="0,0,0,4" />
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBox x:Name="txtRecycleQty" Grid.Column="0" Width="46" Height="28" Text="1" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" />
+                                                        <Button Grid.Column="1" Width="72" Height="28" Margin="10,0,0,0" Content="ADD" Background="#2FA66A" Foreground="White" BorderBrush="#2FA66A" BorderThickness="0" Click="BtnRecycle_Click" />
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Examine -->
+                                        <Border Grid.Row="3" Background="#F5FAFF" BorderBrush="#D7E2F0" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="EXAMINE ITEM" FontWeight="Bold" Foreground="#2E77E6" />
+                                                <StackPanel Grid.Row="1" Margin="0,4,0,0">
+                                                    <ComboBox x:Name="cboExamineItem" Height="28" HorizontalAlignment="Stretch" Margin="0,0,0,4" />
+                                                    <Button Content="OPEN ITEM DETAILS"
+                                                        HorizontalAlignment="Stretch"
+                                                        Height="32"
+                                                        Background="#2E77E6"
+                                                        Foreground="White"
+                                                        BorderBrush="#2E77E6"
+                                                        BorderThickness="0"
+                                                        Click="BtnExamine_Click" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- LCD Display (Arduino/LCD Emulator) -->
+                                        <Border Grid.Row="4"
+                                            Margin="0,0,0,8"
+                                            MinHeight="118"
+                                            Background="#0A1208" 
+                                            BorderBrush="#1A2B18" 
+                                            BorderThickness="2" 
+                                            CornerRadius="4" 
+                                            Padding="12">
+                                            <Grid>
+                                                <TextBlock x:Name="lblLcdDisplay"
+                                                       Text="ECO-MATIC v1.1&#x0a;SYSTEM READY..." 
+                                                       Foreground="#42FF42" 
+                                                       FontFamily="Consolas" 
+                                                       FontSize="13"
+                                                       TextWrapping="Wrap">
+                                                    <TextBlock.Effect>
+                                                        <DropShadowEffect BlurRadius="5" Color="#33FF33" ShadowDepth="0" Opacity="0.7" />
+                                                    </TextBlock.Effect>
+                                                </TextBlock>
+                                                <!-- Scanlines -->
+                                                <Rectangle Opacity="0.05" IsHitTestVisible="False">
+                                                    <Rectangle.Fill>
+                                                        <VisualBrush TileMode="Tile" Viewport="0,0,1,3" ViewportUnits="Absolute">
+                                                            <VisualBrush.Visual>
+                                                                <Rectangle Width="1" Height="1" Fill="Black" />
+                                                            </VisualBrush.Visual>
+                                                        </VisualBrush>
+                                                    </Rectangle.Fill>
+                                                </Rectangle>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Actions -->
+                                        <Grid Grid.Row="5" Margin="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button Content="HELP"
+                                                Grid.Column="0"
+                                                Margin="0,0,6,0"
+                                                Click="BtnHelp_Click"
+                                                Height="38" />
+                                            <Button x:Name="btnBack"
+                                                Grid.Column="1"
+                                                Margin="6,0,0,0"
+                                                Content="DONE"
+                                                Background="#2E77E6"
+                                                Foreground="White"
+                                                BorderBrush="#2E77E6"
+                                                BorderThickness="0"
+                                                Click="BtnBack_Click"
+                                                Height="38" />
+                                        </Grid>
+
                                     </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
 
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="1"
+                        <Border Grid.Row="1"
                             Margin="0,15,0,0"
                             CornerRadius="12"
                             BorderBrush="#A0B4CF"
                             BorderThickness="4"
                             Padding="0">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#C5D3E5" Offset="0" />
-                                <GradientStop Color="#DBE4F0" Offset="0.15" />
-                                <GradientStop Color="#F1F5FA" Offset="0.5" />
-                                <GradientStop Color="#E8EFF7" Offset="1" />
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <Grid>
-                             <Grid x:Name="pnlDispenseTray" ClipToBounds="True">
-                                 <Image x:Name="imgDispense" 
-                                        Stretch="Uniform" 
-                                        Height="120" 
-                                        Width="120"
-                                        VerticalAlignment="Center" 
-                                        HorizontalAlignment="Center" 
-                                        RenderTransformOrigin="0.5,0.5">
-                                     <Image.RenderTransform>
-                                         <TransformGroup>
-                                             <RotateTransform x:Name="imgDispenseRotate" Angle="0" />
-                                             <TranslateTransform x:Name="imgDispenseTranslate" X="0" Y="0" />
-                                         </TransformGroup>
-                                     </Image.RenderTransform>
-                                 </Image>
-                             </Grid>
-                         </Grid>
-                    </Border>
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#C5D3E5" Offset="0" />
+                                    <GradientStop Color="#DBE4F0" Offset="0.15" />
+                                    <GradientStop Color="#F1F5FA" Offset="0.5" />
+                                    <GradientStop Color="#E8EFF7" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Grid Margin="8">
+                                <Border Background="#F7FAFF"
+                                    BorderBrush="#D8E2EF"
+                                    BorderThickness="1"
+                                    CornerRadius="8" />
+                                <Grid x:Name="pnlDispenseTray" ClipToBounds="True" Margin="6">
+                                    <Image x:Name="imgDispense"
+                                       Stretch="Uniform"
+                                       Height="120"
+                                       Width="120"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       RenderTransformOrigin="0.5,0.5">
+                                        <Image.RenderTransform>
+                                            <TransformGroup>
+                                                <RotateTransform x:Name="imgDispenseRotate" Angle="0" />
+                                                <TranslateTransform x:Name="imgDispenseTranslate" X="0" Y="0" />
+                                            </TransformGroup>
+                                        </Image.RenderTransform>
+                                    </Image>
+                                </Grid>
+                            </Grid>
+                        </Border>
 
-                    <TextBlock Grid.Row="2"
+                        <TextBlock Grid.Row="2"
                                Margin="0,8,0,0"
                                HorizontalAlignment="Center"
                                Foreground="#7A889F"
                                Text="ECO-MATIC  Recycle and Reward" />
+                    </Grid>
                 </Grid>
             </Border>
         </Border>

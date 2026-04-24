@@ -118,7 +118,7 @@
             <Setter Property="MinWidth" Value="86" />
             <Setter Property="Background" Value="#EEF4FF" />
             <Setter Property="BorderBrush" Value="#C9D9F1" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderThickness" Value="1,1,1,0" />
             <Setter Property="Foreground" Value="#506684" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Template">

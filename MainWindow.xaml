@@ -372,7 +372,7 @@
 
                                 <Button x:Name="btnAdmin"
                                         Margin="0,0,0,16"
-                                        Content="Admin Console"
+                                        Content="Login"
                                         Style="{StaticResource PrimaryActionButton}"
                                         Click="BtnAdmin_Click" />
 

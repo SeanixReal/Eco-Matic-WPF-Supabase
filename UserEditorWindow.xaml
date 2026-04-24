@@ -4,7 +4,8 @@
         Title="User Management" Height="450" Width="350"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterOwner"
-        MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">
+        MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown"
+        Loaded="Window_Loaded">
     <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect Color="#10000000" BlurRadius="15" ShadowDepth="4"/>
@@ -27,6 +28,7 @@
 
                 <TextBlock Text="Role:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
                 <ComboBox x:Name="cboRole" Height="35" Padding="5,8" BorderBrush="#CBD5E1" Margin="0,0,0,10" SelectionChanged="CboRole_SelectionChanged"/>
+                <TextBlock x:Name="txtLoadStatus" Text="Loading roles and machines..." Foreground="#94A3B8" FontSize="11" Margin="0,0,0,10"/>
 
                 <TextBlock x:Name="lblMachine" Text="Assigned Machine:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B" Visibility="Collapsed"/>
                 <ComboBox x:Name="cboMachine" Height="35" Padding="5,8" BorderBrush="#CBD5E1" Visibility="Collapsed"/>
@@ -38,7 +40,7 @@
                     <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Content="Register" Background="#2E77E6" Foreground="White" FontWeight="Bold" Height="40" Click="BtnConfirm_Click"/>
+                <Button x:Name="btnConfirm" Grid.Column="0" Content="Register" Background="#2E77E6" Foreground="White" FontWeight="Bold" Height="40" Click="BtnConfirm_Click"/>
                 <Button Grid.Column="2" Content="Cancel" Background="#E2E8F0" Foreground="#1E293B" FontWeight="Bold" Height="40" Click="BtnCancel_Click"/>
             </Grid>
         </Grid>

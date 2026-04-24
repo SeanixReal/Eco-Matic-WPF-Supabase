@@ -1,13 +1,13 @@
 # Eco-Matic Vending & Recycling System
 
 ## Overview
-Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty system integrated with a physical Arduino-based RFID scanner. The project allows users to purchase items, while simultaneously dropping off recyclables (bottles, cans) to earn Eco-Credits.
+Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty system integrated with a physical Arduino RFID/LCD hardware module. The project allows users to purchase items, while simultaneously dropping off recyclables (bottles, cans) to earn Eco-Credits.
 
 ## Features
 - **Vending & Inventory Management**: Full WPF graphical interface for managing machines, stock, and purchasing catalog items.
-- **Hardware Integration (Arduino)**: 
-  - Uses an Arduino Uno, MFRC522 RFID reader, and 16x2 I2C LCD display.
-  - Bidirectional USB Serial communication on `COM5` to handle physical hardware states (Active vs. AFK mode) and validation feedback.
+- **Hardware Integration (Arduino)**:
+  - Uses an Arduino Uno/Nano, RC522 RFID reader, 16x2 I2C LCD display, and green/red LEDs.
+  - Bidirectional USB Serial communication defaults to `COM5` at `9600` baud to handle physical hardware states, LCD messages, RFID scans, and LED feedback.
 - **Eco-Credits Loyalty Program**: 
   - Scan physical RFID cards to register/login.
   - E-Wallet dashboard for tracking accumulated points.
@@ -19,8 +19,23 @@ Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty syste
 
 ## Setup
 - **Database**: The current application uses Supabase via `Data/SupabaseStore.cs` and `Data/SupabaseClient.cs`. SQL reference files are organized under `docs/sql/`.
-- **Hardware**: Wire the Arduino and MFRC522 per `Arduino/README.md` instructions and flash `RFID_Scanner.ino`.
+- **Hardware**: Wire the Arduino hardware per `Arduino/README.md` and flash `Arduino/RFID_Scanner/RFID_Scanner.ino`.
 - **Application**: Open the project in Visual Studio and build it, or run `dotnet run` in the root folder.
+
+## Environment Setup
+
+Eco-Matic now requires a repo-root `.env` file before startup.
+
+1. Copy `.env.example` to `.env`
+2. Fill in your real Supabase URL/key and local MySQL password if it differs
+3. Make sure local MySQL is running before launching the app
+
+Important notes:
+
+- the app will fail fast on startup if `.env` is missing or still contains placeholder values
+- `.env.example` is the tracked template, while `.env` stays local and ignored
+- if you also set the same variables in Windows, those OS values win over `.env`
+- optional hardware settings are `ECOMATIC_ARDUINO_PORT` and `ECOMATIC_ARDUINO_BAUD`
 
 ## Offline Behavior
 

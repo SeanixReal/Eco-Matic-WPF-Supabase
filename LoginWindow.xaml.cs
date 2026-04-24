@@ -5,8 +5,8 @@ namespace Eco_Matic;
 
 public partial class LoginWindow : Window
 {
-    public string Username => txtUsername.Text;
-    public string Password => txtPassword.Password;
+    public string Username { get; private set; } = string.Empty;
+    public string Password { get; private set; } = string.Empty;
 
     public LoginWindow()
     {
@@ -16,6 +16,8 @@ public partial class LoginWindow : Window
 
     private void BtnLogin_Click(object sender, RoutedEventArgs e)
     {
+        Username = txtUsername.Text;
+        Password = txtPassword.Password;
         DialogResult = true;
         Close();
     }

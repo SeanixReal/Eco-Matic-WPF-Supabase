@@ -11,6 +11,14 @@ namespace Eco_Matic
 {
     public partial class CatalogItemWindow : Window
     {
+        public string ItemName { get; private set; } = string.Empty;
+        public string ItemType { get; private set; } = "Misc";
+        public string ImagePath { get; private set; } = "Assets/Images/placeholder.png";
+        public decimal Price { get; private set; }
+        public int Calories { get; private set; }
+        public string DispenseMessage { get; private set; } = "Enjoy your item!";
+        public string ExamineMessage { get; private set; } = "A standard vending item.";
+
         public CatalogItemWindow()
         {
             InitializeComponent();
@@ -127,6 +135,13 @@ namespace Eco_Matic
                 return;
             }
 
+            ItemName = txtName.Text.Trim();
+            ItemType = (cboType.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Misc";
+            ImagePath = string.IsNullOrWhiteSpace(txtImagePath.Text) ? "Assets/Images/placeholder.png" : txtImagePath.Text.Trim();
+            Price = decimal.TryParse(txtPrice.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal price) ? price : 0m;
+            Calories = int.TryParse(txtCalories.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int calories) ? calories : 0;
+            DispenseMessage = string.IsNullOrWhiteSpace(txtDispenseMessage.Text) ? "Enjoy your item!" : txtDispenseMessage.Text.Trim();
+            ExamineMessage = string.IsNullOrWhiteSpace(txtExamineMessage.Text) ? "A standard vending item." : txtExamineMessage.Text.Trim();
             DialogResult = true;
             Close();
         }
@@ -136,19 +151,5 @@ namespace Eco_Matic
             DialogResult = false;
             Close();
         }
-
-        public string ItemName => txtName.Text.Trim();
-
-        public string ItemType => (cboType.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Misc";
-
-        public string ImagePath => string.IsNullOrWhiteSpace(txtImagePath.Text) ? "Assets/Images/placeholder.png" : txtImagePath.Text.Trim();
-
-        public decimal Price => decimal.TryParse(txtPrice.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal price) ? price : 0m;
-
-        public int Calories => int.TryParse(txtCalories.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int calories) ? calories : 0;
-
-        public string DispenseMessage => string.IsNullOrWhiteSpace(txtDispenseMessage.Text) ? "Enjoy your item!" : txtDispenseMessage.Text.Trim();
-
-        public string ExamineMessage => string.IsNullOrWhiteSpace(txtExamineMessage.Text) ? "A standard vending item." : txtExamineMessage.Text.Trim();
     }
 }

@@ -1,0 +1,149 @@
+<Window x:Class="Eco_Matic.RecyclableItemWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Recycle Catalog Item"
+        Height="470"
+        Width="440"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent">
+
+    <Grid Margin="20,10,20,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0"
+              Margin="16,0,16,-1"
+              Panel.ZIndex="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="README"
+                        Style="{StaticResource TopActionTabActive}"
+                        Click="OpenReadmeMenuItem_Click" />
+                <Button Content="ABOUT ME"
+                        Style="{StaticResource TopActionTab}"
+                        Margin="0"
+                        Click="AboutMenuItem_Click" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="x"
+                        Style="{StaticResource WindowCloseTab}"
+                        Click="BtnClose_Click" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="White"
+                BorderBrush="#C5D3EB"
+                BorderThickness="1"
+                CornerRadius="18"
+                MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">
+            <Border.Effect>
+                <DropShadowEffect Color="#2F0C264A" BlurRadius="25" ShadowDepth="6" />
+            </Border.Effect>
+
+            <Border CornerRadius="17" ClipToBounds="True">
+                <Grid Margin="24,22,24,24">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Display Name" FontWeight="SemiBold" Foreground="#334155" />
+                    <TextBox x:Name="txtDisplayName" Grid.Row="1" Margin="0,6,0,12" />
+
+                    <Grid Grid.Row="2" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Material Type" FontWeight="SemiBold" Foreground="#334155" />
+                            <TextBox x:Name="txtMaterialType" Margin="0,6,0,0" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Unit Label" FontWeight="SemiBold" Foreground="#334155" />
+                            <TextBox x:Name="txtUnitLabel" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="3" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Points per Unit" FontWeight="SemiBold" Foreground="#334155" />
+                            <TextBox x:Name="txtPointsPerUnit" Margin="0,6,0,0" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Sort Order" FontWeight="SemiBold" Foreground="#334155" />
+                            <TextBox x:Name="txtSortOrder" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Grid.Row="4" Text="Description" FontWeight="SemiBold" Foreground="#334155" />
+                    <TextBox x:Name="txtDescription"
+                             Grid.Row="5"
+                             Margin="0,6,0,12"
+                             Height="84"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto" />
+
+                    <CheckBox x:Name="chkIsActive"
+                              Grid.Row="6"
+                              Content="Active in customer recycle menu"
+                              IsChecked="True"
+                              VerticalAlignment="Top"
+                              Foreground="#334155"
+                              FontWeight="SemiBold" />
+
+                    <Grid Grid.Row="7" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="1"
+                                Content="Cancel"
+                                Width="90"
+                                Margin="0,0,10,0"
+                                Click="BtnClose_Click" />
+                        <Button Grid.Column="2"
+                                Content="Save"
+                                Width="90"
+                                Background="#2E77E6"
+                                Foreground="White"
+                                BorderBrush="#2E77E6"
+                                BorderThickness="0"
+                                Click="BtnSave_Click" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Border>
+    </Grid>
+</Window>

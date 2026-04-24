@@ -8,71 +8,100 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent">
-    <Grid>
-        <!-- Custom Window Controls Tab -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Panel.ZIndex="10" Margin="0,0,30,0">
-            <Button Content="-" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMinimize_Click"/>
-            <Button Content="o" Width="40" Height="28" Margin="0,0,5,0" Style="{StaticResource WindowControlTab}" Click="BtnMaximize_Click"/>
-            <Button Content="x" Width="40" Height="28" Style="{StaticResource WindowCloseTab}" Click="BtnClose_Click" />
-        </StackPanel>
-        
-        <!-- Main Card Border -->
-        <Border Background="White" CornerRadius="12" Margin="0,30,0,0">
+    <Grid Margin="20,10,20,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0"
+              Margin="16,0,16,-1"
+              Panel.ZIndex="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Content="README"
+                        Style="{StaticResource TopActionTabActive}" />
+                <Button Content="ABOUT ME"
+                        Style="{StaticResource TopActionTab}"
+                        Margin="0"
+                        Click="BtnOpenAbout_Click" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="-"
+                        Style="{StaticResource WindowControlTab}"
+                        Click="BtnMinimize_Click" />
+                <Button Content="o"
+                        Style="{StaticResource WindowControlTab}"
+                        Click="BtnMaximize_Click" />
+                <Button Content="x"
+                        Style="{StaticResource WindowCloseTab}"
+                        Margin="6,0,0,0"
+                        Click="BtnClose_Click" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="White"
+                BorderBrush="#C5D3EB"
+                BorderThickness="1"
+                CornerRadius="16"
+                MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">
             <Border.Effect>
-                <DropShadowEffect Color="#000000" Direction="270" ShadowDepth="4" BlurRadius="12" Opacity="0.1" />
+                <DropShadowEffect Color="#2F0C264A" BlurRadius="28" ShadowDepth="8" />
             </Border.Effect>
-            <Grid Margin="14">
-                    <Border Background="White"
+
+            <Border CornerRadius="15" ClipToBounds="True">
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="README"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="#2E77E6"
+                               Margin="0,0,0,12" />
+
+                    <Border Grid.Row="1"
+                            Background="#F9FBFF"
                             BorderBrush="#D7DFEC"
                             BorderThickness="1"
-                            CornerRadius="16"
-                            Padding="16">
-                        <Border.Effect>
-                            <DropShadowEffect Color="#10000000" BlurRadius="18" ShadowDepth="4" />
-                        </Border.Effect>
-
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0"
-                                       Text="README"
-                                       FontSize="24"
-                                       FontWeight="Bold"
-                                       Foreground="#2E77E6"
-                                       Margin="0,0,0,10" />
-
-                            <TextBox x:Name="txtContent"
-                                     Grid.Row="1"
-                                     IsReadOnly="True"
-                                     FontFamily="Consolas"
-                                     FontSize="13"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Auto"
-                                     Background="#F9FBFF"
-                                     Foreground="#20304C"
-                                     BorderBrush="#D7DFEC"
-                                     BorderThickness="1"
-                                     Padding="10" />
-
-                            <Button Grid.Row="2"
-                                    Width="110"
-                                    Height="34"
-                                    HorizontalAlignment="Center"
-                                    Margin="0,12,0,0"
-                                    Content="Close"
-                                    Background="#2E77E6"
-                                    Foreground="White"
-                                    BorderBrush="#2E77E6"
-                                    BorderThickness="0"
-                                    Click="BtnClose_Click" />
-                        </Grid>
+                            CornerRadius="12">
+                        <TextBox x:Name="txtContent"
+                                 IsReadOnly="True"
+                                 FontFamily="Consolas"
+                                 FontSize="13"
+                                 TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 Background="Transparent"
+                                 Foreground="#20304C"
+                                 BorderThickness="0"
+                                 Padding="12" />
                     </Border>
+
+                    <Button Grid.Row="2"
+                            Width="120"
+                            Height="36"
+                            HorizontalAlignment="Center"
+                            Margin="0,14,0,0"
+                            Content="Close"
+                            Background="#2E77E6"
+                            Foreground="White"
+                            BorderBrush="#2E77E6"
+                            BorderThickness="0"
+                            Click="BtnClose_Click" />
                 </Grid>
+            </Border>
         </Border>
     </Grid>
 </Window>

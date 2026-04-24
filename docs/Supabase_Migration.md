@@ -15,7 +15,7 @@ Instead of maintaining a persistent, stateful connection to the database (which 
 - `Data/SupabaseStore.cs` & `Data/SupabaseStore_Customers.cs`: A complete, drop-in replacement for the old `MySqlStore`. To ensure the existing WPF UI didn't break or require a massive `async/await` rewrite, the SupabaseStore uses a synchronous wrapper `Run()` over the asynchronous HTTP tasks.
 
 ## Database Schema
-The database uses Row-Level Security (RLS) to ensure security while allowing the application to read and write data using the public `anon` key. 
+The database uses Row-Level Security (RLS) to ensure security while allowing the application to read and write data using the public `publishable` key.
 
 The following tables exist in the `public` schema:
 - `roles`

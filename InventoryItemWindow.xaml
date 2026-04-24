@@ -4,7 +4,8 @@
         Title="Assign Machine Slot" Height="720" Width="430"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterOwner"
-        MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">
+        MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown"
+        Loaded="Window_Loaded">
     <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1">
         <Border.Effect>
             <DropShadowEffect Color="#10000000" BlurRadius="15" ShadowDepth="4"/>
@@ -19,12 +20,20 @@
             <TextBlock x:Name="TitleContent" Text="Assign Item to Machine Slot" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20"/>
 
             <StackPanel Grid.Row="1" Margin="0,0,0,20">
+                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock x:Name="txtSetupSummary" Text="Assign a global item to a machine slot." Foreground="#1E293B" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="txtRulesHint" Text="Rules: slots are 1-12, max stock is 15, and the same global item may be reused across multiple slots." TextWrapping="Wrap" Foreground="#64748B" FontSize="11" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
                 <TextBlock Text="Slot ID (1-12):" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
                 <TextBox x:Name="txtSlotId" Height="35" Padding="5,8" Margin="0,0,0,15" BorderBrush="#CBD5E1"/>
 
                 <TextBlock Text="Global Item:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
-                <ComboBox x:Name="cboExistingItem" Padding="10,8" Margin="0,0,0,15" BorderBrush="#CBD5E1" Height="35"
+                <ComboBox x:Name="cboExistingItem" Padding="10,8" Margin="0,0,0,6" BorderBrush="#CBD5E1" Height="35"
                           DisplayMemberPath="name" SelectionChanged="CboExistingItem_SelectionChanged"/>
+                <TextBlock x:Name="txtCatalogStatus" Text="Loading global items..." Foreground="#94A3B8" FontSize="11" Margin="0,0,0,15"/>
 
                 <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,0,0,15">
                     <StackPanel>
@@ -78,6 +87,7 @@
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="Stock" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
                         <TextBox x:Name="txtStock" Height="35" Padding="5,8" BorderBrush="#CBD5E1" Text="15"/>
+                        <TextBlock Text="Enter a value from 0 to 15." FontSize="11" Foreground="#94A3B8" Margin="0,5,0,0"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>
@@ -88,7 +98,7 @@
                     <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Content="Save Slot" Background="#2E77E6" Foreground="White" FontWeight="Bold" Height="40" Click="BtnSave_Click"/>
+                <Button x:Name="btnSave" Grid.Column="0" Content="Save Slot" Background="#2E77E6" Foreground="White" FontWeight="Bold" Height="40" Click="BtnSave_Click"/>
                 <Button Grid.Column="2" Content="Cancel" Background="#E2E8F0" Foreground="#1E293B" FontWeight="Bold" Height="40" Click="BtnCancel_Click"/>
             </Grid>
         </Grid>

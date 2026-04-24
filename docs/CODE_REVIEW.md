@@ -62,25 +62,7 @@ Recommended next fix:
 - hash passwords before storage
 - compare using a proper verification flow instead of `password_hash=eq.<password>`
 
-### 2. Live Supabase schema needed repo-alignment migrations
-
-At the start of this audit pass, the live project was missing:
-
-- `public.machine_inventory.slot_price`
-- `public.sales_transactions.client_sync_id`
-- `public.event_logs.client_sync_id`
-
-Those gaps were aligned during this pass by applying:
-
-- `docs/sql/migrations/supabase/migration_increment3.sql`
-- `docs/sql/migrations/supabase/migration_increment4.sql`
-
-Why this still matters:
-
-- future environments must apply those migrations before expecting slot-price support and safe offline replay deduplication
-- docs and deployment steps must stay aligned with the live project
-
-### 3. RLS is enabled but effectively open to anon
+### 2. RLS is enabled but effectively open to anon
 
 The audited live Supabase project currently has permissive anon policies equivalent to `Allow all for anon` across the public tables used by the app.
 
@@ -100,24 +82,64 @@ Recommended next fix:
 - document the blocker clearly now
 - defer real policy tightening until the app stops depending on direct anon table access
 
-### 4. Supabase configuration is still hardcoded in the client
+### 3. Runtime configuration now depends on a local `.env` file
 
-The current client still embeds the Supabase URL and anon key directly in source.
+The current client now reads both Supabase and local MySQL settings from a repo-root `.env` file at startup.
 
 Why this matters:
 
-- configuration rotation is harder
-- it is easy for docs and environments to drift
-- classroom/demo settings cannot be switched cleanly without recompiling
+- classroom/demo setup is clearer and does not require recompiling to switch endpoints
+- startup failures now surface missing config immediately instead of failing later in the offline bootstrap path
+- the previously exposed anon key should still be treated as leaked and rotated in Supabase
 
 Relevant code:
 
+- `Data/AppEnvironment.cs`
 - `Data/SupabaseClient.cs`
+
+Current expectation:
+
+- keep `.env.example` tracked as the setup template
+- keep real `.env` ignored and local-only
+- rotate the current anon key because it was already committed in earlier history
+
+### 4. Several foreign keys are still missing covering indexes
+
+The live Supabase performance advisor currently reports missing covering indexes for:
+
+- `event_logs.machine_id`
+- `machine_inventory.item_id`
+- `sales_transactions.machine_id`
+- `sales_transactions.item_id`
+- `users.assigned_machine_id`
+- `users.role_id`
+
+Why this matters:
+
+- current live row counts are small, so the app still works fine in class/demo conditions
+- those joins will become slower as the machine, inventory, sales, and user tables grow
+- the missing indexes are now a concrete live-database maintenance task, not just a theoretical optimization
 
 Recommended next fix:
 
-- move the values into configuration or environment-backed settings
-- document the expected deployment configuration clearly
+- add indexes in a tracked Supabase migration so future environments stay aligned
+
+### 5. Schema surface is ahead of real data coverage
+
+The live project now includes:
+
+- `receipt_sessions`
+- `receipt_session_lines`
+- `esp32_commands`
+- `esp32_telemetry`
+
+But those tables are currently empty in the audited environment.
+
+Why this matters:
+
+- the schema is ready for receipt history and ESP32 integration
+- documentation should mention these tables because they are real
+- the app still needs more exercised runtime data and testing around those paths
 
 ## Secondary Findings
 
@@ -148,9 +170,16 @@ This review pass updated the main docs to reflect the actual implementation.
 ## RFID mode
 
 1. `ArduinoService` raises `OnCardScanned`
-2. `MainWindow` checks `CustomerExists(rfid)`
-3. registration or dashboard flow opens
-4. pending recycle points are eventually saved into the `customers` table
+2. `MainWindow` checks `CustomerExists(rfid)` on a background task
+3. `MainWindow` sends `VALID` or `INVALID` back to Arduino before opening dashboard/registration UI
+4. registration or dashboard flow opens on the UI thread
+5. pending recycle points are saved into the `customers` table from a background task
+
+RFID implementation rule:
+
+- do not perform Supabase/customer lookups or registration writes directly on the WPF UI thread
+- do not open modal windows before the Arduino receives `VALID` or `INVALID`
+- registration/dashboard modals should show busy state and disable buttons while background customer writes are running
 
 ## Admin mode
 
@@ -172,7 +201,7 @@ This review pass updated the main docs to reflect the actual implementation.
 ## Best Next Improvements
 
 1. replace plain-text passwords with real hashing
-2. apply `docs/sql/migrations/supabase/migration_increment3.sql` and `docs/sql/migrations/supabase/migration_increment4.sql` to the live Supabase project
-3. externalize the Supabase configuration instead of hardcoding it in the client
+2. rotate the exposed Supabase anon key and keep `.env` local-only
+3. add Supabase indexes for the currently unindexed foreign keys
 4. redesign backend access before attempting real least-privilege RLS tightening
 5. add a database-side uniqueness/slot-range constraint to complement the service-layer checks

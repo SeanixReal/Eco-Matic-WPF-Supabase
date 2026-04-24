@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Eco_Matic.Utilities;
+using Eco_Matic;
 
 namespace Eco_Matic.Data;
 
@@ -102,6 +103,12 @@ public partial class SupabaseStore
             return false;
         }
 
+        if (maxCap > DataStore.MaxStockPerItem)
+        {
+            errorMessage = $"Max capacity cannot exceed {DataStore.MaxStockPerItem}.";
+            return false;
+        }
+
         if (stock > maxCap)
         {
             errorMessage = $"Stock cannot exceed max capacity ({maxCap}).";
@@ -171,7 +178,7 @@ public partial class SupabaseStore
         try
         {
             var rows = Run(_client.GetAsync("items",
-                "select=item_id,name,type,price,calories,image_path,dispense_message,examine_message&order=name.asc"));
+                "select=item_id,name,type,price,calories,image_path,dispense_message,examine_message&order=item_id.asc"));
             var usageRows = Run(_client.GetAsync("machine_inventory", "select=item_id"));
             var usageCounts = new Dictionary<int, int>();
 
@@ -220,6 +227,16 @@ public partial class SupabaseStore
     {
         try
         {
+            if (TryFindDuplicateCatalogItemName(name, out _))
+            {
+                System.Windows.MessageBox.Show(
+                    "An item with the same name already exists in the global catalog. Reuse the existing item or rename this one.",
+                    "Duplicate Item",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
             var result = Run(_client.PostAsync("items", new
             {
                 name,
@@ -243,6 +260,16 @@ public partial class SupabaseStore
     {
         try
         {
+            if (TryFindDuplicateCatalogItemName(name, out int duplicateItemId) && duplicateItemId != itemId)
+            {
+                System.Windows.MessageBox.Show(
+                    "Another global item already uses that name. Choose a different item name to avoid duplicate catalog entries.",
+                    "Duplicate Item",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
             Run(_client.PatchAsync("items", $"item_id=eq.{itemId}", new
             {
                 name,
@@ -260,6 +287,31 @@ public partial class SupabaseStore
             System.Windows.MessageBox.Show("Failed to update item: " + ex.Message);
             return false;
         }
+    }
+
+    private bool TryFindDuplicateCatalogItemName(string name, out int itemId)
+    {
+        itemId = 0;
+        string normalizedName = name.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedName))
+        {
+            return false;
+        }
+
+        var rows = Run(_client.GetAsync("items", "select=item_id,name"));
+        foreach (var node in rows)
+        {
+            string existingName = node?["name"]?.GetValue<string>() ?? string.Empty;
+            if (!string.Equals(existingName.Trim(), normalizedName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            itemId = node?["item_id"]?.GetValue<int>() ?? 0;
+            return itemId > 0;
+        }
+
+        return false;
     }
 
     public bool DeleteCatalogItem(int itemId)
@@ -283,6 +335,140 @@ public partial class SupabaseStore
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show("Failed to delete item: " + ex.Message);
+            return false;
+        }
+    }
+
+    public List<RecyclableItemDefinition> GetActiveRecyclableItems()
+    {
+        var items = new List<RecyclableItemDefinition>();
+
+        try
+        {
+            var rows = Run(_client.GetAsync("recyclable_items",
+                "select=id,display_name,material_type,unit_label,points_per_unit,description,is_active,sort_order&is_active=eq.true&order=sort_order.asc"));
+
+            foreach (var node in rows)
+            {
+                items.Add(new RecyclableItemDefinition
+                {
+                    Id = node?["id"]?.GetValue<int>() ?? 0,
+                    DisplayName = node?["display_name"]?.GetValue<string>() ?? string.Empty,
+                    MaterialType = node?["material_type"]?.GetValue<string>() ?? string.Empty,
+                    UnitLabel = node?["unit_label"]?.GetValue<string>() ?? "piece",
+                    PointsPerUnit = node?["points_per_unit"]?.GetValue<int>() ?? 0,
+                    Description = node?["description"]?.GetValue<string>() ?? string.Empty,
+                    IsActive = node?["is_active"]?.GetValue<bool>() ?? true,
+                    SortOrder = node?["sort_order"]?.GetValue<int>() ?? 0
+                });
+            }
+        }
+        catch
+        {
+        }
+
+        return items;
+    }
+
+    public System.Data.DataTable GetRecyclableCatalog(bool includeInactive = true)
+    {
+        var dt = new System.Data.DataTable();
+        dt.Columns.Add("ID", typeof(int));
+        dt.Columns.Add("Display Name", typeof(string));
+        dt.Columns.Add("Material Type", typeof(string));
+        dt.Columns.Add("Unit Label", typeof(string));
+        dt.Columns.Add("Points / Unit", typeof(int));
+        dt.Columns.Add("Description", typeof(string));
+        dt.Columns.Add("Active", typeof(string));
+        dt.Columns.Add("Sort Order", typeof(int));
+
+        try
+        {
+            string filter = includeInactive ? string.Empty : "&is_active=eq.true";
+            var rows = Run(_client.GetAsync("recyclable_items",
+                $"select=id,display_name,material_type,unit_label,points_per_unit,description,is_active,sort_order&order=sort_order.asc{filter}"));
+
+            foreach (var node in rows)
+            {
+                bool isActive = node?["is_active"]?.GetValue<bool>() ?? true;
+                dt.Rows.Add(
+                    node?["id"]?.GetValue<int>() ?? 0,
+                    node?["display_name"]?.GetValue<string>() ?? string.Empty,
+                    node?["material_type"]?.GetValue<string>() ?? string.Empty,
+                    node?["unit_label"]?.GetValue<string>() ?? "piece",
+                    node?["points_per_unit"]?.GetValue<int>() ?? 0,
+                    node?["description"]?.GetValue<string>() ?? string.Empty,
+                    isActive ? "Active" : "Inactive",
+                    node?["sort_order"]?.GetValue<int>() ?? 0
+                );
+            }
+        }
+        catch
+        {
+        }
+
+        return dt;
+    }
+
+    public bool AddRecyclableItem(string displayName, string materialType, string unitLabel, int pointsPerUnit, string description, bool isActive, int sortOrder)
+    {
+        try
+        {
+            var inserted = Run(_client.PostAsync("recyclable_items", new
+            {
+                display_name = displayName,
+                material_type = materialType,
+                unit_label = unitLabel,
+                points_per_unit = pointsPerUnit,
+                description,
+                is_active = isActive,
+                sort_order = sortOrder
+            }));
+            return inserted.Count > 0;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Failed to create recyclable item: " + ex.Message);
+            return false;
+        }
+    }
+
+    public bool UpdateRecyclableItem(int recyclableItemId, string displayName, string materialType, string unitLabel, int pointsPerUnit, string description, bool isActive, int sortOrder)
+    {
+        try
+        {
+            Run(_client.PatchAsync("recyclable_items", $"id=eq.{recyclableItemId}", new
+            {
+                display_name = displayName,
+                material_type = materialType,
+                unit_label = unitLabel,
+                points_per_unit = pointsPerUnit,
+                description,
+                is_active = isActive,
+                sort_order = sortOrder
+            }));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Failed to update recyclable item: " + ex.Message);
+            return false;
+        }
+    }
+
+    public bool SetRecyclableItemActive(int recyclableItemId, bool isActive)
+    {
+        try
+        {
+            Run(_client.PatchAsync("recyclable_items", $"id=eq.{recyclableItemId}", new
+            {
+                is_active = isActive
+            }));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("Failed to update recyclable item status: " + ex.Message);
             return false;
         }
     }
@@ -328,19 +514,43 @@ public partial class SupabaseStore
         var dt = new System.Data.DataTable();
         try
         {
-            var rows = Run(_client.GetAsync("vending_machines", "select=machine_id,location_name,status,created_at"));
+            JsonArray rows;
+            try
+            {
+                rows = Run(_client.GetAsync("vending_machines", "select=machine_id,location_name,address_text,latitude,longitude,status,created_at"));
+            }
+            catch
+            {
+                rows = Run(_client.GetAsync("vending_machines", "select=machine_id,location_name,status,created_at"));
+            }
+
             dt.Columns.Add("ID", typeof(int));
-            dt.Columns.Add("Location", typeof(string));
+            dt.Columns.Add("Name", typeof(string));
+            dt.Columns.Add("Address", typeof(string));
             dt.Columns.Add("Status", typeof(string));
             dt.Columns.Add("Deployed", typeof(DateTime));
+            dt.Columns.Add("_Latitude", typeof(double));
+            dt.Columns.Add("_Longitude", typeof(double));
 
             foreach (var node in rows)
             {
+                var latitudeNode = node?["latitude"];
+                var longitudeNode = node?["longitude"];
+                double? latitude = latitudeNode != null && latitudeNode.GetValueKind() != JsonValueKind.Null
+                    ? latitudeNode.GetValue<double>()
+                    : null;
+                double? longitude = longitudeNode != null && longitudeNode.GetValueKind() != JsonValueKind.Null
+                    ? longitudeNode.GetValue<double>()
+                    : null;
+
                 dt.Rows.Add(
                     node?["machine_id"]?.GetValue<int>() ?? 0,
                     node?["location_name"]?.GetValue<string>() ?? "",
+                    node?["address_text"]?.GetValue<string>() ?? "",
                     node?["status"]?.GetValue<string>() ?? "Active",
-                    DateTime.Parse(node?["created_at"]?.GetValue<string>() ?? DateTime.Now.ToString())
+                    DateTime.Parse(node?["created_at"]?.GetValue<string>() ?? DateTime.Now.ToString()),
+                    latitude.HasValue ? latitude.Value : DBNull.Value,
+                    longitude.HasValue ? longitude.Value : DBNull.Value
                 );
             }
         }
@@ -356,16 +566,40 @@ public partial class SupabaseStore
         var dt = new System.Data.DataTable();
         try
         {
-            var rows = Run(_client.GetAsync("vending_machines", "select=machine_id,location_name,status"));
+            JsonArray rows;
+            try
+            {
+                rows = Run(_client.GetAsync("vending_machines", "select=machine_id,location_name,address_text,latitude,longitude,status"));
+            }
+            catch
+            {
+                rows = Run(_client.GetAsync("vending_machines", "select=machine_id,location_name,status"));
+            }
+
             dt.Columns.Add("machine_id", typeof(int));
             dt.Columns.Add("location_name", typeof(string));
+            dt.Columns.Add("address_text", typeof(string));
+            dt.Columns.Add("latitude", typeof(double));
+            dt.Columns.Add("longitude", typeof(double));
             dt.Columns.Add("status", typeof(string));
 
             foreach (var node in rows)
             {
+                var latitudeNode = node?["latitude"];
+                var longitudeNode = node?["longitude"];
+                double? latitude = latitudeNode != null && latitudeNode.GetValueKind() != JsonValueKind.Null
+                    ? latitudeNode.GetValue<double>()
+                    : null;
+                double? longitude = longitudeNode != null && longitudeNode.GetValueKind() != JsonValueKind.Null
+                    ? longitudeNode.GetValue<double>()
+                    : null;
+
                 dt.Rows.Add(
                     node?["machine_id"]?.GetValue<int>() ?? 0,
                     node?["location_name"]?.GetValue<string>() ?? "",
+                    node?["address_text"]?.GetValue<string>() ?? "",
+                    latitude.HasValue ? latitude.Value : DBNull.Value,
+                    longitude.HasValue ? longitude.Value : DBNull.Value,
                     node?["status"]?.GetValue<string>() ?? ""
                 );
             }
@@ -374,7 +608,35 @@ public partial class SupabaseStore
         return dt;
     }
 
-    public bool AddMachine(string locationName)
+    public int GetAssignedSlotCount(int machineId)
+    {
+        return GetMachineSlotRecords(machineId).Count;
+    }
+
+    public string? GetNextAvailableSlotId(int machineId)
+    {
+        var usedSlots = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string? slotId in GetMachineSlotRecords(machineId).Select(slot => slot.NormalizedSlotId))
+        {
+            if (!string.IsNullOrWhiteSpace(slotId))
+            {
+                usedSlots.Add(slotId);
+            }
+        }
+
+        for (int slotNumber = SlotIdHelper.MinSlot; slotNumber <= SlotIdHelper.MaxSlot; slotNumber++)
+        {
+            string candidate = slotNumber.ToString();
+            if (!usedSlots.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    public int? CreateMachine(string locationName, string? addressText = null, double? latitude = null, double? longitude = null)
     {
         try
         {
@@ -384,13 +646,38 @@ public partial class SupabaseStore
             {
                 System.Windows.MessageBox.Show("Maximum of 4 vending machines allowed.", "Limit Reached",
                     System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return false;
+                return null;
             }
 
-            var result = Run(_client.PostAsync("vending_machines", new { location_name = locationName }));
-            return result.Count > 0;
+            JsonArray result;
+            try
+            {
+                result = Run(_client.PostAsync("vending_machines", new
+                {
+                    location_name = locationName,
+                    address_text = string.IsNullOrWhiteSpace(addressText) ? null : addressText,
+                    latitude,
+                    longitude
+                }));
+            }
+            catch
+            {
+                result = Run(_client.PostAsync("vending_machines", new { location_name = locationName }));
+            }
+
+            if (result.Count == 0)
+            {
+                return null;
+            }
+
+            return result[0]?["machine_id"]?.GetValue<int>();
         }
-        catch { return false; }
+        catch { return null; }
+    }
+
+    public bool AddMachine(string locationName, string? addressText = null, double? latitude = null, double? longitude = null)
+    {
+        return CreateMachine(locationName, addressText, latitude, longitude).HasValue;
     }
 
     public bool DeleteMachine(int machineId)
@@ -403,12 +690,28 @@ public partial class SupabaseStore
         catch { return false; }
     }
 
-    public bool UpdateMachine(int machineId, string locationName, string status)
+    public bool UpdateMachine(int machineId, string locationName, string addressText, string status, double? latitude = null, double? longitude = null)
     {
         try
         {
-            Run(_client.PatchAsync("vending_machines", $"machine_id=eq.{machineId}",
-                new { location_name = locationName, status }));
+            try
+            {
+                Run(_client.PatchAsync("vending_machines", $"machine_id=eq.{machineId}",
+                    new
+                    {
+                        location_name = locationName,
+                        address_text = string.IsNullOrWhiteSpace(addressText) ? null : addressText,
+                        latitude,
+                        longitude,
+                        status
+                    }));
+            }
+            catch
+            {
+                Run(_client.PatchAsync("vending_machines", $"machine_id=eq.{machineId}",
+                    new { location_name = locationName, status }));
+            }
+
             return true;
         }
         catch { return false; }
@@ -569,9 +872,8 @@ public partial class SupabaseStore
                 );
             }
         }
-        catch (Exception ex)
+        catch
         {
-            System.Windows.MessageBox.Show($"Failed to load inventory: {ex.Message}");
         }
         return dt;
     }
@@ -773,6 +1075,36 @@ public partial class SupabaseStore
             }
         }
         catch { }
+    }
+
+    public bool RandomizeMachineStocks(int machineId)
+    {
+        try
+        {
+            var rows = Run(_client.GetAsync("machine_inventory",
+                $"select=inventory_id,max_capacity&machine_id=eq.{machineId}"));
+            var rng = new Random();
+
+            foreach (var node in rows)
+            {
+                int invId = node?["inventory_id"]?.GetValue<int>() ?? 0;
+                int maxCapacity = node?["max_capacity"]?.GetValue<int>() ?? 15;
+                if (invId <= 0 || maxCapacity <= 0)
+                {
+                    continue;
+                }
+
+                int randomStock = rng.Next(1, maxCapacity + 1);
+                Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{invId}",
+                    new { stock_level = randomStock }));
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public bool UpdateMachineInventoryAssignment(int inventoryId, int machineId, string slotId, int itemId, int stock, int maxCap, decimal? slotPrice)
@@ -1015,6 +1347,75 @@ public partial class SupabaseStore
         }
     }
 
+    public bool ReceiptSessionExists(string clientSyncId)
+    {
+        var rows = Run(_client.GetAsync("receipt_sessions",
+            $"select=receipt_session_id&client_sync_id=eq.{Uri.EscapeDataString(clientSyncId)}&limit=1"));
+        return rows.Count > 0;
+    }
+
+    public void InsertQueuedReceiptSession(Transaction transaction)
+    {
+        var inserted = Run(_client.PostAsync("receipt_sessions", new
+        {
+            client_sync_id = transaction.ClientSyncId,
+            receipt_number = transaction.ReceiptNumber,
+            machine_id = transaction.MachineId,
+            session_started_at = transaction.SessionStartedAt.ToUniversalTime().ToString("O"),
+            session_ended_at = transaction.SessionEndedAt.ToUniversalTime().ToString("O"),
+            total_amount = transaction.TotalAmount,
+            amount_paid = transaction.AmountPaid,
+            change_amount = transaction.Change,
+            recycle_points_total = transaction.RecyclePointsTotal,
+            source = transaction.Source
+        }));
+
+        if (inserted.Count == 0)
+        {
+            throw new InvalidOperationException("Receipt session insert did not return a session id.");
+        }
+
+        int receiptSessionId = inserted[0]?["receipt_session_id"]?.GetValue<int>() ?? 0;
+        if (receiptSessionId <= 0)
+        {
+            throw new InvalidOperationException("Receipt session insert returned an invalid session id.");
+        }
+
+        int lineOrder = 1;
+        foreach (var item in transaction.Items)
+        {
+            Run(_client.PostAsync("receipt_session_lines", new
+            {
+                receipt_session_id = receiptSessionId,
+                line_order = lineOrder++,
+                entry_type = "sale",
+                slot_id = item.SlotId,
+                item_name = item.ProductName,
+                quantity = item.Quantity,
+                unit_price = item.UnitPrice,
+                line_total = item.LineTotal
+            }));
+        }
+
+        foreach (var recycle in transaction.RecycledItems)
+        {
+            Run(_client.PostAsync("receipt_session_lines", new
+            {
+                receipt_session_id = receiptSessionId,
+                line_order = lineOrder++,
+                entry_type = "recycle",
+                recycle_item_id = recycle.RecyclableItemId > 0 ? (int?)recycle.RecyclableItemId : null,
+                recycle_display_name = recycle.DisplayName,
+                recycle_material_type = recycle.MaterialType,
+                recycle_unit_label = recycle.UnitLabel,
+                recycle_points_per_unit = recycle.PointsPerUnit,
+                recycle_material = recycle.DisplayName,
+                recycle_pieces = recycle.Pieces,
+                recycle_points = recycle.TotalPoints
+            }));
+        }
+    }
+
     public (decimal Daily, decimal Weekly, decimal Monthly, decimal Yearly) GetSalesTotals()
     {
         try
@@ -1051,12 +1452,12 @@ public partial class SupabaseStore
         decimal total = 0m;
         try
         {
-            string filter = BuildDateFilter("transaction_date", date, filterType);
             var rows = Run(_client.GetAsync("sales_transactions",
-                $"select=transaction_id,transaction_date,machine_id,item_id,amount_paid,vending_machines(location_name),items(name,price)&{filter}&order=transaction_date.desc"));
+                "select=transaction_id,transaction_date,machine_id,item_id,amount_paid,vending_machines(location_name),items(name,price)&order=transaction_date.desc"));
 
             dt.Columns.Add("TX ID", typeof(int));
             dt.Columns.Add("Date", typeof(DateTime));
+            dt.Columns.Add("Period", typeof(string));
             dt.Columns.Add("Machine", typeof(string));
             dt.Columns.Add("Item", typeof(string));
             dt.Columns.Add("Quantity", typeof(int));
@@ -1065,12 +1466,19 @@ public partial class SupabaseStore
 
             foreach (var node in rows)
             {
+                DateTime txDate = ParseSupabaseLocalDateTime(node?["transaction_date"]?.GetValue<string>());
+                if (!IsDateInFilter(txDate, date, filterType))
+                {
+                    continue;
+                }
+
                 decimal paid = node?["amount_paid"]?.GetValue<decimal>() ?? 0m;
                 total += paid;
 
                 dt.Rows.Add(
                     node?["transaction_id"]?.GetValue<int>() ?? 0,
-                    DateTime.Parse(node?["transaction_date"]?.GetValue<string>() ?? DateTime.Now.ToString()),
+                    txDate,
+                    BuildSalesPeriodLabel(txDate, filterType),
                     node?["vending_machines"]?["location_name"]?.GetValue<string>() ?? "",
                     node?["items"]?["name"]?.GetValue<string>() ?? "",
                     1,
@@ -1081,6 +1489,57 @@ public partial class SupabaseStore
         }
         catch { }
         return (dt, total);
+    }
+
+    public System.Data.DataTable GetStockMonitoring()
+    {
+        var dt = new System.Data.DataTable();
+        dt.Columns.Add("Machine", typeof(string));
+        dt.Columns.Add("Slot", typeof(string));
+        dt.Columns.Add("Item", typeof(string));
+        dt.Columns.Add("Type", typeof(string));
+        dt.Columns.Add("Stock", typeof(int));
+        dt.Columns.Add("Max Capacity", typeof(int));
+        dt.Columns.Add("Fill %", typeof(decimal));
+        dt.Columns.Add("Status", typeof(string));
+        dt.Columns.Add("Reorder Qty", typeof(int));
+
+        try
+        {
+            var rows = Run(_client.GetAsync("machine_inventory",
+                "select=slot_id,stock_level,max_capacity,vending_machines(location_name),items(name,type)&order=stock_level.asc"));
+
+            foreach (var node in rows)
+            {
+                int stock = node?["stock_level"]?.GetValue<int>() ?? 0;
+                int maxCapacity = Math.Max(1, node?["max_capacity"]?.GetValue<int>() ?? 15);
+                decimal fillPercent = Math.Round((decimal)stock / maxCapacity * 100m, 1);
+                string status = stock <= 0
+                    ? "OUT OF STOCK"
+                    : stock <= 3
+                        ? "LOW STOCK"
+                        : fillPercent <= 40m
+                            ? "WATCH"
+                            : "OK";
+
+                dt.Rows.Add(
+                    node?["vending_machines"]?["location_name"]?.GetValue<string>() ?? "Machine",
+                    SlotIdHelper.Normalize(node?["slot_id"]?.GetValue<string>() ?? "") ?? "",
+                    node?["items"]?["name"]?.GetValue<string>() ?? "Unknown",
+                    node?["items"]?["type"]?.GetValue<string>() ?? "Misc",
+                    stock,
+                    maxCapacity,
+                    fillPercent,
+                    status,
+                    Math.Max(0, maxCapacity - stock)
+                );
+            }
+        }
+        catch
+        {
+        }
+
+        return dt;
     }
 
     public void GetDashboardMetrics(out decimal totalSales, out int totalItemsSold, out int lowStockAlerts, out int activeMachines)
@@ -1144,5 +1603,47 @@ public partial class SupabaseStore
         return cal.GetWeekOfYear(a, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday) ==
                cal.GetWeekOfYear(b, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday) &&
                a.Year == b.Year;
+    }
+
+    private static DateTime ParseSupabaseLocalDateTime(string? value)
+    {
+        if (DateTimeOffset.TryParse(value, out var offset))
+        {
+            return offset.ToLocalTime().DateTime;
+        }
+
+        return DateTime.TryParse(value, out var parsed) ? parsed : DateTime.Now;
+    }
+
+    private static bool IsDateInFilter(DateTime txDate, DateTime selectedDate, string filterType)
+    {
+        selectedDate = selectedDate.Date;
+        return filterType switch
+        {
+            "Day" => txDate.Date == selectedDate,
+            "Week" => GetWeekStart(txDate.Date) == GetWeekStart(selectedDate),
+            "Month" => txDate.Year == selectedDate.Year && txDate.Month == selectedDate.Month,
+            "Year" => txDate.Year == selectedDate.Year,
+            "All Time" => true,
+            _ => txDate.Date == selectedDate
+        };
+    }
+
+    private static string BuildSalesPeriodLabel(DateTime txDate, string filterType)
+    {
+        return filterType switch
+        {
+            "Day" => txDate.ToString("HH:00"),
+            "Week" => txDate.ToString("ddd"),
+            "Month" => txDate.ToString("MMM dd"),
+            "Year" => txDate.ToString("MMM"),
+            _ => txDate.ToString("yyyy-MM")
+        };
+    }
+
+    private static DateTime GetWeekStart(DateTime date)
+    {
+        int diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
+        return date.Date.AddDays(-diff);
     }
 }

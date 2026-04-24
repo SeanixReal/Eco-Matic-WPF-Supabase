@@ -16,14 +16,8 @@ namespace Eco_Matic.Data;
 public class SupabaseClient
 {
     private readonly HttpClient _http;
+    private readonly string _projectUrl;
     private readonly string _baseUrl;
-
-    // ── Configuration ──────────────────────────────────────
-    // Your Supabase project URL and anon key.
-    // The anon key is safe to embed in desktop/IoT apps when RLS policies are set.
-    private const string SUPABASE_URL = "https://woyadcahjkutrowkzryv.supabase.co";
-    private const string SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndveWFkY2Foamt1dHJvd2t6cnl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MDQwOTYsImV4cCI6MjA5MjE4MDA5Nn0.JJmpv7WUo6WeFdqifaf4U-FMPU2u8XQiNOrOXJ-h67g";
-    // ───────────────────────────────────────────────────────
 
     private static readonly Lazy<SupabaseClient> _instance = new(() => new SupabaseClient());
     public static SupabaseClient Instance => _instance.Value;
@@ -37,14 +31,23 @@ public class SupabaseClient
 
     private SupabaseClient()
     {
-        _baseUrl = $"{SUPABASE_URL}/rest/v1";
+        string supabaseUrl = AppEnvironment.GetRequired("ECOMATIC_SUPABASE_URL");
+        string supabaseApiKey = AppEnvironment.GetRequiredSupabaseApiKey();
+
+        _projectUrl = supabaseUrl.TrimEnd('/');
+        _baseUrl = $"{_projectUrl}/rest/v1";
         _http = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(8)
         };
-        _http.DefaultRequestHeaders.Add("apikey", SUPABASE_ANON_KEY);
-        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SUPABASE_ANON_KEY);
+        _http.DefaultRequestHeaders.Add("apikey", supabaseApiKey);
+        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", supabaseApiKey);
         _http.DefaultRequestHeaders.Add("Prefer", "return=representation");
+    }
+
+    public string GetFunctionUrl(string functionName)
+    {
+        return $"{_projectUrl}/functions/v1/{functionName.Trim('/')}";
     }
 
     // ── Core HTTP Methods ──────────────────────────────────

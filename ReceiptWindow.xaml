@@ -35,6 +35,7 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -49,10 +50,42 @@
                                 <TextBlock Text="Thank you for using Eco-Matic"
                                            Foreground="#6A7891"
                                            HorizontalAlignment="Center" />
+                                <TextBlock x:Name="lblReceiptMeta"
+                                           Foreground="#6A7891"
+                                           HorizontalAlignment="Center"
+                                           FontSize="11"
+                                           Margin="0,4,0,0" />
+                                <TextBlock x:Name="lblPrintStatus"
+                                           Foreground="#4B5B75"
+                                           HorizontalAlignment="Center"
+                                           FontSize="11"
+                                           Margin="0,6,0,0"
+                                           Text="Printer status unavailable." />
                             </StackPanel>
 
+                            <Border Grid.Row="1"
+                                    Margin="0,0,0,12"
+                                    Background="#F7FAFF"
+                                    BorderBrush="#DDE5F2"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="10">
+                                <StackPanel>
+                                    <TextBlock x:Name="lblMachineName"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="#2E77E6"
+                                               Text="Machine: -" />
+                                    <TextBlock x:Name="lblMachineAddress"
+                                               Margin="0,4,0,0"
+                                               Foreground="#52637F"
+                                               TextWrapping="Wrap"
+                                               Text="Address: -" />
+                                </StackPanel>
+                            </Border>
+
                             <ListBox x:Name="itemsList"
-                                     Grid.Row="1"
+                                     Grid.Row="2"
                                      FontFamily="Consolas"
                                      FontSize="13"
                                      Background="#F9FBFF"
@@ -60,7 +93,7 @@
                                      BorderThickness="1"
                                      Padding="6" />
 
-                            <Border Grid.Row="2"
+                            <Border Grid.Row="3"
                                     Margin="0,12,0,0"
                                     Background="#F7FAFF"
                                     BorderBrush="#DDE5F2"
@@ -74,17 +107,29 @@
                                 </StackPanel>
                             </Border>
 
-                            <Button Grid.Row="3"
-                                    Height="36"
-                                    Width="130"
-                                    Margin="0,14,0,0"
-                                    HorizontalAlignment="Center"
-                                    Content="Close"
-                                    Background="#2E77E6"
-                                    Foreground="White"
-                                    BorderBrush="#2E77E6"
-                                    BorderThickness="0"
-                                    Click="BtnClose_Click" />
+                            <StackPanel Grid.Row="4"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,14,0,0">
+                                <Button x:Name="btnPrint"
+                                        Height="36"
+                                        Width="130"
+                                        Margin="0,0,10,0"
+                                        Content="Print"
+                                        Background="#1B9C67"
+                                        Foreground="White"
+                                        BorderBrush="#1B9C67"
+                                        BorderThickness="0"
+                                        Click="BtnPrint_Click" />
+                                <Button Height="36"
+                                        Width="130"
+                                        Content="Close"
+                                        Background="#2E77E6"
+                                        Foreground="White"
+                                        BorderBrush="#2E77E6"
+                                        BorderThickness="0"
+                                        Click="BtnClose_Click" />
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </Grid>

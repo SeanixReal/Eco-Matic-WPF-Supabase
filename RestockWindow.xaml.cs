@@ -5,6 +5,8 @@ namespace Eco_Matic
 {
     public partial class RestockWindow : Window
     {
+        public int RestockQuantity { get; private set; }
+
         public RestockWindow()
         {
             InitializeComponent();
@@ -26,6 +28,7 @@ namespace Eco_Matic
                 return;
             }
 
+            RestockQuantity = qty;
             DialogResult = true;
             Close();
         }
@@ -35,7 +38,5 @@ namespace Eco_Matic
             DialogResult = false;
             Close();
         }
-
-        public int RestockQuantity => int.Parse(txtQuantity.Text);
     }
 }
