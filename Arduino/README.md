@@ -128,25 +128,46 @@ Recommended horn:
 
 - use the single-arm horn for a simple cardboard lid because it is easier to tape or hot-glue to one flap
 - use the dual-arm horn only if you need a wider contact area or want to push the lid from the middle
-- mount the horn so the lid is closed at about `15 degrees` and opens at about `95 degrees`
+- the sketch currently uses the inside-mounted motion: closed at about `15 degrees`, open at about `95 degrees`
+- for a back-mounted servo with the horn starting vertical/up-down, change `SERVO_MOUNT_MODE` in the sketch from `SERVO_MOUNT_INSIDE` to `SERVO_MOUNT_BACK`
+- if the back-mounted servo opens the wrong direction, change `SERVO_BACK_OPEN_ANGLE` from `0` to `180`
 
 Simple lid mechanism:
 
 ```text
-Closed box side/top:
+Inside-mounted servo, current active option:
 
-    cardboard lid
+    box wall / lid
     +----------+
-    |          |
+    |          |  <- single-arm horn taped/glued to the flap
     +----------+
-         |
-      servo horn
-         |
-       SG90
+         \
+          SG90 inside the box
 
 On purchase:
 
     servo turns -> lid opens -> waits briefly -> lid closes
+```
+
+Back-mounted servo option:
+
+```text
+Back of cardboard box
+
+       SG90 outside/back
+          |
+          | horn starts vertical, up/down
+          |
+    +-----+----+
+    | cardboard |
+    | lid/flap  |
+    +----------+
+
+In code:
+
+    SERVO_MOUNT_MODE = SERVO_MOUNT_BACK
+    closed angle = 90
+    open angle = 0, or 180 if the hinge moves the other way
 ```
 
 The Arduino sketch opens the lid automatically when the WPF app sends a purchase display message containing `DISPENSING` or `TAKE YOUR ITEM`.
@@ -160,6 +181,8 @@ The Arduino sketch opens the lid automatically when the WPF app sends a purchase
   - `ECOMATIC_ARDUINO_BAUD`
 
 The Arduino sends RFID scans as `RFID:<UID>`. The WPF app sends `STATE:ACTIVE`, `STATE:AFK`, `VALID`, `INVALID`, and `MSG:<text>` commands back to the Arduino for LCD and LED feedback. A successful purchase opens the optional SG90 lid because the WPF app sends a `DISPENSING` message.
+
+When customer mode opens, WPF sends `STATE:ACTIVE` immediately and repeats it once shortly after. This prevents the Arduino from staying in AFK mode if the board reset or was still booting when the first command arrived.
 
 RFID scans are accepted only while customer mode is open. Customers without RFID can still earn points during the session and see them on the receipt, but only a registered RFID card can save those points to Supabase `customers.eco_credits`.
 

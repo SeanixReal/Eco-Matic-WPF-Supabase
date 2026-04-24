@@ -29,10 +29,26 @@ static const int RED_LED = 7;
 static const int LCD_COLUMNS = 16;
 static const int LCD_ROWS = 2;
 static const uint32_t SERIAL_BAUD_RATE = 9600;
-static const int SERVO_CLOSED_ANGLE = 15;
-static const int SERVO_OPEN_ANGLE = 95;
+static const int SERVO_MOUNT_INSIDE = 0;
+static const int SERVO_MOUNT_BACK = 1;
+static const int SERVO_MOUNT_MODE = SERVO_MOUNT_INSIDE;
+
+// INSIDE mount is your current working motion.
+// BACK mount starts with the horn vertical. If it opens the wrong way,
+// change SERVO_BACK_OPEN_ANGLE from 0 to 180.
+static const int SERVO_INSIDE_CLOSED_ANGLE = 15;
+static const int SERVO_INSIDE_OPEN_ANGLE = 95;
+static const int SERVO_BACK_CLOSED_ANGLE = 90;
+static const int SERVO_BACK_OPEN_ANGLE = 0;
+static const int SERVO_CLOSED_ANGLE = SERVO_MOUNT_MODE == SERVO_MOUNT_BACK
+  ? SERVO_BACK_CLOSED_ANGLE
+  : SERVO_INSIDE_CLOSED_ANGLE;
+static const int SERVO_OPEN_ANGLE = SERVO_MOUNT_MODE == SERVO_MOUNT_BACK
+  ? SERVO_BACK_OPEN_ANGLE
+  : SERVO_INSIDE_OPEN_ANGLE;
 static const unsigned long SERVO_OPEN_DURATION_MS = 1500;
 static const unsigned long RFID_VALIDATION_TIMEOUT_MS = 12000;
+static const unsigned long READY_CUE_MIN_INTERVAL_MS = 8000;
 
 LiquidCrystal_I2C *lcd = nullptr;
 MFRC522 mfrc522(SS_PIN, RST_PIN);
@@ -43,6 +59,7 @@ unsigned long messageTimer = 0;
 unsigned long activeLedTimer = 0;
 unsigned long servoOpenedAt = 0;
 unsigned long validationStartedAt = 0;
+unsigned long lastReadyCueAt = 0;
 
 bool lcdReady = false;
 bool showingMessage = false;
@@ -65,6 +82,8 @@ const char *afkFacts[][2] = {
   {"CLEAN BOTTLES  ", "EARN ECO POINTS"}
 };
 static const int AFK_FACT_COUNT = sizeof(afkFacts) / sizeof(afkFacts[0]);
+
+void playCue(const String &cue);
 
 uint8_t scanLcdAddress() {
   Serial.println("LCD:I2C_SCAN_START");
@@ -274,6 +293,14 @@ void buzzTone(unsigned int frequency, unsigned int durationMs) {
   noTone(BUZZER_PIN);
 }
 
+void playReadyCueIfNeeded(bool modeChanged) {
+  unsigned long now = millis();
+  if (modeChanged || now - lastReadyCueAt >= READY_CUE_MIN_INTERVAL_MS) {
+    lastReadyCueAt = now;
+    playCue("READY");
+  }
+}
+
 void playCue(const String &cue) {
   if (cue == "READY") {
     buzzTone(988, 70);
@@ -386,9 +413,11 @@ void handleIncomingCommand(const String &incoming) {
   }
 
   if (msg == "STATE:ACTIVE") {
+    bool modeChanged = systemMode != 1;
     systemMode = 1;
     resetDisplay();
-    playCue("READY");
+    playReadyCueIfNeeded(modeChanged);
+    Serial.println("SESSION:ACTIVE");
     return;
   }
 
@@ -396,6 +425,7 @@ void handleIncomingCommand(const String &incoming) {
     systemMode = 0;
     closeLidServo();
     resetDisplay();
+    Serial.println("SESSION:AFK");
     return;
   }
 

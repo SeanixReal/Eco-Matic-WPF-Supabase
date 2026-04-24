@@ -96,9 +96,9 @@ public partial class CustomerWindow : Window
     private async void CustomerWindow_Loaded(object sender, RoutedEventArgs e)
     {
         Loaded -= CustomerWindow_Loaded;
+        ActivateHardwareSession();
         await LoadRecycleCatalogAsync();
         InitializeLiveInventoryRefresh();
-        ActivateHardwareSession();
     }
 
     private void ActivateHardwareSession()
@@ -109,8 +109,7 @@ public partial class CustomerWindow : Window
         }
 
         _hardwareActivated = true;
-        _arduino?.SendStateCommand("STATE:ACTIVE");
-        _arduino?.SendMessage("CUSTOMER MODE READY");
+        _arduino?.SendCustomerSessionActive();
     }
 
     protected override void OnClosed(EventArgs e)
@@ -971,6 +970,7 @@ public partial class CustomerWindow : Window
             decimal returned = _insertedMoney;
             _insertedMoney = 0;
             UpdateMoneyDisplay();
+            _arduino?.SendMessage("CHANGE RETURNED");
             
             MessageBox.Show(this,
                 $"P{returned:F2} change returned. Thank you for using Eco-Matic!",

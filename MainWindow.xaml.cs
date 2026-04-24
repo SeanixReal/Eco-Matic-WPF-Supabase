@@ -269,8 +269,7 @@ namespace Eco_Matic
 
                     if (_openCustomerWindows == 0)
                     {
-                        _arduino?.SendMessage("ECO-MATIC IDLE");
-                        _arduino?.SendStateCommand("STATE:AFK");
+                        _arduino?.SendCustomerSessionAfk();
                     }
                 };
                 customerWindow.Show();

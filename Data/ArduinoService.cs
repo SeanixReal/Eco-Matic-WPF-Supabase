@@ -2,6 +2,8 @@ using System;
 using System.IO.Ports;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Eco_Matic.Data
 {
@@ -14,6 +16,7 @@ namespace Eco_Matic.Data
 
         private readonly object _writeLock = new();
         private SerialPort _serialPort;
+        private int _sessionCommandVersion;
         public event EventHandler<string>? OnCardScanned;
         public string PortName => _serialPort.PortName;
         public int BaudRate => _serialPort.BaudRate;
@@ -124,6 +127,40 @@ namespace Eco_Matic.Data
         public void SendStateCommand(string state)
         {
             WriteLine(state);
+        }
+
+        public void SendCustomerSessionActive()
+        {
+            int version = Interlocked.Increment(ref _sessionCommandVersion);
+            WriteLine("STATE:ACTIVE");
+            WriteLine("MSG:CUSTOMER MODE READY");
+
+            // Arduino boards often reset when the serial port opens. These short
+            // repeats make customer mode reliable without blocking the WPF UI.
+            _ = Task.Run(() =>
+            {
+                Thread.Sleep(350);
+                if (Volatile.Read(ref _sessionCommandVersion) != version)
+                {
+                    return;
+                }
+
+                WriteLine("STATE:ACTIVE");
+                Thread.Sleep(350);
+                if (Volatile.Read(ref _sessionCommandVersion) != version)
+                {
+                    return;
+                }
+
+                WriteLine("MSG:CUSTOMER MODE READY");
+            });
+        }
+
+        public void SendCustomerSessionAfk()
+        {
+            Interlocked.Increment(ref _sessionCommandVersion);
+            WriteLine("MSG:ECO-MATIC IDLE");
+            WriteLine("STATE:AFK");
         }
 
         public void SendMessage(string message)
