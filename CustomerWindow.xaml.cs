@@ -781,6 +781,8 @@ public partial class CustomerWindow : Window
         _totalChangeReturned += returned;
         _insertedMoney = 0;
 
+        AudioService.PlaySfx("Assets/Audio/coin_dispense.mp3");
+
         UpdateMoneyDisplay();
         SetDispenseStatus("CHANGE RETURNED", StatusIdle);
         UpdateAllButtonStates();
@@ -1182,6 +1184,7 @@ public partial class CustomerWindow : Window
             completedSession = FinalizeActiveSession();
             await Task.Run(() => DataStore.SaveCompletedReceipt(completedSession));
             _arduino?.SendMessage("PRINTING RECEIPT");
+            AudioService.PlaySfx("Assets/Audio/coin_dispense.mp3");
             printResult = await Task.Run(() => ReceiptPrinterService.Instance.TryPrintReceipt(completedSession));
             _arduino?.SendMessage(printResult.Success ? "RECEIPT COMPLETE" : "RECEIPT FAILED");
 
