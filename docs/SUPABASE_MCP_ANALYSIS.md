@@ -22,7 +22,8 @@ This note captures what was directly verified through Supabase MCP before updati
 - `machine_inventory` currently contains `24` rows, which means `12` assigned slots per machine
 - current machine inventory slot IDs are normalized as `1` through `12` for both live machines
 - `receipt_sessions`, `receipt_session_lines`, `sales_transactions`, `event_logs`, `customers`, `esp32_commands`, and `esp32_telemetry` are currently empty
-- `roles` currently contains `Admin`, `Operator`, and `Viewer`
+- `roles` currently contains `Admin` and `Inventory Manager`
+- `user_machine_assignments` stores multi-machine inventory-manager scope
 
 ## Doc Impact
 

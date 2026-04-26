@@ -106,13 +106,15 @@ namespace Eco_Matic
 
                         if (dashboard.SaveSucceeded)
                         {
-                            _activeCustomerWindow?.MarkPendingPointsSaved();
+                            _activeCustomerWindow?.MarkPendingPointsSaved(dashboard.SavedPoints);
                             arduino.SendMessage($"{dashboard.SavedPoints} POINTS SAVED");
                         }
                         else if (DataStore.PendingPoints > 0)
                         {
                             arduino.SendMessage("NO POINTS SAVED");
                         }
+
+                        _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);
                     });
                 }
                 else
@@ -132,13 +134,15 @@ namespace Eco_Matic
 
                             if (dashboard.SaveSucceeded)
                             {
-                                _activeCustomerWindow?.MarkPendingPointsSaved();
+                                _activeCustomerWindow?.MarkPendingPointsSaved(dashboard.SavedPoints);
                                 arduino.SendMessage($"{dashboard.SavedPoints} POINTS SAVED");
                             }
                             else
                             {
                                 arduino.SendMessage("CARD REGISTERED");
                             }
+
+                            _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);
                         }
                         else
                         {
@@ -294,18 +298,18 @@ namespace Eco_Matic
                 var loginResult = await System.Threading.Tasks.Task.Run(() =>
                 {
                     var store = new Eco_Matic.Data.SupabaseStore();
-                    return store.AuthenticateUser(username, password);
+                    return store.AuthenticateUserAccess(username, password);
                 });
 
                 Mouse.OverrideCursor = null;
                 btnAdmin.IsEnabled = true;
                 string? role = loginResult.Role;
-                int? machineId = loginResult.AssignedMachineId;
+                List<int> machineIds = loginResult.AssignedMachineIds;
 
                 if (role != null)
                 {
                     Hide();
-                    var adminWindow = new AdminWindow(role, machineId)
+                    var adminWindow = new AdminWindow(role, machineIds)
                     {
                         Owner = this
                     };

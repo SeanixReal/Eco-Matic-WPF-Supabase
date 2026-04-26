@@ -9,6 +9,8 @@ SQL files are grouped here so the repo is easier to scan and the active Supabase
 - `migrations/supabase/migration_increment5.sql`
 - `migrations/supabase/migration_increment6.sql`
 - `migrations/supabase/migration_increment7.sql`
+- `migrations/supabase/migration_increment8_qr_payments.sql`
+- `migrations/supabase/migration_increment9_user_machine_assignments.sql`
 - `seeds/seed_inventory.sql`
 
 ## Historical Files
@@ -26,5 +28,7 @@ The repo accumulated incremental SQL patches over time instead of one single res
 - `migration_increment5.sql` adds receipt session persistence tables
 - `migration_increment6.sql` adds richer machine location fields
 - `migration_increment7.sql` adds the admin-managed recycle catalog and richer recycle receipt line fields
+- `migration_increment8_qr_payments.sql` adds QR payment intent storage
+- `migration_increment9_user_machine_assignments.sql` adds multi-machine assignment support for inventory managers
 
 Only the files under `migrations/supabase/` are part of the current live Supabase migration path.

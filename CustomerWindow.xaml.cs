@@ -26,7 +26,11 @@ public partial class CustomerWindow : Window
     private decimal _totalMoneyInserted;
     private decimal _totalChangeReturned;
     private int _pendingPoints;
+    private int _availableEcoCredits;
+    private string? _linkedRfid;
+    private string? _linkedCustomerEmail;
     private bool _isDispensing;
+    private bool _payWithPoints;
     private readonly Data.ArduinoService? _arduino;
     private readonly int _machineId;
     private readonly string _machineDisplayName;
@@ -364,6 +368,28 @@ public partial class CustomerWindow : Window
 
     private void UpdateButtonBuyability(SlotControls slot, VendingItem product)
     {
+        if (_payWithPoints)
+        {
+            int pointsCost = GetPointCost(product);
+            if (GetTotalEcoPoints() >= pointsCost)
+            {
+                slot.SelectButton.Content = "POINT PAY";
+                slot.SelectButton.Background = CreateBrush(255, 206, 74);
+                slot.SelectButton.Foreground = CreateBrush(29, 35, 63);
+                slot.SelectButton.BorderBrush = CreateBrush(255, 206, 74);
+            }
+            else
+            {
+                slot.SelectButton.Content = "NEED POINTS";
+                slot.SelectButton.Background = ButtonDim;
+                slot.SelectButton.Foreground = CreateBrush(48, 65, 92);
+                slot.SelectButton.BorderBrush = CreateBrush(201, 216, 239);
+            }
+
+            return;
+        }
+
+        slot.SelectButton.Content = "SELECT";
         if (_insertedMoney >= product.Price)
         {
             slot.SelectButton.Background = ButtonReady;
@@ -419,16 +445,71 @@ public partial class CustomerWindow : Window
     private void UpdateMoneyDisplay()
     {
         lblCashAmount.Text = $"P {_insertedMoney:F2}";
-        lblPointsAmount.Text = _pendingPoints.ToString(CultureInfo.InvariantCulture);
+        int totalEcoPoints = GetTotalEcoPoints();
+        if (totalEcoPoints <= 0)
+        {
+            _payWithPoints = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_linkedRfid))
+        {
+            lblPointsAmount.Text = _pendingPoints > 0
+                ? $"{_availableEcoCredits}+{_pendingPoints}"
+                : _availableEcoCredits.ToString(CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            lblPointsAmount.Text = _pendingPoints.ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (btnPayWithPoints != null)
+        {
+            btnPayWithPoints.IsEnabled = totalEcoPoints > 0;
+            btnPayWithPoints.Content = _payWithPoints
+                ? "PAYING WITH POINTS"
+                : totalEcoPoints > 0
+                    ? "PAY WITH POINTS"
+                    : "NO ECO POINTS";
+
+            btnPayWithPoints.Background = _payWithPoints
+                ? CreateBrush(255, 206, 74)
+                : CreateBrush(47, 166, 106);
+            btnPayWithPoints.Foreground = _payWithPoints
+                ? CreateBrush(29, 35, 63)
+                : Brushes.White;
+        }
     }
 
-    public void MarkPendingPointsSaved()
+    public void MarkPendingPointsSaved(int savedPoints)
     {
-        _pendingPoints = 0;
-        DataStore.PendingPoints = 0;
+        int pointsToClear = Math.Clamp(savedPoints, 0, _pendingPoints);
+        _pendingPoints -= pointsToClear;
+        DataStore.PendingPoints = _pendingPoints;
         UpdateMoneyDisplay();
-        SetDispenseStatus("POINTS SAVED TO RFID", Brushes.MediumSeaGreen);
+        SetDispenseStatus(pointsToClear > 0 ? "POINTS SAVED TO RFID" : "NO POINTS SAVED", pointsToClear > 0 ? Brushes.MediumSeaGreen : StatusIdle);
         UpdateDoneButtonState();
+    }
+
+    public void SetLinkedRfidCustomer(string rfid, string email, int ecoCredits)
+    {
+        _linkedRfid = rfid;
+        _linkedCustomerEmail = email;
+        _availableEcoCredits = Math.Max(0, ecoCredits);
+        _payWithPoints = false;
+        UpdateMoneyDisplay();
+
+        SetDispenseStatus($"{GetLinkedCustomerLabel()} {_availableEcoCredits} PTS", Brushes.MediumSeaGreen);
+    }
+
+    private string GetLinkedCustomerLabel()
+    {
+        if (string.IsNullOrWhiteSpace(_linkedCustomerEmail))
+        {
+            return "RFID READY";
+        }
+
+        string name = _linkedCustomerEmail.Split('@')[0].Trim();
+        return string.IsNullOrWhiteSpace(name) ? "RFID READY" : name.ToUpperInvariant();
     }
 
     private void StartNewSession()
@@ -437,6 +518,10 @@ public partial class CustomerWindow : Window
         _totalMoneyInserted = 0m;
         _totalChangeReturned = 0m;
         _pendingPoints = 0;
+        _availableEcoCredits = 0;
+        _linkedRfid = null;
+        _linkedCustomerEmail = null;
+        _payWithPoints = false;
         DataStore.PendingPoints = 0;
         _activeSession = new Transaction
         {
@@ -625,6 +710,40 @@ public partial class CustomerWindow : Window
         UpdateDoneButtonState();
     }
 
+    private void BtnPayWithPoints_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetTotalEcoPoints() <= 0)
+        {
+            SetDispenseStatus("NO ECO POINTS", SoldOutRed);
+            return;
+        }
+
+        _payWithPoints = !_payWithPoints;
+        SetDispenseStatus(_payWithPoints ? "POINT PAY READY" : "POINT PAY OFF", _payWithPoints ? Brushes.Goldenrod : StatusIdle);
+        UpdateMoneyDisplay();
+        UpdateAllButtonStates();
+    }
+
+    private int GetTotalEcoPoints()
+    {
+        return Math.Max(0, _availableEcoCredits) + Math.Max(0, _pendingPoints);
+    }
+
+    private async Task<bool> UpdateLinkedCustomerCreditsAsync(int newBalance)
+    {
+        string? rfid = _linkedRfid;
+        if (string.IsNullOrWhiteSpace(rfid))
+        {
+            return false;
+        }
+
+        return await Task.Run(() =>
+        {
+            var store = new Data.SupabaseStore();
+            return store.UpdateCustomerCredits(rfid, Math.Max(0, newBalance));
+        });
+    }
+
     private decimal GetSuggestedQrPaymentAmount()
     {
         decimal cheapestAvailablePrice = _products
@@ -637,11 +756,16 @@ public partial class CustomerWindow : Window
         return remainingForCheapestItem > 0 ? remainingForCheapestItem : 20m;
     }
 
-    private void BtnCoinReturn_Click(object sender, RoutedEventArgs e)
+    private async void BtnCoinReturn_Click(object sender, RoutedEventArgs e)
+    {
+        await ReturnRemainingBalanceAsync(true);
+    }
+
+    private async Task<bool> ReturnRemainingBalanceAsync(bool showMessage)
     {
         if (_insertedMoney <= 0)
         {
-            return;
+            return true;
         }
 
         decimal returned = _insertedMoney;
@@ -653,11 +777,16 @@ public partial class CustomerWindow : Window
         UpdateAllButtonStates();
         UpdateDoneButtonState();
 
-        MessageBox.Show(this,
-            $"P{returned:F2} returned. Please collect your money.",
-            "Coin Return",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        if (showMessage)
+        {
+            MessageBox.Show(this,
+                $"P{returned:F2} returned. Please collect your money.",
+                "Coin Return",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        return true;
     }
 
     private void BtnRecycle_Click(object sender, RoutedEventArgs e)
@@ -704,7 +833,7 @@ public partial class CustomerWindow : Window
         string recycleLogDetails = $"{pieces} {recyclableItem.UnitLabel}(s) {recyclableItem.DisplayName}";
         QueueBackgroundStoreAction(() => DataStore.LogEvent(_machineId, "RECYCLE", recycleLogDetails, points));
         txtRecycleQty.Text = "1";
-        SetDispenseStatus($"+{points} POINTS TAP RFID TO SAVE", Brushes.MediumSeaGreen);
+        SetDispenseStatus($"+{points} POINTS ADDED", Brushes.MediumSeaGreen);
         UpdateMoneyDisplay();
         UpdateAllButtonStates();
         UpdateDoneButtonState();
@@ -769,6 +898,12 @@ public partial class CustomerWindow : Window
             return;
         }
 
+        if (_payWithPoints)
+        {
+            await PurchaseWithPointsAsync(product, slotId);
+            return;
+        }
+
         if (_insertedMoney < product.Price)
         {
             StartBlink(slotId);
@@ -798,6 +933,79 @@ public partial class CustomerWindow : Window
         UpdateMoneyDisplay();
         RefreshProducts();
         UpdateDoneButtonState();
+    }
+
+    private async Task PurchaseWithPointsAsync(Product product, int slotId)
+    {
+        int pointsCost = GetPointCost(product);
+        if (GetTotalEcoPoints() < pointsCost)
+        {
+            StartBlink(slotId);
+            SetDispenseStatus($"NEED {pointsCost} POINTS", SoldOutRed);
+            return;
+        }
+
+        int pendingPointsSpent = Math.Min(_pendingPoints, pointsCost);
+        int savedPointsSpent = pointsCost - pendingPointsSpent;
+
+        if (savedPointsSpent > 0 && string.IsNullOrWhiteSpace(_linkedRfid))
+        {
+            StartBlink(slotId);
+            SetDispenseStatus($"NEED {pointsCost} POINTS", SoldOutRed);
+            return;
+        }
+
+        if (savedPointsSpent > 0)
+        {
+            bool updated = await UpdateLinkedCustomerCreditsAsync(_availableEcoCredits - savedPointsSpent);
+            if (!updated)
+            {
+                SetDispenseStatus("POINT PAY ERROR", SoldOutRed);
+                MessageBox.Show(this,
+                    "Eco-Matic could not deduct saved RFID points. You can still spend unsaved session points.",
+                    "Point Payment",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+        }
+
+        _pendingPoints -= pendingPointsSpent;
+        DataStore.PendingPoints = _pendingPoints;
+        _availableEcoCredits -= savedPointsSpent;
+        _totalMoneyInserted += product.Price;
+
+        product.Stock--;
+        AddProductToActiveSession(product);
+
+        int inventoryId = product.DbInventoryId;
+        int updatedStock = product.Stock;
+        string pointSource = savedPointsSpent > 0
+            ? $"session points: {pendingPointsSpent}, saved RFID points: {savedPointsSpent}"
+            : $"session points: {pendingPointsSpent}";
+        string logDetails = $"Item: {product.Name} | Quantity: 1 | Paid with {pointsCost} eco points ({pointSource}) | Total: ₱{product.Price:0.00}";
+        QueueBackgroundStoreAction(() =>
+        {
+            DataStore.SaveInventory(_machineId, CreateInventorySaveSnapshot(inventoryId, updatedStock));
+            DataStore.LogEvent(_machineId, "POINT_PURCHASE", logDetails, product.Price);
+            DataStore.RecordSale(_machineId, inventoryId, product.Price);
+        });
+
+        ImageSource? dispenseSource = _slots.TryGetValue(slotId, out SlotControls slotControls)
+            ? slotControls.VendingItemImage.Source
+            : null;
+
+        SetDispenseStatus($"{pointsCost} POINTS PAID", Brushes.MediumSeaGreen);
+        _arduino?.SendMessage("POINT PAYMENT OK");
+        StartDispenseFeedback(product, dispenseSource);
+        UpdateMoneyDisplay();
+        RefreshProducts();
+        UpdateDoneButtonState();
+    }
+
+    private static int GetPointCost(VendingItem product)
+    {
+        return Math.Max(1, (int)Math.Ceiling(product.Price));
     }
 
     private void StartDispenseFeedback(VendingItem product, ImageSource? dispenseSource)
@@ -937,9 +1145,10 @@ public partial class CustomerWindow : Window
             "HOW TO USE:\n\n" +
             "1. Insert bills to add money.\n" +
             "2. Press SELECT below a product slot.\n" +
-            "3. Use RECYCLE FOR CREDIT if needed.\n" +
-            "4. Use EXAMINE to view item details.\n" +
-            "5. Your remaining balance will be returned automatically when you click DONE.",
+            "3. Use RECYCLE FOR ECO POINTS to earn points.\n" +
+            "4. Toggle PAY WITH POINTS when you want points instead of cash.\n" +
+            "5. Tap RFID only if you want to save unused points.\n" +
+            "6. Your remaining cash balance is returned when you click DONE.",
             "Help - ECO-MATIC",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
@@ -951,6 +1160,11 @@ public partial class CustomerWindow : Window
         ReceiptPrintResult? printResult = null;
         if (HasSessionActivity())
         {
+            if (!await ReturnRemainingBalanceAsync(false))
+            {
+                return;
+            }
+
             completedSession = FinalizeActiveSession();
             await Task.Run(() => DataStore.SaveCompletedReceipt(completedSession));
             _arduino?.SendMessage("PRINTING RECEIPT");
@@ -962,21 +1176,6 @@ public partial class CustomerWindow : Window
                 Owner = this
             };
             receipt.ShowDialog();
-        }
-
-        // Automatically return change
-        if (_insertedMoney > 0)
-        {
-            decimal returned = _insertedMoney;
-            _insertedMoney = 0;
-            UpdateMoneyDisplay();
-            _arduino?.SendMessage("CHANGE RETURNED");
-            
-            MessageBox.Show(this,
-                $"P{returned:F2} change returned. Thank you for using Eco-Matic!",
-                "Change Returned",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         }
 
         _allowWindowClose = true;

@@ -8,6 +8,8 @@ namespace Eco_Matic
         private readonly string _rfid;
 
         public int SavedPoints { get; private set; }
+        public int FinalBalance { get; private set; }
+        public string CustomerEmail { get; private set; } = string.Empty;
         public bool SaveSucceeded { get; private set; }
 
         public CustomerDashboardWindow(string rfid)
@@ -52,8 +54,8 @@ namespace Eco_Matic
                     {
                         savedPoints = pointsToSave;
                         saveSucceeded = true;
-                        DataStore.LogEvent("POINTS_SAVED", $"{pointsToSave} points saved via RFID ({rfid})");
-                        DataStore.PendingPoints = 0;
+                        DataStore.PendingPoints = Math.Max(0, DataStore.PendingPoints - pointsToSave);
+                        db.LogEvent("POINTS_SAVED", $"{pointsToSave} points saved via RFID ({rfid})");
                     }
                     else
                     {
@@ -73,6 +75,8 @@ namespace Eco_Matic
             });
 
             SavedPoints = result.SavedPoints;
+            FinalBalance = result.FinalBalance;
+            CustomerEmail = result.Email;
             SaveSucceeded = result.SaveSucceeded;
 
             if (result.SaveSucceeded)

@@ -2,6 +2,8 @@
 
 This document is written for presentation and defense. You can use it as your speaking guide when explaining the architecture of Eco-Matic.
 
+For a deeper class-by-class explanation and database Q&A script, use `docs/PROFESSOR_CLASS_DATABASE_QA.md` together with the separated diagrams linked from `docs/DIAGRAMS.md`.
+
 ## 1. Short Opening Script
 
 You can start with this:
@@ -200,7 +202,7 @@ Suggested answer:
 
 Suggested answer:
 
-> Authentication happens in `SupabaseStore.AuthenticateUser()`, and then `AdminWindow` checks the returned role and assigned machine. Based on that role, it hides restricted views and limits machine access for inventory managers.
+> Authentication happens in `SupabaseStore.AuthenticateUserAccess()`, and then `AdminWindow` checks the returned role and assigned machine IDs. Based on that role, it hides restricted views and limits machine access for inventory managers.
 
 ### How does hardware interact with the desktop app?
 
@@ -230,6 +232,8 @@ Suggested answer:
 
 If you want a strong live walkthrough, open these files:
 
+- `docs/DIAGRAMS.md`
+- `docs/PROFESSOR_CLASS_DATABASE_QA.md`
 - `MainWindow.xaml.cs`
 - `CustomerWindow.xaml.cs`
 - `AdminWindow.xaml.cs`

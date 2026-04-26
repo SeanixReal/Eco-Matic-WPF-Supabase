@@ -184,7 +184,7 @@ RFID implementation rule:
 ## Admin mode
 
 1. `LoginWindow` captures credentials
-2. `SupabaseStore.AuthenticateUser()` returns role and assigned machine
+2. `SupabaseStore.AuthenticateUserAccess()` returns role and assigned machine IDs
 3. `AdminWindow` enables views according to role
 4. global item editing happens in the `Items` tab
 5. per-machine slot assignment happens in the `Inventory` tab

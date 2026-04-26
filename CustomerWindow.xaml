@@ -555,6 +555,16 @@
                                                             BorderThickness="0"
                                                             FontWeight="Bold"
                                                             Click="BtnQrPay_Click" />
+                                                    <Button x:Name="btnPayWithPoints"
+                                                            Content="PAY WITH POINTS"
+                                                            Height="28"
+                                                            Margin="24,4,24,0"
+                                                            Background="#2FA66A"
+                                                            Foreground="White"
+                                                            BorderBrush="#2FA66A"
+                                                            BorderThickness="0"
+                                                            FontWeight="Bold"
+                                                            Click="BtnPayWithPoints_Click" />
                                                 </StackPanel>
                                             </Grid>
                                         </Border>

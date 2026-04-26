@@ -2,24 +2,42 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Collections.Generic;
 
 
 namespace Eco_Matic
 {
     public partial class UserEditorWindow : Window
     {
+        private readonly bool _isEditMode;
+        private readonly HashSet<int> _initialMachineIds = new();
+
         public string Username { get; private set; } = string.Empty;
         public string Password { get; private set; } = string.Empty;
         public int RoleId { get; private set; }
         public int? AssignedMachineId { get; private set; }
+        public List<int> AssignedMachineIds { get; } = new();
 
         public UserEditorWindow()
         {
             InitializeComponent();
             btnConfirm.IsEnabled = false;
-            cboRole.IsEnabled = false;
-            cboMachine.IsEnabled = false;
+            lstMachines.IsEnabled = false;
+        }
+
+        public UserEditorWindow(string username, IEnumerable<int> assignedMachineIds)
+            : this()
+        {
+            _isEditMode = true;
+            txtUsername.Text = username;
+            txtUsername.IsReadOnly = true;
+            txtUsername.Background = System.Windows.Media.Brushes.WhiteSmoke;
+            lblPassword.Visibility = Visibility.Collapsed;
+            txtPassword.Visibility = Visibility.Collapsed;
+            btnConfirm.Content = "Save";
+            foreach (int machineId in assignedMachineIds.Where(id => id > 0))
+            {
+                _initialMachineIds.Add(machineId);
+            }
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -35,18 +53,20 @@ namespace Eco_Matic
                 var result = await Task.Run(() =>
                 {
                     var store = new Data.SupabaseStore();
-                    return (Roles: store.GetRoles(), Machines: store.GetVendingMachinesLookup());
+                    return (InventoryManagerRoleId: store.GetInventoryManagerRoleId(), Machines: store.GetVendingMachinesLookup());
                 });
 
-                cboRole.ItemsSource = result.Roles.DefaultView;
-                cboRole.DisplayMemberPath = "role_name";
-                cboRole.SelectedValuePath = "role_id";
+                if (!result.InventoryManagerRoleId.HasValue)
+                {
+                    throw new InvalidOperationException("The Inventory Manager role is missing in Supabase.");
+                }
 
-                cboMachine.ItemsSource = result.Machines.DefaultView;
-                cboMachine.DisplayMemberPath = "location_name";
-                cboMachine.SelectedValuePath = "machine_id";
+                RoleId = result.InventoryManagerRoleId.Value;
 
-                txtLoadStatus.Text = "Reference data loaded.";
+                lstMachines.ItemsSource = result.Machines.DefaultView;
+                ApplyInitialMachineSelection();
+
+                txtLoadStatus.Text = "Inventory managers can only manage inventory for their assigned machines.";
             }
             catch (Exception ex)
             {
@@ -60,26 +80,25 @@ namespace Eco_Matic
             finally
             {
                 btnConfirm.IsEnabled = true;
-                cboRole.IsEnabled = true;
-                cboMachine.IsEnabled = true;
+                lstMachines.IsEnabled = true;
                 Mouse.OverrideCursor = null;
             }
         }
 
-        private void CboRole_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ApplyInitialMachineSelection()
         {
-            if (cboRole.SelectedItem is System.Data.DataRowView row)
+            if (!_isEditMode || _initialMachineIds.Count == 0)
             {
-                string roleName = row["role_name"].ToString() ?? "";
-                if (roleName == "Inventory Manager")
+                return;
+            }
+
+            foreach (object item in lstMachines.Items)
+            {
+                if (item is System.Data.DataRowView row &&
+                    int.TryParse(row["machine_id"]?.ToString(), out int machineId) &&
+                    _initialMachineIds.Contains(machineId))
                 {
-                    lblMachine.Visibility = Visibility.Visible;
-                    cboMachine.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    lblMachine.Visibility = Visibility.Collapsed;
-                    cboMachine.Visibility = Visibility.Collapsed;
+                    lstMachines.SelectedItems.Add(item);
                 }
             }
         }
@@ -94,7 +113,7 @@ namespace Eco_Matic
 
         private void BtnConfirm_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtUsername.Text) || string.IsNullOrWhiteSpace(txtPassword.Password) || cboRole.SelectedValue == null)
+            if (string.IsNullOrWhiteSpace(txtUsername.Text) || (!_isEditMode && string.IsNullOrWhiteSpace(txtPassword.Password)) || RoleId <= 0)
             {
                 MessageBox.Show("Please complete all fields.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -102,21 +121,27 @@ namespace Eco_Matic
 
             Username = txtUsername.Text.Trim();
             Password = txtPassword.Password;
-            RoleId = Convert.ToInt32(cboRole.SelectedValue);
 
-            if (lblMachine.Visibility == Visibility.Visible)
+            AssignedMachineIds.Clear();
+            foreach (object selectedItem in lstMachines.SelectedItems)
             {
-                if (cboMachine.SelectedValue == null)
+                if (selectedItem is System.Data.DataRowView row &&
+                    int.TryParse(row["machine_id"]?.ToString(), out int machineId) &&
+                    machineId > 0 &&
+                    !AssignedMachineIds.Contains(machineId))
                 {
-                    MessageBox.Show("Please assign a machine to the inventory manager.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
+                    AssignedMachineIds.Add(machineId);
                 }
-                AssignedMachineId = Convert.ToInt32(cboMachine.SelectedValue);
             }
-            else
+
+            if (AssignedMachineIds.Count == 0)
             {
-                AssignedMachineId = null;
+                MessageBox.Show("Please assign at least one vending machine to the inventory manager.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
+
+            AssignedMachineIds.Sort();
+            AssignedMachineId = AssignedMachineIds[0];
 
             DialogResult = true;
             Close();

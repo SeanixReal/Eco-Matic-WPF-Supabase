@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
+#include <avr/pgmspace.h>
 
 // Eco-Matic Arduino Uno/Nano RFID + LCD + LED module.
 //
@@ -26,27 +27,15 @@ static const int SERVO_PIN = 5;
 static const int GREEN_LED = 6;
 static const int RED_LED = 7;
 
+static const uint8_t DEFAULT_LCD_ADDRESS = 0x27;
+static const uint8_t FALLBACK_LCD_ADDRESS = 0x3F;
 static const int LCD_COLUMNS = 16;
 static const int LCD_ROWS = 2;
 static const uint32_t SERIAL_BAUD_RATE = 9600;
-static const int SERVO_MOUNT_INSIDE = 0;
-static const int SERVO_MOUNT_BACK = 1;
-static const int SERVO_MOUNT_MODE = SERVO_MOUNT_INSIDE;
-
-// INSIDE mount is your current working motion.
-// BACK mount starts with the horn vertical. If it opens the wrong way,
-// change SERVO_BACK_OPEN_ANGLE from 0 to 180.
-static const int SERVO_INSIDE_CLOSED_ANGLE = 15;
-static const int SERVO_INSIDE_OPEN_ANGLE = 95;
-static const int SERVO_BACK_CLOSED_ANGLE = 90;
-static const int SERVO_BACK_OPEN_ANGLE = 0;
-static const int SERVO_CLOSED_ANGLE = SERVO_MOUNT_MODE == SERVO_MOUNT_BACK
-  ? SERVO_BACK_CLOSED_ANGLE
-  : SERVO_INSIDE_CLOSED_ANGLE;
-static const int SERVO_OPEN_ANGLE = SERVO_MOUNT_MODE == SERVO_MOUNT_BACK
-  ? SERVO_BACK_OPEN_ANGLE
-  : SERVO_INSIDE_OPEN_ANGLE;
-static const unsigned long SERVO_OPEN_DURATION_MS = 1500;
+static const int SERVO_CLOSED_ANGLE = 15;
+static const int SERVO_TIP_ANGLE = 95;
+static const unsigned long SERVO_TIP_STEP_MS = 260;
+static const unsigned long SERVO_DETACH_DELAY_MS = 450;
 static const unsigned long RFID_VALIDATION_TIMEOUT_MS = 12000;
 static const unsigned long READY_CUE_MIN_INTERVAL_MS = 8000;
 
@@ -57,9 +46,10 @@ Servo lidServo;
 unsigned long afkTimer = 0;
 unsigned long messageTimer = 0;
 unsigned long activeLedTimer = 0;
-unsigned long servoOpenedAt = 0;
+unsigned long servoStepAt = 0;
 unsigned long validationStartedAt = 0;
 unsigned long lastReadyCueAt = 0;
+unsigned long servoDetachAt = 0;
 
 bool lcdReady = false;
 bool showingMessage = false;
@@ -67,39 +57,187 @@ bool waitingValidation = false;
 bool lastScanWasValid = false;
 bool activeHeartbeatOn = false;
 bool activeBlinkState = false;
-bool servoOpen = false;
+bool servoTipActive = false;
+bool servoAttached = false;
+bool servoDetachPending = false;
+int servoTipStep = 0;
 
 // 0 = AFK/customer closed, 1 = customer vending mode open
 int systemMode = 0;
 int afkFrame = 0;
 
-const char *afkFacts[][2] = {
-  {"1 ALUMINUM CAN", "SAVES 95% POWER"},
-  {"RECYCLED PAPER", "SAVES TREES    "},
-  {"PLASTIC BOTTLES", "CAN BECOME BAGS"},
-  {"GLASS CAN BE   ", "RECYCLED AGAIN "},
-  {"CANS RECYCLE IN", "ABOUT 60 DAYS  "},
-  {"CLEAN BOTTLES  ", "EARN ECO POINTS"}
+enum LedMode {
+  LED_BOOT,
+  LED_AFK,
+  LED_READY,
+  LED_SCANNING,
+  LED_SUCCESS,
+  LED_ERROR,
+  LED_DISPENSING,
+  LED_CASH
 };
-static const int AFK_FACT_COUNT = sizeof(afkFacts) / sizeof(afkFacts[0]);
+
+LedMode ledMode = LED_BOOT;
+unsigned long ledTimer = 0;
+int ledStep = 0;
+
+const char afkFact00[] PROGMEM = "1 ALUMINUM CAN";
+const char afkFact01[] PROGMEM = "SAVES 95% POWER";
+const char afkFact10[] PROGMEM = "RECYCLED PAPER";
+const char afkFact11[] PROGMEM = "SAVES TREES";
+const char afkFact20[] PROGMEM = "PLASTIC BOTTLES";
+const char afkFact21[] PROGMEM = "CAN BECOME BAGS";
+const char afkFact30[] PROGMEM = "GLASS CAN BE";
+const char afkFact31[] PROGMEM = "RECYCLED AGAIN";
+const char afkFact40[] PROGMEM = "CANS RECYCLE IN";
+const char afkFact41[] PROGMEM = "ABOUT 60 DAYS";
+const char afkFact50[] PROGMEM = "CLEAN BOTTLES";
+const char afkFact51[] PROGMEM = "EARN ECO POINTS";
+
+const char *const afkFacts[][2] PROGMEM = {
+  {afkFact00, afkFact01},
+  {afkFact10, afkFact11},
+  {afkFact20, afkFact21},
+  {afkFact30, afkFact31},
+  {afkFact40, afkFact41},
+  {afkFact50, afkFact51}
+};
+static const int AFK_FACT_COUNT = 6;
 
 void playCue(const String &cue);
 
+void setLedMode(LedMode mode) {
+  if (ledMode == mode) {
+    return;
+  }
+
+  ledMode = mode;
+  ledTimer = millis();
+  ledStep = 0;
+}
+
+void writeLeds(bool greenOn, bool redOn) {
+  digitalWrite(GREEN_LED, greenOn ? HIGH : LOW);
+  digitalWrite(RED_LED, redOn ? HIGH : LOW);
+}
+
+void advanceLedStep(unsigned long intervalMs) {
+  unsigned long now = millis();
+  if (now - ledTimer >= intervalMs) {
+    ledTimer = now;
+    ledStep++;
+  }
+}
+
+void updateLedState() {
+  switch (ledMode) {
+    case LED_BOOT:
+      advanceLedStep(120);
+      writeLeds(ledStep % 2 == 0, ledStep % 2 != 0);
+      break;
+
+    case LED_AFK:
+      advanceLedStep(180);
+      // Slow green-green-red-rest pattern while the machine is waiting.
+      switch (ledStep % 8) {
+        case 0:
+        case 2:
+          writeLeds(true, false);
+          break;
+        case 4:
+          writeLeds(false, true);
+          break;
+        default:
+          writeLeds(false, false);
+          break;
+      }
+      break;
+
+    case LED_READY:
+      advanceLedStep(140);
+      // Green heartbeat with a tiny red status wink so both LEDs prove alive.
+      switch (ledStep % 12) {
+        case 0:
+        case 2:
+          writeLeds(true, false);
+          break;
+        case 6:
+          writeLeds(false, true);
+          break;
+        default:
+          writeLeds(false, false);
+          break;
+      }
+      break;
+
+    case LED_SCANNING:
+      advanceLedStep(95);
+      writeLeds(ledStep % 2 == 0, ledStep % 2 != 0);
+      break;
+
+    case LED_SUCCESS:
+      advanceLedStep(100);
+      writeLeds(ledStep % 2 == 0, false);
+      break;
+
+    case LED_ERROR:
+      advanceLedStep(90);
+      writeLeds(false, ledStep % 2 == 0);
+      break;
+
+    case LED_DISPENSING:
+      advanceLedStep(75);
+      switch (ledStep % 4) {
+        case 0:
+          writeLeds(true, false);
+          break;
+        case 1:
+          writeLeds(true, true);
+          break;
+        case 2:
+          writeLeds(false, true);
+          break;
+        default:
+          writeLeds(false, false);
+          break;
+      }
+      break;
+
+    case LED_CASH:
+      advanceLedStep(85);
+      switch (ledStep % 6) {
+        case 0:
+        case 2:
+        case 4:
+          writeLeds(true, false);
+          break;
+        case 1:
+        case 3:
+          writeLeds(true, true);
+          break;
+        default:
+          writeLeds(false, false);
+          break;
+      }
+      break;
+  }
+}
+
 uint8_t scanLcdAddress() {
-  Serial.println("LCD:I2C_SCAN_START");
+  Serial.println(F("LCD:I2C_SCAN_START"));
 
   uint8_t firstAddress = 0;
   for (uint8_t address = 1; address < 127; address++) {
     Wire.beginTransmission(address);
     byte error = Wire.endTransmission();
     if (error == 0) {
-      Serial.print("LCD:I2C_DEVICE=0x");
+      Serial.print(F("LCD:I2C_DEVICE=0x"));
       if (address < 16) {
         Serial.print("0");
       }
       Serial.println(address, HEX);
 
-      if (address == 0x27 || address == 0x3F) {
+      if (address == DEFAULT_LCD_ADDRESS || address == FALLBACK_LCD_ADDRESS) {
         return address;
       }
 
@@ -126,6 +264,7 @@ String sanitizeLcdText(const String &value) {
   return output;
 }
 
+
 String fitLcdLine(const String &value, int startIndex) {
   String line = "";
   for (int i = 0; i < LCD_COLUMNS; i++) {
@@ -143,10 +282,29 @@ void writeLcdLines(const String &line1, const String &line2) {
   String clean1 = sanitizeLcdText(line1);
   String clean2 = sanitizeLcdText(line2);
 
+  lcd->display();
+  lcd->backlight();
   lcd->setCursor(0, 0);
   lcd->print(fitLcdLine(clean1, 0));
   lcd->setCursor(0, 1);
   lcd->print(fitLcdLine(clean2, 0));
+}
+
+void writeSmartLcdMessage(const String &clean) {
+  if (clean.length() <= LCD_COLUMNS) {
+    writeLcdLines(clean, "");
+    return;
+  }
+
+  int splitAt = clean.lastIndexOf(' ', LCD_COLUMNS);
+  if (splitAt <= 0) {
+    splitAt = LCD_COLUMNS;
+  }
+
+  String line1 = clean.substring(0, splitAt);
+  String line2 = clean.substring(splitAt);
+  line2.trim();
+  writeLcdLines(line1, line2);
 }
 
 void writeWrappedMessage(const String &message) {
@@ -179,6 +337,21 @@ void writeWrappedMessage(const String &message) {
 
   if (clean == "CHANGE RETURNED") {
     writeLcdLines("CHANGE RETURNED", "COLLECT COINS");
+    return;
+  }
+
+  if (clean == "POINT PAYMENT OK") {
+    writeLcdLines("POINT PAYMENT", "APPROVED");
+    return;
+  }
+
+  if (clean == "POINT PAY READY") {
+    writeLcdLines("POINT PAY READY", "SELECT ITEM");
+    return;
+  }
+
+  if (clean == "POINT PAY OFF") {
+    writeLcdLines("POINT PAY OFF", "CASH MODE");
     return;
   }
 
@@ -247,18 +420,35 @@ void writeWrappedMessage(const String &message) {
     return;
   }
 
-  writeLcdLines(fitLcdLine(clean, 0), fitLcdLine(clean, LCD_COLUMNS));
+  writeSmartLcdMessage(clean);
+}
+
+void readAfkFactLine(int frame, int row, char *buffer, size_t bufferSize) {
+  if (bufferSize == 0) {
+    return;
+  }
+
+  frame = constrain(frame, 0, AFK_FACT_COUNT - 1);
+  row = constrain(row, 0, 1);
+
+  const char *linePtr = (const char *)pgm_read_word(&(afkFacts[frame][row]));
+  strncpy_P(buffer, linePtr, bufferSize - 1);
+  buffer[bufferSize - 1] = '\0';
 }
 
 void initLcd() {
   Wire.begin();
+  Wire.setClock(100000);
+  delay(300);
+
   uint8_t detectedAddress = scanLcdAddress();
   if (detectedAddress == 0) {
-    detectedAddress = 0x27;
-    Serial.println("LCD:NOT_FOUND_USING_DEFAULT_0x27");
+    lcdReady = false;
+    Serial.println(F("LCD:NOT_FOUND_CHECK_5V_GND_SDA_A4_SCL_A5"));
+    return;
   }
 
-  Serial.print("LCD:USING_ADDRESS=0x");
+  Serial.print(F("LCD:USING_ADDRESS=0x"));
   if (detectedAddress < 16) {
     Serial.print("0");
   }
@@ -266,24 +456,79 @@ void initLcd() {
 
   lcd = new LiquidCrystal_I2C(detectedAddress, LCD_COLUMNS, LCD_ROWS);
   lcd->init();
+  delay(80);
+  lcd->display();
   lcd->backlight();
+  delay(80);
+  lcd->clear();
+  delay(20);
+
   lcdReady = true;
+  writeLcdLines("LCD1602 READY", detectedAddress == DEFAULT_LCD_ADDRESS ? "ADDR 0X27" : (detectedAddress == FALLBACK_LCD_ADDRESS ? "ADDR 0X3F" : "ADDR DETECTED"));
+  delay(1000);
+  writeLcdLines("ADJUST CONTRAST", "IF TEXT IS DIM");
+  delay(1000);
+}
+
+void ensureLidServoAttached() {
+  if (!servoAttached) {
+    lidServo.attach(SERVO_PIN);
+    delay(15);
+    servoAttached = true;
+  }
+
+  servoDetachPending = false;
 }
 
 void closeLidServo() {
+  if (!servoTipActive && !servoAttached) {
+    return;
+  }
+
+  ensureLidServoAttached();
   lidServo.write(SERVO_CLOSED_ANGLE);
-  servoOpen = false;
+  servoTipActive = false;
+  servoTipStep = 0;
+  servoDetachAt = millis() + SERVO_DETACH_DELAY_MS;
+  servoDetachPending = true;
+  if (ledMode == LED_DISPENSING) {
+    setLedMode(systemMode == 1 ? LED_READY : LED_AFK);
+  }
 }
 
 void openLidServo() {
-  lidServo.write(SERVO_OPEN_ANGLE);
-  servoOpenedAt = millis();
-  servoOpen = true;
+  ensureLidServoAttached();
+  lidServo.write(SERVO_TIP_ANGLE);
+  servoStepAt = millis();
+  servoTipActive = true;
+  servoTipStep = 0;
+  servoDetachPending = false;
+  setLedMode(LED_DISPENSING);
 }
 
 void updateLidServo() {
-  if (servoOpen && millis() - servoOpenedAt >= SERVO_OPEN_DURATION_MS) {
-    closeLidServo();
+  if (servoTipActive && millis() - servoStepAt >= SERVO_TIP_STEP_MS) {
+    servoStepAt = millis();
+    servoTipStep++;
+
+    switch (servoTipStep) {
+      case 1:
+        lidServo.write(SERVO_CLOSED_ANGLE);
+        break;
+      case 2:
+      case 3:
+        lidServo.write(SERVO_TIP_ANGLE);
+        break;
+      case 4:
+        closeLidServo();
+        break;
+    }
+  }
+
+  if (servoDetachPending && (long)(millis() - servoDetachAt) >= 0) {
+    lidServo.detach();
+    servoAttached = false;
+    servoDetachPending = false;
   }
 }
 
@@ -353,56 +598,25 @@ void resetDisplay() {
 
   if (systemMode == 1) {
     writeLcdLines("ECO-MATIC READY", "CASH OR RECYCLE");
-    digitalWrite(GREEN_LED, HIGH);
-    digitalWrite(RED_LED, LOW);
+    setLedMode(LED_READY);
   } else {
     writeLcdLines("ECO-MATIC IDLE", "START IN APP");
-    digitalWrite(GREEN_LED, LOW);
-    digitalWrite(RED_LED, LOW);
+    setLedMode(LED_AFK);
   }
 
   afkTimer = millis();
 }
 
 void showAfkFrame() {
-  writeLcdLines(afkFacts[afkFrame][0], afkFacts[afkFrame][1]);
-  digitalWrite(GREEN_LED, afkFrame % 2 == 0 ? HIGH : LOW);
-  digitalWrite(RED_LED, afkFrame % 2 != 0 ? HIGH : LOW);
+  char line1[LCD_COLUMNS + 1];
+  char line2[LCD_COLUMNS + 1];
+  readAfkFactLine(afkFrame, 0, line1, sizeof(line1));
+  readAfkFactLine(afkFrame, 1, line2, sizeof(line2));
+  writeLcdLines(line1, line2);
 }
 
 void updateActiveLedState() {
-  unsigned long now = millis();
-
-  if (showingMessage) {
-    if (lastScanWasValid) {
-      digitalWrite(GREEN_LED, HIGH);
-      digitalWrite(RED_LED, LOW);
-    } else if (now - activeLedTimer >= 180) {
-      activeLedTimer = now;
-      activeBlinkState = !activeBlinkState;
-      digitalWrite(GREEN_LED, LOW);
-      digitalWrite(RED_LED, activeBlinkState ? HIGH : LOW);
-    }
-    return;
-  }
-
-  if (waitingValidation) {
-    if (now - activeLedTimer >= 110) {
-      activeLedTimer = now;
-      activeBlinkState = !activeBlinkState;
-      digitalWrite(GREEN_LED, activeBlinkState ? HIGH : LOW);
-      digitalWrite(RED_LED, activeBlinkState ? HIGH : LOW);
-    }
-    return;
-  }
-
-  unsigned long interval = activeHeartbeatOn ? 120 : 760;
-  if (now - activeLedTimer >= interval) {
-    activeLedTimer = now;
-    activeHeartbeatOn = !activeHeartbeatOn;
-    digitalWrite(GREEN_LED, activeHeartbeatOn ? HIGH : LOW);
-    digitalWrite(RED_LED, LOW);
-  }
+  updateLedState();
 }
 
 void handleIncomingCommand(const String &incoming) {
@@ -417,7 +631,7 @@ void handleIncomingCommand(const String &incoming) {
     systemMode = 1;
     resetDisplay();
     playReadyCueIfNeeded(modeChanged);
-    Serial.println("SESSION:ACTIVE");
+    Serial.println(F("SESSION:ACTIVE"));
     return;
   }
 
@@ -425,7 +639,7 @@ void handleIncomingCommand(const String &incoming) {
     systemMode = 0;
     closeLidServo();
     resetDisplay();
-    Serial.println("SESSION:AFK");
+    Serial.println(F("SESSION:AFK"));
     return;
   }
 
@@ -442,22 +656,31 @@ void handleIncomingCommand(const String &incoming) {
 
     String cleanMsg = sanitizeLcdText(customMsg);
     if (cleanMsg == "CASH INSERTED" || cleanMsg == "QR PAYMENT OK") {
+      setLedMode(LED_CASH);
       playCue("CASH");
     } else if (cleanMsg.indexOf("DISPENS") >= 0 || cleanMsg.indexOf("TAKE YOUR ITEM") >= 0) {
       openLidServo();
       playCue("DISPENSE");
     } else if (cleanMsg == "PRINTING RECEIPT") {
+      setLedMode(LED_SCANNING);
       playCue("RECEIPT");
-    } else if (cleanMsg == "RECEIPT COMPLETE") {
+    } else if (cleanMsg == "RECEIPT COMPLETE" || cleanMsg == "CARD REGISTERED" || cleanMsg.indexOf("POINTS SAVED") >= 0) {
+      setLedMode(LED_SUCCESS);
       playCue("SUCCESS");
-    } else if (cleanMsg == "RECEIPT FAILED") {
+    } else if (cleanMsg == "RECEIPT FAILED" || cleanMsg == "REGISTER CANCELLED" || cleanMsg.indexOf("OFFLINE") >= 0) {
+      setLedMode(LED_ERROR);
       playCue("ERROR");
     } else if (cleanMsg.indexOf("CHANGE") >= 0 || cleanMsg.indexOf("RETURN") >= 0) {
+      setLedMode(LED_CASH);
       playCue("CHANGE");
     } else if (cleanMsg.indexOf("NOT ENOUGH") >= 0 || cleanMsg.indexOf("ERROR") >= 0 || cleanMsg.indexOf("SOLD OUT") >= 0) {
+      setLedMode(LED_ERROR);
       playCue("ERROR");
     } else if (cleanMsg.indexOf("POINTS") >= 0 || cleanMsg.indexOf("RFID") >= 0 || cleanMsg.indexOf("CASH") >= 0) {
+      setLedMode(LED_SCANNING);
       playCue("CLICK");
+    } else {
+      setLedMode(LED_READY);
     }
 
     showingMessage = true;
@@ -473,6 +696,7 @@ void handleIncomingCommand(const String &incoming) {
     activeLedTimer = millis();
     showingMessage = true;
     messageTimer = millis();
+    setLedMode(LED_SUCCESS);
     playCue("VALID");
     return;
   }
@@ -486,6 +710,7 @@ void handleIncomingCommand(const String &incoming) {
     activeBlinkState = true;
     showingMessage = true;
     messageTimer = millis();
+    setLedMode(LED_ERROR);
     playCue("INVALID");
     return;
   }
@@ -501,8 +726,7 @@ void setup() {
   digitalWrite(GREEN_LED, LOW);
   digitalWrite(RED_LED, LOW);
   digitalWrite(BUZZER_PIN, LOW);
-  lidServo.attach(SERVO_PIN);
-  closeLidServo();
+  setLedMode(LED_BOOT);
 
   initLcd();
 
@@ -510,19 +734,26 @@ void setup() {
   mfrc522.PCD_Init();
   delay(30);
 
-  Serial.print("RFID:FIRMWARE_VERSION=");
+  Serial.print(F("RFID:FIRMWARE_VERSION="));
   mfrc522.PCD_DumpVersionToSerial();
 
   byte version = mfrc522.PCD_ReadRegister(mfrc522.VersionReg);
   if (version == 0x00 || version == 0xFF) {
-    Serial.println("RFID:NOT_FOUND_CHECK_SPI_WIRING");
+    Serial.println(F("RFID:NOT_FOUND_CHECK_SPI_WIRING"));
     writeLcdLines("RFID NOT FOUND", "CHECK WIRING");
+    setLedMode(LED_ERROR);
   } else {
-    Serial.println("RFID:READY");
+    Serial.println(F("RFID:READY"));
     resetDisplay();
   }
 
-  Serial.println("SYSTEM:READY");
+  lidServo.attach(SERVO_PIN);
+  servoAttached = true;
+  lidServo.write(SERVO_CLOSED_ANGLE);
+  servoDetachAt = millis() + SERVO_DETACH_DELAY_MS;
+  servoDetachPending = true;
+
+  Serial.println(F("SYSTEM:READY"));
 }
 
 void loop() {
@@ -534,6 +765,7 @@ void loop() {
   }
 
   if (systemMode == 0) {
+    updateLedState();
     if (millis() - afkTimer > 3000) {
       afkTimer = millis();
       afkFrame = (afkFrame + 1) % AFK_FACT_COUNT;
@@ -550,7 +782,7 @@ void loop() {
 
   if (waitingValidation) {
     if (millis() - validationStartedAt > RFID_VALIDATION_TIMEOUT_MS) {
-      Serial.println("RFID:PC_RESPONSE_TIMEOUT");
+      Serial.println(F("RFID:PC_RESPONSE_TIMEOUT"));
       writeLcdLines("RFID TIMEOUT", "TRY AGAIN");
       playCue("ERROR");
       waitingValidation = false;
@@ -559,6 +791,7 @@ void loop() {
       showingMessage = true;
       messageTimer = millis();
       activeLedTimer = millis();
+      setLedMode(LED_ERROR);
     }
     return;
   }
@@ -576,7 +809,7 @@ void loop() {
   }
   rfidStr.toUpperCase();
 
-  Serial.print("RFID:");
+  Serial.print(F("RFID:"));
   Serial.println(rfidStr);
 
   writeLcdLines("CARD SCANNED", "CHECKING...");
@@ -585,8 +818,7 @@ void loop() {
   validationStartedAt = millis();
   activeLedTimer = millis();
   activeBlinkState = true;
-  digitalWrite(GREEN_LED, HIGH);
-  digitalWrite(RED_LED, HIGH);
+  setLedMode(LED_SCANNING);
 
   mfrc522.PICC_HaltA();
   mfrc522.PCD_StopCrypto1();
