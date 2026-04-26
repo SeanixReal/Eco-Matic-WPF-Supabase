@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using Eco_Matic.Data;
+using Eco_Matic.Utilities;
 
 namespace Eco_Matic
 {
@@ -97,6 +98,7 @@ namespace Eco_Matic
                 {
                     arduino.SendResponse(true);
                     arduino.SendMessage("WELCOME BACK");
+                    Eco_Matic.Utilities.AudioService.SpeakAsync("Welcome back!");
 
                     await Dispatcher.InvokeAsync(() =>
                     {
@@ -108,6 +110,7 @@ namespace Eco_Matic
                         {
                             _activeCustomerWindow?.MarkPendingPointsSaved(dashboard.SavedPoints);
                             arduino.SendMessage($"{dashboard.SavedPoints} POINTS SAVED");
+                            Eco_Matic.Utilities.AudioService.PlaySfx("Assets/Audio/success.mp3");
                         }
                         else if (DataStore.PendingPoints > 0)
                         {
@@ -121,6 +124,7 @@ namespace Eco_Matic
                 {
                     arduino.SendResponse(false);
                     arduino.SendMessage("NEW USER REGISTER");
+                    Eco_Matic.Utilities.AudioService.SpeakAsync("Welcome. Please register your new card.");
 
                     await Dispatcher.InvokeAsync(() =>
                     {
@@ -136,10 +140,12 @@ namespace Eco_Matic
                             {
                                 _activeCustomerWindow?.MarkPendingPointsSaved(dashboard.SavedPoints);
                                 arduino.SendMessage($"{dashboard.SavedPoints} POINTS SAVED");
+                                Eco_Matic.Utilities.AudioService.PlaySfx("Assets/Audio/success.mp3");
                             }
                             else
                             {
                                 arduino.SendMessage("CARD REGISTERED");
+                                Eco_Matic.Utilities.AudioService.PlaySfx("Assets/Audio/success.mp3");
                             }
 
                             _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);

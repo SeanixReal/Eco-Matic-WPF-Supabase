@@ -7,7 +7,9 @@ using System.Windows.Media.Animation;
 using System.ComponentModel;
 using System.Threading;
 using System.Windows.Threading;
+using System.Windows.Threading;
 using Eco_Matic.Data;
+using Eco_Matic.Utilities;
 
 namespace Eco_Matic;
 
@@ -101,6 +103,9 @@ public partial class CustomerWindow : Window
     {
         Loaded -= CustomerWindow_Loaded;
         ActivateHardwareSession();
+        AudioService.PlayBackgroundMusic("Assets/Audio/lobby.mp3");
+        await Task.Delay(500); // Wait for audio engine to wake up to prevent TTS cutoff
+        AudioService.SpeakAsync("Welcome to Eco-Matic. Please insert money or tap your R F I D card to begin.");
         await LoadRecycleCatalogAsync();
         InitializeLiveInventoryRefresh();
     }
@@ -119,6 +124,8 @@ public partial class CustomerWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
+        AudioService.StopBackgroundMusic();
+        AudioService.SpeakAsync("Thank you for using Eco-Matic. Have a nice day!");
         if (_dispenseTimer != null)
         {
             _dispenseTimer.Stop();
@@ -683,6 +690,7 @@ public partial class CustomerWindow : Window
 
         _insertedMoney += amount;
         _totalMoneyInserted += amount;
+        AudioService.PlaySfx("Assets/Audio/coins.mp3");
         _arduino?.SendMessage("CASH INSERTED");
         UpdateMoneyDisplay();
         UpdateAllButtonStates();
@@ -703,6 +711,7 @@ public partial class CustomerWindow : Window
 
         _insertedMoney += qrPayment.PaidAmount;
         _totalMoneyInserted += qrPayment.PaidAmount;
+        AudioService.PlaySfx("Assets/Audio/success.mp3");
 
         SetDispenseStatus("QR PAYMENT OK", Brushes.MediumSeaGreen);
         UpdateMoneyDisplay();
@@ -1062,24 +1071,29 @@ public partial class CustomerWindow : Window
         opacityAnim.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.18)), new QuadraticEase { EasingMode = EasingMode.EaseOut }));
         imgDispense.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
 
-        if (_dispenseTimer != null)
-        {
-            _dispenseTimer.Stop();
-        }
+        _ = FinishDispenseSequenceAsync(product);
+    }
 
-        _dispenseTimer = new DispatcherTimer
+    private async Task FinishDispenseSequenceAsync(VendingItem product)
+    {
+        AudioService.PlaySfx("Assets/Audio/coin_dispense.mp3");
+        AudioService.SpeakAsync($"Dispensing {product.Name}");
+        // Wait for the motor's open cycle (1.5 seconds)
+        await Task.Delay(1500);
+        
+        _isDispensing = false;
+        imgDispenseOpacityReset();
+        SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
+        AudioService.SpeakAsync($"Please take your item. {product.DispenseMessage}");
+
+        // Wait enough time for customer to read the message and motor to finish closing
+        await Task.Delay(3000);
+
+        if (!_isDispensing)
         {
-            Interval = TimeSpan.FromSeconds(1.75)
-        };
-        _dispenseTimer.Tick += (_, _) =>
-        {
-            _dispenseTimer?.Stop();
-            _dispenseTimer = null;
-            _isDispensing = false;
-            imgDispenseOpacityReset();
-            SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
-        };
-        _dispenseTimer.Start();
+            imgDispense.Visibility = Visibility.Hidden;
+            SetDispenseStatus("ECO-MATIC READY\nCASH OR RECYCLE", Brushes.LightGray);
+        }
     }
 
     private void imgDispenseOpacityReset()

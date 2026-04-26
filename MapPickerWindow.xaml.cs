@@ -7,8 +7,8 @@ namespace Eco_Matic;
 
 public partial class MapPickerWindow : Window
 {
-    private const double DefaultLatitude = 14.5995;
-    private const double DefaultLongitude = 120.9842;
+    private const double DefaultLatitude = 10.3157;
+    private const double DefaultLongitude = 123.8854;
 
     public string SelectedAddress { get; private set; } = string.Empty;
     public double? SelectedLatitude { get; private set; }
@@ -149,16 +149,33 @@ public partial class MapPickerWindow : Window
   <div class="hint">Click a point on the map to place the vending machine.</div>
   <div id="map"></div>
   <script>
-    const initialLat = {{latitude.ToString(CultureInfo.InvariantCulture)}};
-    const initialLon = {{longitude.ToString(CultureInfo.InvariantCulture)}};
-    const map = L.map('map').setView([initialLat, initialLon], 16);
+        const initialLat = {{latitude.ToString(CultureInfo.InvariantCulture)}};
+        const initialLon = {{longitude.ToString(CultureInfo.InvariantCulture)}};
+        const map = L.map('map').setView([initialLat, initialLon], 13);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+        const primaryTileUrl = 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png';
+        const fallbackTileUrl = 'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png';
 
-    let marker = L.marker([initialLat, initialLon]).addTo(map);
+        let usedFallback = false;
+        const primaryLayer = L.tileLayer(primaryTileUrl, {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const fallbackLayer = L.tileLayer(fallbackTileUrl, {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        });
+
+        primaryLayer.on('tileerror', function() {
+            if (!usedFallback) {
+                usedFallback = true;
+                map.removeLayer(primaryLayer);
+                fallbackLayer.addTo(map);
+            }
+        });
+
+        let marker = L.marker([initialLat, initialLon]).addTo(map);
 
     function notifyHost(lat, lon) {
       if (window.chrome && window.chrome.webview) {

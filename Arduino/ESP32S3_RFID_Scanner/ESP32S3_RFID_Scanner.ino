@@ -130,6 +130,10 @@ void writeLcdLines(const String &line1, const String &line2) {
 
 void writeWrappedMessage(const String &message) {
   String clean = sanitizeLcdText(message);
+  if (clean == "CUSTOMER MODE READY") {
+    resetDisplay();
+    return;
+  }
   writeLcdLines(fitLcdLine(clean, 0), fitLcdLine(clean, LCD_COLUMNS));
 }
 
@@ -185,7 +189,7 @@ void initLcd() {
   }
 
   lcdReady = true;
-  writeLcdLines("ECO-MATIC BOOT", "LCD READY");
+  writeLcdLines("ECO-MATIC SYSTEM", "BOOTING...");
 }
 
 void initAudio() {
@@ -393,7 +397,7 @@ void handleIncomingCommand(const String &incoming) {
     writeWrappedMessage(customMsg);
 
     String cleanMsg = sanitizeLcdText(customMsg);
-    if (cleanMsg.indexOf("DISPENS") >= 0 || cleanMsg.indexOf("TAKE YOUR ITEM") >= 0) {
+    if (cleanMsg.indexOf("DISPENS") >= 0) {
       playCue("DISPENSE");
     } else if (cleanMsg.indexOf("ERROR") >= 0 || cleanMsg.indexOf("OFFLINE") >= 0 || cleanMsg.indexOf("FAILED") >= 0) {
       playCue("ERROR");

@@ -41,8 +41,15 @@ Important current note:
 Use this folder as the source of truth for the current implementation. The running application uses:
 
 - WPF for the desktop interface
-- `SupabaseStore` and `SupabaseClient` for data access
+- `SupabaseStore` and `SupabaseClient` for data access (REST based)
 - `ArduinoService` for RFID and LCD communication
+
+### Installed NuGet Packages
+- **`Microsoft.Web.WebView2`**: Used for rendering interactive maps to pick vending machine locations.
+- **`MySqlConnector`**: Used for the local offline cache capability during customer vending mode.
+- **`QRCoder`**: Used to generate QR codes for customer payment / registration links.
+- **`System.IO.Ports`**: Enables serial communication with the Arduino hardware (RFID, LCD, Servos).
+- **`System.Speech`**: Powers the Eco-Matic voice assistant (Text-to-Speech) for customer interactions.
 
 ## Diagram Files
 

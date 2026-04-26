@@ -32,8 +32,8 @@ static const uint8_t FALLBACK_LCD_ADDRESS = 0x3F;
 static const int LCD_COLUMNS = 16;
 static const int LCD_ROWS = 2;
 static const uint32_t SERIAL_BAUD_RATE = 9600;
-static const int SERVO_CLOSED_ANGLE = 15;
-static const int SERVO_TIP_ANGLE = 95;
+static const int SERVO_CLOSED_ANGLE = 180;
+static const int SERVO_TIP_ANGLE = 80;
 static const unsigned long SERVO_TIP_STEP_MS = 260;
 static const unsigned long SERVO_DETACH_DELAY_MS = 450;
 static const unsigned long RFID_VALIDATION_TIMEOUT_MS = 12000;
@@ -290,28 +290,13 @@ void writeLcdLines(const String &line1, const String &line2) {
   lcd->print(fitLcdLine(clean2, 0));
 }
 
-void writeSmartLcdMessage(const String &clean) {
-  if (clean.length() <= LCD_COLUMNS) {
-    writeLcdLines(clean, "");
-    return;
-  }
 
-  int splitAt = clean.lastIndexOf(' ', LCD_COLUMNS);
-  if (splitAt <= 0) {
-    splitAt = LCD_COLUMNS;
-  }
-
-  String line1 = clean.substring(0, splitAt);
-  String line2 = clean.substring(splitAt);
-  line2.trim();
-  writeLcdLines(line1, line2);
-}
 
 void writeWrappedMessage(const String &message) {
   String clean = sanitizeLcdText(message);
 
   if (clean == "CUSTOMER MODE READY") {
-    writeLcdLines("VEND MODE READY", "TAP RFID TO SAVE");
+    resetDisplay();
     return;
   }
 
@@ -405,22 +390,14 @@ void writeWrappedMessage(const String &message) {
     return;
   }
 
-  if (clean.indexOf("DISPENS") >= 0) {
-    writeLcdLines("OPENING LID", "PLEASE WAIT");
-    return;
-  }
 
-  if (clean.indexOf("TAKE YOUR ITEM") >= 0) {
-    writeLcdLines("TAKE YOUR ITEM", "THANK YOU");
-    return;
-  }
 
   if (clean == "NOT ENOUGH MONEY") {
     writeLcdLines("INSERT MORE CASH", "TRY AGAIN");
     return;
   }
 
-  writeSmartLcdMessage(clean);
+  writeLcdLines(fitLcdLine(clean, 0), fitLcdLine(clean, LCD_COLUMNS));
 }
 
 void readAfkFactLine(int frame, int row, char *buffer, size_t bufferSize) {
@@ -464,7 +441,7 @@ void initLcd() {
   delay(20);
 
   lcdReady = true;
-  writeLcdLines("LCD1602 READY", detectedAddress == DEFAULT_LCD_ADDRESS ? "ADDR 0X27" : (detectedAddress == FALLBACK_LCD_ADDRESS ? "ADDR 0X3F" : "ADDR DETECTED"));
+  writeLcdLines("ECO-MATIC SYSTEM", "BOOTING...");
   delay(1000);
   writeLcdLines("ADJUST CONTRAST", "IF TEXT IS DIM");
   delay(1000);
@@ -658,7 +635,7 @@ void handleIncomingCommand(const String &incoming) {
     if (cleanMsg == "CASH INSERTED" || cleanMsg == "QR PAYMENT OK") {
       setLedMode(LED_CASH);
       playCue("CASH");
-    } else if (cleanMsg.indexOf("DISPENS") >= 0 || cleanMsg.indexOf("TAKE YOUR ITEM") >= 0) {
+    } else if (cleanMsg.indexOf("DISPENS") >= 0) {
       openLidServo();
       playCue("DISPENSE");
     } else if (cleanMsg == "PRINTING RECEIPT") {
@@ -747,9 +724,9 @@ void setup() {
     resetDisplay();
   }
 
+  lidServo.write(SERVO_CLOSED_ANGLE);
   lidServo.attach(SERVO_PIN);
   servoAttached = true;
-  lidServo.write(SERVO_CLOSED_ANGLE);
   servoDetachAt = millis() + SERVO_DETACH_DELAY_MS;
   servoDetachPending = true;
 
