@@ -483,7 +483,7 @@ public partial class SupabaseStore
         {
             // Query users joined with roles
             var rows = Run(_client.GetAsync("users",
-                $"select=username,password_hash,assigned_machine_id,roles(role_name)&username=eq.{Uri.EscapeDataString(username)}&password_hash=eq.{Uri.EscapeDataString(password)}"));
+                $"select=user_id,username,password_hash,assigned_machine_id,roles(role_name)&username=eq.{Uri.EscapeDataString(username)}&password_hash=eq.{Uri.EscapeDataString(password)}"));
 
             if (rows.Count > 0)
             {
@@ -502,6 +502,41 @@ public partial class SupabaseStore
         {
             System.Windows.MessageBox.Show($"Database connection failed: {ex.Message}");
             return (null, null);
+        }
+    }
+
+    public (string? Role, List<int> AssignedMachineIds) AuthenticateUserAccess(string username, string password)
+    {
+        try
+        {
+            var rows = Run(_client.GetAsync("users",
+                $"select=user_id,username,password_hash,assigned_machine_id,roles(role_name)&username=eq.{Uri.EscapeDataString(username)}&password_hash=eq.{Uri.EscapeDataString(password)}"));
+
+            if (rows.Count == 0)
+            {
+                return (null, new List<int>());
+            }
+
+            var user = rows[0];
+            int userId = user?["user_id"]?.GetValue<int>() ?? 0;
+            string? roleName = user?["roles"]?["role_name"]?.GetValue<string>();
+            var assignedIds = GetAssignedMachineIdsForUser(userId);
+
+            if (assignedIds.Count == 0)
+            {
+                var mid = user?["assigned_machine_id"];
+                if (mid != null && mid.GetValueKind() != JsonValueKind.Null)
+                {
+                    assignedIds.Add(mid.GetValue<int>());
+                }
+            }
+
+            return (roleName, assignedIds);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Database connection failed: {ex.Message}");
+            return (null, new List<int>());
         }
     }
 
@@ -726,7 +761,7 @@ public partial class SupabaseStore
         var dt = new System.Data.DataTable();
         try
         {
-            var rows = Run(_client.GetAsync("roles", "select=role_id,role_name"));
+            var rows = Run(_client.GetAsync("roles", "select=role_id,role_name&order=role_id.asc"));
             dt.Columns.Add("role_id", typeof(int));
             dt.Columns.Add("role_name", typeof(string));
 
@@ -742,6 +777,20 @@ public partial class SupabaseStore
         return dt;
     }
 
+    public int? GetInventoryManagerRoleId()
+    {
+        try
+        {
+            var rows = Run(_client.GetAsync("roles",
+                "select=role_id&role_name=eq.Inventory%20Manager&limit=1"));
+            return rows.Count > 0 ? rows[0]?["role_id"]?.GetValue<int>() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     // ══════════════════════════════════════════════════
     //  USERS
     // ══════════════════════════════════════════════════
@@ -752,23 +801,76 @@ public partial class SupabaseStore
         try
         {
             var rows = Run(_client.GetAsync("users",
-                "select=user_id,username,roles(role_name),vending_machines(location_name)&roles.role_name=neq.Admin"));
+                "select=user_id,username,assigned_machine_id,roles(role_name)&order=user_id.asc"));
+            var assignmentRows = Run(_client.GetAsync("user_machine_assignments", "select=user_id,machine_id"));
+            var machineRows = Run(_client.GetAsync("vending_machines", "select=machine_id,location_name"));
+            var machineNames = new Dictionary<int, string>();
+            foreach (var machine in machineRows)
+            {
+                int machineId = machine?["machine_id"]?.GetValue<int>() ?? 0;
+                if (machineId > 0)
+                {
+                    machineNames[machineId] = machine?["location_name"]?.GetValue<string>() ?? $"Machine {machineId}";
+                }
+            }
+
+            var assignmentsByUser = new Dictionary<int, List<int>>();
+            foreach (var assignment in assignmentRows)
+            {
+                int userId = assignment?["user_id"]?.GetValue<int>() ?? 0;
+                int machineId = assignment?["machine_id"]?.GetValue<int>() ?? 0;
+                if (userId <= 0 || machineId <= 0)
+                {
+                    continue;
+                }
+
+                if (!assignmentsByUser.TryGetValue(userId, out var list))
+                {
+                    list = new List<int>();
+                    assignmentsByUser[userId] = list;
+                }
+
+                if (!list.Contains(machineId))
+                {
+                    list.Add(machineId);
+                }
+            }
 
             dt.Columns.Add("ID", typeof(int));
             dt.Columns.Add("Username", typeof(string));
             dt.Columns.Add("Role", typeof(string));
-            dt.Columns.Add("Assigned Machine", typeof(string));
+            dt.Columns.Add("Assigned Machines", typeof(string));
+            dt.Columns.Add("_AssignedMachineIds", typeof(string));
 
             foreach (var node in rows)
             {
                 string? roleName = node?["roles"]?["role_name"]?.GetValue<string>();
                 if (roleName == "Admin") continue; // Skip admin users
+                int userId = node?["user_id"]?.GetValue<int>() ?? 0;
+                var machineIds = assignmentsByUser.TryGetValue(userId, out var assigned)
+                    ? assigned
+                    : new List<int>();
+
+                if (machineIds.Count == 0)
+                {
+                    var legacyMachineId = node?["assigned_machine_id"];
+                    if (legacyMachineId != null && legacyMachineId.GetValueKind() != JsonValueKind.Null)
+                    {
+                        machineIds.Add(legacyMachineId.GetValue<int>());
+                    }
+                }
+
+                machineIds = machineIds.Distinct().OrderBy(id => id).ToList();
+                string assignedMachineNames = machineIds.Count == 0
+                    ? ""
+                    : string.Join(", ", machineIds.Select(id => machineNames.TryGetValue(id, out string? name) ? name : $"Machine {id}"));
 
                 dt.Rows.Add(
-                    node?["user_id"]?.GetValue<int>() ?? 0,
+                    userId,
                     node?["username"]?.GetValue<string>() ?? "",
                     roleName ?? "",
-                    node?["vending_machines"]?["location_name"]?.GetValue<string>() ?? ""
+                    assignedMachineNames,
+                    string.Join(",", machineIds)
                 );
             }
         }
@@ -778,30 +880,106 @@ public partial class SupabaseStore
 
     public bool AddUser(string username, string password, int roleId, int? assignedMachineId)
     {
+        return AddUser(username, password, roleId, assignedMachineId.HasValue ? new[] { assignedMachineId.Value } : Array.Empty<int>());
+    }
+
+    public bool AddUser(string username, string password, int roleId, IEnumerable<int> assignedMachineIds)
+    {
         try
         {
+            var machineIds = assignedMachineIds.Distinct().Where(id => id > 0).ToList();
             var body = new Dictionary<string, object?>
             {
                 ["username"] = username,
                 ["password_hash"] = password,
                 ["role_id"] = roleId,
-                ["assigned_machine_id"] = assignedMachineId
+                ["assigned_machine_id"] = machineIds.FirstOrDefault() > 0 ? machineIds.First() : null
             };
 
             var result = Run(_client.PostAsync("users", body));
-            return result.Count > 0;
+            int userId = result.Count > 0 ? result[0]?["user_id"]?.GetValue<int>() ?? 0 : 0;
+            if (userId <= 0)
+            {
+                return false;
+            }
+
+            return ReplaceUserMachineAssignments(userId, machineIds);
         }
         catch { return false; }
+    }
+
+    public bool UpdateUserMachineAssignments(int userId, IEnumerable<int> assignedMachineIds)
+    {
+        try
+        {
+            return ReplaceUserMachineAssignments(userId, assignedMachineIds);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public bool DeleteUser(int userId)
     {
         try
         {
+            Run(_client.DeleteAsync("user_machine_assignments", $"user_id=eq.{userId}"));
             Run(_client.DeleteAsync("users", $"user_id=eq.{userId}"));
             return true;
         }
         catch { return false; }
+    }
+
+    private List<int> GetAssignedMachineIdsForUser(int userId)
+    {
+        var result = new List<int>();
+        if (userId <= 0)
+        {
+            return result;
+        }
+
+        try
+        {
+            var rows = Run(_client.GetAsync("user_machine_assignments",
+                $"select=machine_id&user_id=eq.{userId}&order=machine_id.asc"));
+            foreach (var row in rows)
+            {
+                int machineId = row?["machine_id"]?.GetValue<int>() ?? 0;
+                if (machineId > 0 && !result.Contains(machineId))
+                {
+                    result.Add(machineId);
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return result;
+    }
+
+    private bool ReplaceUserMachineAssignments(int userId, IEnumerable<int> assignedMachineIds)
+    {
+        var machineIds = assignedMachineIds.Distinct().Where(id => id > 0).OrderBy(id => id).ToList();
+        Run(_client.DeleteAsync("user_machine_assignments", $"user_id=eq.{userId}"));
+
+        if (machineIds.Count > 0)
+        {
+            var assignments = machineIds.Select(machineId => new
+            {
+                user_id = userId,
+                machine_id = machineId
+            }).ToList();
+            Run(_client.PostAsync("user_machine_assignments", assignments));
+        }
+
+        Run(_client.PatchAsync("users", $"user_id=eq.{userId}", new
+        {
+            assigned_machine_id = machineIds.Count > 0 ? (int?)machineIds[0] : null
+        }));
+
+        return true;
     }
 
     // ══════════════════════════════════════════════════
@@ -1056,48 +1234,21 @@ public partial class SupabaseStore
             new { stock_level = newStock }));
     }
 
-    public void RandomizeAllStocks()
-    {
-        try
-        {
-            // Get all inventory IDs, then update each with a random value
-            var rows = Run(_client.GetAsync("machine_inventory", "select=inventory_id"));
-            var rng = new Random();
-            foreach (var node in rows)
-            {
-                int invId = node?["inventory_id"]?.GetValue<int>() ?? 0;
-                if (invId > 0)
-                {
-                    int randomStock = rng.Next(1, 16);
-                    Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{invId}",
-                        new { stock_level = randomStock }));
-                }
-            }
-        }
-        catch { }
-    }
-
-    public bool RandomizeMachineStocks(int machineId)
+    public bool RestockInventoryItemToMax(int inventoryId)
     {
         try
         {
             var rows = Run(_client.GetAsync("machine_inventory",
-                $"select=inventory_id,max_capacity&machine_id=eq.{machineId}"));
-            var rng = new Random();
+                $"select=max_capacity&inventory_id=eq.{inventoryId}"));
 
-            foreach (var node in rows)
+            if (rows.Count == 0)
             {
-                int invId = node?["inventory_id"]?.GetValue<int>() ?? 0;
-                int maxCapacity = node?["max_capacity"]?.GetValue<int>() ?? 15;
-                if (invId <= 0 || maxCapacity <= 0)
-                {
-                    continue;
-                }
-
-                int randomStock = rng.Next(1, maxCapacity + 1);
-                Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{invId}",
-                    new { stock_level = randomStock }));
+                return false;
             }
+
+            int maxCapacity = Math.Max(0, rows[0]?["max_capacity"]?.GetValue<int>() ?? 15);
+            Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{inventoryId}",
+                new { stock_level = maxCapacity }));
 
             return true;
         }
@@ -1446,14 +1597,15 @@ public partial class SupabaseStore
         }
     }
 
-    public (System.Data.DataTable Data, decimal Total) GetFilteredSales(DateTime date, string filterType)
+    public (System.Data.DataTable Data, decimal Total) GetFilteredSales(DateTime date, string filterType, int? machineId = null)
     {
         var dt = new System.Data.DataTable();
         decimal total = 0m;
         try
         {
+            string machineFilter = machineId.HasValue ? $"&machine_id=eq.{machineId.Value}" : string.Empty;
             var rows = Run(_client.GetAsync("sales_transactions",
-                "select=transaction_id,transaction_date,machine_id,item_id,amount_paid,vending_machines(location_name),items(name,price)&order=transaction_date.desc"));
+                $"select=transaction_id,transaction_date,machine_id,item_id,amount_paid,vending_machines(location_name),items(name,price){machineFilter}&order=transaction_date.desc"));
 
             dt.Columns.Add("TX ID", typeof(int));
             dt.Columns.Add("Date", typeof(DateTime));

@@ -27,7 +27,8 @@ This is the WPF user interface.
   - manages money insertion, item selection, recycle points in the current session, and receipt flow
 - `AdminWindow.xaml.cs`
   - acts as the admin control center
-  - loads dashboard, inventory, global items, sales, logs, machines, users, and customer data
+  - loads dashboard, inventory, global items, sales, logs, machines, users, and customer data for admins
+  - limits inventory managers to the inventory page for their assigned machines only
 - supporting dialog windows
   - `LoginWindow`
   - `CatalogItemWindow`
@@ -145,11 +146,12 @@ Important implementation note:
 ### 3.3 Admin Flow
 
 1. `MainWindow` opens `LoginWindow`.
-2. `SupabaseStore.AuthenticateUser()` validates the username and password and returns the role plus assigned machine.
+2. `SupabaseStore.AuthenticateUserAccess()` validates the username and password and returns the role plus assigned machine IDs.
 3. `AdminWindow` loads with role-based restrictions.
-4. If the role is `Inventory Manager`, machine access is limited and finance-related sections are hidden.
-5. The admin window uses one shell window and switches views with `Visibility` toggling instead of opening many separate pages.
-6. Machine setup now stores:
+4. If the role is `Admin`, the first loaded view is `Dashboard`.
+5. If the role is `Inventory Manager`, the user is routed directly to Inventory and every other page is hidden.
+6. The admin window uses one shell window and switches views with `Visibility` toggling instead of opening many separate pages.
+7. Machine setup now stores:
    - a machine name in `vending_machines.location_name`
    - an editable address in `vending_machines.address_text`
    - optional map-picked coordinates in `vending_machines.latitude` and `vending_machines.longitude`
@@ -158,7 +160,10 @@ Important admin split:
 
 - the `Items` tab manages the shared global catalog in `items`
 - the `Inventory` tab manages per-machine slot assignment, stock, and optional slot-specific price override in `machine_inventory`
+- the `Inventory` tab has a selected-row quick action that restocks only the chosen item to its max capacity
 - the `Machines` tab manages machine identity and physical placement information
+- the `Sales Report` tab can be filtered by date period and by a single vending machine, or left on all machines
+- stock monitoring now includes the vending machine name beside low-stock rows so alerts show where the problem is
 
 ## 4. Why the Architecture Looks Like This
 
@@ -232,6 +237,15 @@ Important vending-machine detail:
 - `vending_machines.latitude` and `vending_machines.longitude` store optional map-selected coordinates
 
 That means your ERD should show `customers` as an independent table in the current implementation.
+
+Current staff-role detail:
+
+- live staff roles are `Admin` and `Inventory Manager`
+- `Operator` and `Viewer` are no longer exposed in the app
+- every inventory manager must be assigned to at least one vending machine
+- multiple inventory-manager machine assignments live in `user_machine_assignments`
+- `users.assigned_machine_id` remains as a compatibility primary assignment
+- demo sales data exists in `sales_transactions` across roughly one year so Day, Week, Month, Year, All Time, and machine-scoped sales reports can be demonstrated
 
 ## 7. What to Emphasize During Defense
 

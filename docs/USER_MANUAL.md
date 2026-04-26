@@ -50,11 +50,13 @@ The admin side is controlled through `AdminWindow`.
 
 ### Admin capabilities
 
+- admin login opens on the dashboard by default
 - view dashboard metrics
 - manage the global item catalog
 - manage machine inventory
 - monitor low-stock and out-of-stock slots
-- restock items
+- restock items by quantity
+- restock the selected inventory item directly to max capacity
 - view logs and sales
 - review sales reports with revenue trends, product mix, best-selling items, and machine revenue
 - manage vending machines
@@ -64,7 +66,7 @@ The admin side is controlled through `AdminWindow`.
 ### Role behavior
 
 - `Admin`: full access
-- `Inventory Manager`: inventory-only style access with restricted views
+- `Inventory Manager`: inventory-only access for the vending machines assigned by an admin
 
 ## 5. Inventory Rules You Should Follow
 
@@ -98,6 +100,7 @@ Current technical note:
 - total sales
 - items sold
 - low stock alerts
+- the vending machine where each low-stock alert belongs
 - active machines
 
 ### Low stock logic

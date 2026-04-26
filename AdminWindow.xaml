@@ -51,6 +51,31 @@
             </Setter>
         </Style>
 
+        <Style x:Key="InventoryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SidebarButtonStyle}">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="MinWidth" Value="120" />
+        </Style>
+
+        <Style x:Key="InventoryActionButtonActiveStyle" TargetType="Button" BasedOn="{StaticResource InventoryActionButtonStyle}">
+            <Setter Property="Background" Value="#2E77E6" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#1E68D2" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="CardBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="White" />
             <Setter Property="BorderBrush" Value="#E2E8F0" />
@@ -243,6 +268,7 @@
                                         <TextBlock Text="Stock Monitoring" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12" />
                                         <DataGrid x:Name="dgDashboardLowStock" Grid.Row="1" MinHeight="118" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
                                             <DataGrid.Columns>
+                                                <DataGridTextColumn Header="Machine" Binding="{Binding Path='Machine'}" Width="130"/>
                                                 <DataGridTextColumn Header="Item" Binding="{Binding Path='Item'}" Width="*"/>
                                                 <DataGridTextColumn Header="Stock" Binding="{Binding Path='Stock'}" Width="55"/>
                                                 <DataGridTextColumn Header="Status" Binding="{Binding Path='Status'}" Width="95"/>
@@ -284,11 +310,11 @@
                             </StackPanel>
                             
                             <WrapPanel Grid.Row="1" Margin="0,0,0,15" Orientation="Horizontal">
-                                <Button Content="Assign Item to Slot" Width="170" Margin="0,0,10,10" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddItem_Click"/>
-                                <Button Content="Restock Item" Width="135" Margin="0,0,10,10" Style="{StaticResource SidebarButtonStyle}" Click="BtnRestock_Click"/>
-                                <Button Content="Randomize Stocks" Width="150" Margin="0,0,10,10" Style="{StaticResource SidebarButtonStyle}" Click="BtnRandomizeStocks_Click"/>
-                                <Button Content="Edit Slot" Width="125" Margin="0,0,10,10" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditItem_Click"/>
-                                <Button Content="Remove From Slot" Width="150" Margin="0,0,0,10" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteItem_Click"/>
+                                <Button Content="Assign Item to Slot" Width="170" Margin="0,0,10,10" Style="{StaticResource InventoryActionButtonActiveStyle}" Click="BtnAddItem_Click"/>
+                                <Button Content="Restock Item" Width="135" Margin="0,0,10,10" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnRestock_Click"/>
+                                <Button Content="Restock Selected to Max" Width="190" Margin="0,0,10,10" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnRestockSelectedToMax_Click"/>
+                                <Button Content="Edit Slot" Width="125" Margin="0,0,10,10" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnEditItem_Click"/>
+                                <Button Content="Remove From Slot" Width="170" Margin="0,0,0,10" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnDeleteItem_Click"/>
                             </WrapPanel>
 
                             <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="Transparent">
@@ -358,9 +384,9 @@
 
                                 <TextBlock Text="Global Item Catalog" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10" />
                                 <StackPanel Grid.Row="1" Orientation="Horizontal">
-                                    <Button Content="Add Global Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddCatalogItem_Click"/>
-                                    <Button Content="Edit Global Item" Width="150" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditCatalogItem_Click"/>
-                                    <Button Content="Delete Global Item" Width="160" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteCatalogItem_Click"/>
+                                    <Button Content="Add Global Item" Width="170" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonActiveStyle}" Click="BtnAddCatalogItem_Click"/>
+                                    <Button Content="Edit Global Item" Width="170" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnEditCatalogItem_Click"/>
+                                    <Button Content="Delete Global Item" Width="180" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnDeleteCatalogItem_Click"/>
                                 </StackPanel>
                             </Grid>
 
@@ -394,9 +420,9 @@
 
                                 <TextBlock Text="Recycle Catalog" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10" />
                                 <StackPanel Grid.Row="1" Orientation="Horizontal">
-                                    <Button Content="Add Recycle Item" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddRecycleItem_Click"/>
-                                    <Button Content="Edit Recycle Item" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditRecycleItem_Click"/>
-                                    <Button Content="Toggle Active" Width="140" Style="{StaticResource SidebarButtonStyle}" Click="BtnToggleRecycleItem_Click"/>
+                                    <Button Content="Add Recycle Item" Width="170" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonActiveStyle}" Click="BtnAddRecycleItem_Click"/>
+                                    <Button Content="Edit Recycle Item" Width="170" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnEditRecycleItem_Click"/>
+                                    <Button Content="Toggle Active" Width="150" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnToggleRecycleItem_Click"/>
                                 </StackPanel>
                             </Grid>
 
@@ -430,7 +456,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                    <Button Content="Clear Logs" Width="120" HorizontalAlignment="Left" Style="{StaticResource SidebarButtonStyle}" Background="#FCE7E7" Foreground="#D65A5A" Click="BtnClearLogs_Click"/>
+                                    <Button Content="Clear Logs" Width="130" HorizontalAlignment="Left" Style="{StaticResource InventoryActionButtonStyle}" Background="#FCE7E7" Foreground="#D65A5A" Click="BtnClearLogs_Click"/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -464,15 +490,15 @@
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Margin="8,4,12,12">
                                     <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
 
-                                        <UniformGrid Grid.Column="0" Columns="4" Rows="1">
+                                        <UniformGrid Grid.Row="0" Columns="4" Rows="1">
                                             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
                                                 <StackPanel>
                                                     <TextBlock x:Name="txtSalesFilterLabel" Text="Sales (Today)" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
@@ -499,17 +525,19 @@
                                             </Border>
                                         </UniformGrid>
 
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="16,0,0,0">
+                                        <WrapPanel Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,12,0,0">
+                                            <TextBlock Text="Machine:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
+                                            <ComboBox x:Name="cboSalesMachine" Width="190" Margin="0,0,14,8" SelectionChanged="SalesFilter_Changed" DisplayMemberPath="location_name" SelectedValuePath="machine_id" VerticalContentAlignment="Center"/>
                                             <TextBlock Text="Filter By:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
-                                            <ComboBox x:Name="cboSalesFilter" Width="105" Margin="0,0,10,0" SelectedIndex="0" SelectionChanged="SalesFilter_Changed" VerticalContentAlignment="Center">
+                                            <ComboBox x:Name="cboSalesFilter" Width="105" Margin="0,0,10,8" SelectedIndex="0" SelectionChanged="SalesFilter_Changed" VerticalContentAlignment="Center">
                                                 <ComboBoxItem Content="Day"/>
                                                 <ComboBoxItem Content="Week"/>
                                                 <ComboBoxItem Content="Month"/>
                                                 <ComboBoxItem Content="Year"/>
                                                 <ComboBoxItem Content="All Time"/>
                                             </ComboBox>
-                                            <DatePicker x:Name="dpSalesDate" Width="130" SelectedDateChanged="SalesFilter_Changed" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
-                                        </StackPanel>
+                                            <DatePicker x:Name="dpSalesDate" Width="130" Margin="0,0,0,8" SelectedDateChanged="SalesFilter_Changed" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
+                                        </WrapPanel>
                                     </Grid>
 
                                     <Grid Margin="0,0,0,16">
@@ -654,9 +682,9 @@
                             
                             <DockPanel Grid.Row="0" Margin="0,0,0,15" LastChildFill="False">
                                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                                <Button x:Name="btnAddMachine" Content="Register Machine" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddMachine_Click"/>
-                                <Button Content="Edit Machine" Width="160" Margin="0,0,10,0" Background="#F2F5FB" Foreground="#2E77E6" Style="{StaticResource SidebarButtonStyle}" Click="BtnEditMachine_Click"/>
-                                <Button Content="Remove Machine" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteMachine_Click"/>
+                                <Button x:Name="btnAddMachine" Content="Register Machine" Width="170" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonActiveStyle}" Click="BtnAddMachine_Click"/>
+                                <Button Content="Edit Machine" Width="160" Margin="0,0,10,0" Background="#F2F5FB" Foreground="#2E77E6" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnEditMachine_Click"/>
+                                <Button Content="Remove Machine" Width="170" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnDeleteMachine_Click"/>
                                 </StackPanel>
                                 <Border DockPanel.Dock="Right" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="12,8" Margin="14,0,0,0">
                                     <TextBlock x:Name="txtMachineScope" Text="0 / 4 machines in use" Foreground="#475569" FontSize="12" FontWeight="SemiBold"/>
@@ -684,12 +712,20 @@
                             </Grid.RowDefinitions>
                             
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                <Button Content="Add New Staff" Width="160" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnAddUser_Click"/>
-                                <Button Content="Remove Staff" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteUser_Click"/>
+                                <Button Content="Add New Staff" Width="160" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonActiveStyle}" Click="BtnAddUser_Click"/>
+                                <Button Content="Edit Assignments" Width="180" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnEditUserAssignments_Click"/>
+                                <Button Content="Remove Staff" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnDeleteUser_Click"/>
                             </StackPanel>
 
                             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">
-                                <DataGrid x:Name="dgUsers" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0"/>
+                                <DataGrid x:Name="dgUsers" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ID" Binding="{Binding [ID]}" Width="70"/>
+                                        <DataGridTextColumn Header="Username" Binding="{Binding [Username]}" Width="160"/>
+                                        <DataGridTextColumn Header="Role" Binding="{Binding [Role]}" Width="160"/>
+                                        <DataGridTextColumn Header="Assigned Machines" Binding="{Binding [Assigned Machines]}" Width="*"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </Border>
                         </Grid>
 
@@ -701,8 +737,8 @@
                             </Grid.RowDefinitions>
                             
                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-                                <Button Content="Modify Credit Balance" Width="200" Margin="0,0,10,0" Style="{StaticResource SidebarButtonActiveStyle}" Click="BtnEditCustomerCredits_Click"/>
-                                <Button Content="Delete Customer" Width="160" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource SidebarButtonStyle}" Click="BtnDeleteCustomer_Click"/>
+                                <Button Content="Modify Eco-Credit Balance" Width="240" Margin="0,0,10,0" Style="{StaticResource InventoryActionButtonActiveStyle}" Click="BtnEditCustomerCredits_Click"/>
+                                <Button Content="Delete Customer" Width="170" Margin="0,0,0,0" Background="#FCE7E7" Foreground="#D65A5A" Style="{StaticResource InventoryActionButtonStyle}" Click="BtnDeleteCustomer_Click"/>
                             </StackPanel>
 
                             <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" BorderThickness="0" Background="White">

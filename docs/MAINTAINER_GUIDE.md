@@ -36,8 +36,12 @@ For current architecture and review status, use:
 ### Admin flow
 
 - credentials go through `LoginWindow`
-- `SupabaseStore.AuthenticateUser()` decides role and machine access
+- `SupabaseStore.AuthenticateUserAccess()` decides role and machine access
+- admin users open on the Dashboard view after successful login
 - `AdminWindow` loads dashboard, inventory, global items, logs, sales, machines, users, and customers
+- inventory managers only load the Inventory page for their assigned vending machines
+- the Inventory page supports quantity restocking and a selected-item action to restock directly to max capacity
+- the Sales Report can filter all machines or one vending machine, using the selected date as the anchor for Day, Week, Month, or Year
 - machine setup/edit now stores a machine name, an editable address, and optional coordinates
 - `MapPickerWindow` plus `MapLocationService` auto-fill an address from a clicked map point
 
@@ -72,6 +76,9 @@ For current architecture and review status, use:
 - make sure the COM port for Arduino matches the machine you are using
 - make sure images referenced in the database actually exist in runtime-accessible paths
 - make sure each demo machine has a readable machine name and address because both are now surfaced to the customer and available on receipts
+- make sure the live `roles` table has `Admin` and `Inventory Manager`; staff creation expects `Inventory Manager`
+- make sure `user_machine_assignments` exists when using multiple assigned vending machines
+- demo sales rows use deterministic `client_sync_id` values and can be reseeded without stacking duplicates
 
 ## Highest-Risk Technical Debt
 
@@ -103,6 +110,8 @@ Tell the AI these facts up front:
 - `DataStore` is the customer session cache
 - the customer UI currently has only 12 slots
 - the app uses a global `items` catalog plus per-machine `machine_inventory`
+- inventory managers are assigned to one or more machines and only manage those machines' inventory
+- sales reports support an all-machine view and a single-machine filter
 - machine setup now includes machine name, editable address, and optional map coordinates
 - images are local-first, not Supabase Storage-first
 - review findings are in `docs/CODE_REVIEW.md`
