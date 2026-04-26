@@ -1086,9 +1086,10 @@ public partial class CustomerWindow : Window
         _isDispensing = false;
         imgDispenseOpacityReset();
         SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
+        AudioService.SpeakAsync($"Please take your {product.Name}. {product.DispenseMessage}");
 
         // Wait enough time for customer to read the message and motor to finish closing
-        await Task.Delay(3000);
+        await Task.Delay(4000);
 
         if (!_isDispensing)
         {
@@ -1186,6 +1187,12 @@ public partial class CustomerWindow : Window
             AudioService.PlaySfx("Assets/Audio/coin_dispense.mp3");
             printResult = await Task.Run(() => ReceiptPrinterService.Instance.TryPrintReceipt(completedSession));
             _arduino?.SendMessage(printResult.Success ? "RECEIPT COMPLETE" : "RECEIPT FAILED");
+            
+            // Give the user a nice thank you message after the receipt flow
+            await Task.Delay(1000);
+            _arduino?.SendMessage("THANK YOU FOR\nUSING ECO-MATIC");
+            AudioService.SpeakAsync("Thank you for using Eco-Matic. Please come again!");
+            await Task.Delay(2000);
 
             var receipt = new ReceiptWindow(completedSession, printResult)
             {

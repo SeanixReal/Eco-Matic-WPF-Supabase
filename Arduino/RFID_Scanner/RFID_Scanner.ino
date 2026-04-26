@@ -32,8 +32,8 @@ static const uint8_t FALLBACK_LCD_ADDRESS = 0x3F;
 static const int LCD_COLUMNS = 16;
 static const int LCD_ROWS = 2;
 static const uint32_t SERIAL_BAUD_RATE = 9600;
-static const int SERVO_CLOSED_ANGLE = 180;
-static const int SERVO_TIP_ANGLE = 70;
+static const int SERVO_CLOSED_ANGLE = 0;
+static const int SERVO_TIP_ANGLE = 100;
 static const unsigned long SERVO_TIP_STEP_MS = 500;
 static const unsigned long SERVO_DETACH_DELAY_MS = 450;
 static const unsigned long RFID_VALIDATION_TIMEOUT_MS = 12000;
@@ -282,12 +282,15 @@ void writeLcdLines(const String &line1, const String &line2) {
   String clean1 = sanitizeLcdText(line1);
   String clean2 = sanitizeLcdText(line2);
 
-  lcd->display();
-  lcd->backlight();
+  // Write every cell explicitly so old characters never bleed through
   lcd->setCursor(0, 0);
-  lcd->print(fitLcdLine(clean1, 0));
+  for (int i = 0; i < LCD_COLUMNS; i++) {
+    lcd->write(i < (int)clean1.length() ? (char)clean1[i] : ' ');
+  }
   lcd->setCursor(0, 1);
-  lcd->print(fitLcdLine(clean2, 0));
+  for (int i = 0; i < LCD_COLUMNS; i++) {
+    lcd->write(i < (int)clean2.length() ? (char)clean2[i] : ' ');
+  }
 }
 
 
@@ -312,6 +315,16 @@ void writeWrappedMessage(const String &message) {
 
   if (clean == "CASH INSERTED") {
     writeLcdLines("CASH ACCEPTED", "BALANCE UPDATED");
+    return;
+  }
+
+  if (clean == "LOADING MACHINE") {
+    writeLcdLines("LOADING...", "PLEASE WAIT");
+    return;
+  }
+
+  if (clean.indexOf("THANK YOU") >= 0) {
+    writeLcdLines("THANK YOU!", "COME AGAIN SOON");
     return;
   }
 
@@ -750,7 +763,8 @@ void loop() {
 
   if (systemMode == 0) {
     updateLedState();
-    if (millis() - afkTimer > 3000) {
+    // Don't overwrite temporary messages (like LOADING MACHINE) with AFK facts
+    if (!showingMessage && millis() - afkTimer > 3000) {
       afkTimer = millis();
       afkFrame = (afkFrame + 1) % AFK_FACT_COUNT;
       showAfkFrame();
