@@ -33,8 +33,8 @@ static const int LCD_COLUMNS = 16;
 static const int LCD_ROWS = 2;
 static const uint32_t SERIAL_BAUD_RATE = 9600;
 static const int SERVO_CLOSED_ANGLE = 180;
-static const int SERVO_TIP_ANGLE = 80;
-static const unsigned long SERVO_TIP_STEP_MS = 260;
+static const int SERVO_TIP_ANGLE = 70;
+static const unsigned long SERVO_TIP_STEP_MS = 500;
 static const unsigned long SERVO_DETACH_DELAY_MS = 450;
 static const unsigned long RFID_VALIDATION_TIMEOUT_MS = 12000;
 static const unsigned long READY_CUE_MIN_INTERVAL_MS = 8000;
@@ -389,8 +389,15 @@ void writeWrappedMessage(const String &message) {
     writeLcdLines("ECO POINTS ADDED", "TAP RFID TO SAVE");
     return;
   }
+  if (clean.indexOf("DISPENS") >= 0) {
+    writeLcdLines("DISPENSING...", "PLEASE WAIT");
+    return;
+  }
 
-
+  if (clean.indexOf("TAKE YOUR ITEM") >= 0) {
+    writeLcdLines("ITEM DISPENSED!", "COLLECT & ENJOY");
+    return;
+  }
 
   if (clean == "NOT ENOUGH MONEY") {
     writeLcdLines("INSERT MORE CASH", "TRY AGAIN");

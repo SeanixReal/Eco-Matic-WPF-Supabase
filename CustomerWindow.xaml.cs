@@ -1086,7 +1086,6 @@ public partial class CustomerWindow : Window
         _isDispensing = false;
         imgDispenseOpacityReset();
         SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
-        AudioService.SpeakAsync($"Please take your item. {product.DispenseMessage}");
 
         // Wait enough time for customer to read the message and motor to finish closing
         await Task.Delay(3000);
