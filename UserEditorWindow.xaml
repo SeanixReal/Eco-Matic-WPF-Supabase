@@ -1,7 +1,7 @@
 <Window x:Class="Eco_Matic.UserEditorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="User Management" Height="500" Width="420"
+        Title="User Management" Height="420" Width="420"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterOwner"
         MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown"
@@ -34,7 +34,6 @@
 
                 <TextBlock x:Name="lblMachine" Text="Assigned Vending Machines:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
                 <ListBox x:Name="lstMachines" Height="112" BorderBrush="#CBD5E1" SelectionMode="Multiple" DisplayMemberPath="location_name" SelectedValuePath="machine_id"/>
-                <TextBlock Text="Hold Ctrl to select multiple machines." Foreground="#94A3B8" FontSize="11" Margin="0,5,0,0"/>
             </StackPanel>
 
             <Grid Grid.Row="2">

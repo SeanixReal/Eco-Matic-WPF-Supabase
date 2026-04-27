@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="About"
-        Height="420"
+        Height="329"
         Width="560"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
@@ -71,46 +71,28 @@
                             Padding="20">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="96" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <Border Width="76"
-                                    Height="76"
-                                    CornerRadius="38"
-                                    Background="#EAF2FF"
-                                    BorderBrush="#CFE0FF"
-                                    BorderThickness="1"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Top">
-                                <TextBlock Text="E"
-                                           FontSize="40"
-                                           FontWeight="Bold"
-                                           Foreground="#2E77E6"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-
-                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                            <StackPanel Grid.Column="0" Margin="12,0,0,0">
                                 <TextBlock Text="Eco-Matic"
                                            FontSize="28"
                                            FontWeight="Bold"
-                                           Foreground="#1F2A44" />
+                                           Foreground="#1F2A44" TextAlignment="Center" 
+                                           />
                                 <TextBlock Text="Smart vending and recycling rewards station"
+                                           TextAlignment="Center"
                                            Margin="0,6,0,0"
                                            FontSize="14"
                                            Foreground="#6A7891" />
                                 <TextBlock Text="Version 1.0"
+                                           TextAlignment="Center"
                                            Margin="0,18,0,0"
                                            FontSize="15"
                                            FontWeight="SemiBold"
                                            Foreground="#2E77E6" />
-                                <TextBlock Text="Built for kiosk-style vending, recycling rewards, inventory control, and live Supabase-backed reporting workflows."
-                                           Margin="0,12,0,0"
-                                           TextWrapping="Wrap"
-                                           FontSize="14"
-                                           Foreground="#334155" />
                                 <TextBlock Text="Copyright 2026 Seanix"
+                                           TextAlignment="Center"
                                            Margin="0,18,0,0"
                                            FontSize="13"
                                            Foreground="#7A889F" />

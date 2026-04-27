@@ -171,35 +171,30 @@ namespace Eco_Matic
                     navDashboard.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewDashboard.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "Dashboard";
-                    txtViewSubtitle.Text = "System Overview";
                     await LoadDashboardMetricsAsync();
                     break;
                 case "Inventory":
                     navInventory.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewInventory.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "Inventory Management";
-                    txtViewSubtitle.Text = "Assign global items to machine slots and manage stock.";
                     await LoadInventoryMachinesAsync();
                     break;
                 case "Items":
                     navItems.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewItems.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "Catalog Management";
-                    txtViewSubtitle.Text = "Manage shared sale items and customer recycle entries.";
                     await Task.WhenAll(LoadCatalogItemsAsync(), LoadRecycleCatalogAsync());
                     break;
                 case "Logs":
                     navLogs.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewLogs.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "Event Logs";
-                    txtViewSubtitle.Text = "Track system activity.";
                     await LoadEventLogsAsync();
                     break;
                 case "Sales":
                     navSales.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewSales.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "Sales Report";
-                    txtViewSubtitle.Text = "Analyze transaction history.";
                     await LoadSalesMachineFilterAsync();
                     await LoadSalesDataAsync();
                     break;
@@ -207,21 +202,18 @@ namespace Eco_Matic
                     navMachines.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewMachines.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "Vending Machines";
-                    txtViewSubtitle.Text = "Manage interconnected machine instances.";
                     await LoadMachinesDataAsync();
                     break;
                 case "Users":
                     navUsers.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewUsers.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "System Admin Users";
-                    txtViewSubtitle.Text = "Manage admins and inventory workers.";
                     await LoadUsersDataAsync();
                     break;
                 case "Customers":
                     navCustomers.Style = (Style)FindResource("SidebarButtonActiveStyle");
                     viewCustomers.Visibility = Visibility.Visible;
                     txtViewTitle.Text = "Customers CRM";
-                    txtViewSubtitle.Text = "Manage RFID user accounts and credit balances.";
                     await LoadCustomersDataAsync();
                     break;
             }
@@ -815,9 +807,9 @@ namespace Eco_Matic
                     var store = new Data.SupabaseStore();
                     store.GetDashboardMetrics(out decimal totalSales, out int totalItemsSold, out int lowStockAlerts, out int activeMachines);
                     var logs = store.GetEventLogs();
-                    var weeklySales = store.GetFilteredSales(DateTime.Today, "Week").Data;
+                    var yearlySales = store.GetFilteredSales(DateTime.Today, "Year").Data;
                     var stockMonitoring = store.GetStockMonitoring();
-                    return (totalSales, totalItemsSold, lowStockAlerts, activeMachines, logs, weeklySales, stockMonitoring);
+                    return (totalSales, totalItemsSold, lowStockAlerts, activeMachines, logs, yearlySales, stockMonitoring);
                 });
 
                 txtTotalSales.Text = $"₱{result.totalSales:F2}";
@@ -839,7 +831,7 @@ namespace Eco_Matic
                     dgRecentActivity.ItemsSource = null;
                 }
 
-                icDashboardSalesTrend.ItemsSource = BuildTrendData(result.weeklySales, 280);
+                icDashboardSalesTrend.ItemsSource = BuildTrendData(result.yearlySales, 280);
 
                 DataView stockView = result.stockMonitoring.DefaultView;
                 stockView.RowFilter = "[Status] = 'OUT OF STOCK' OR [Status] = 'LOW STOCK' OR [Status] = 'WATCH'";

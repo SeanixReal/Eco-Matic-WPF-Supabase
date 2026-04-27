@@ -181,7 +181,6 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBlock x:Name="txtViewTitle" Text="Project Dashboard" FontSize="28" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center" />
-                        <TextBlock x:Name="txtViewSubtitle" Text="Oversee operational statistics." FontSize="12" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,35,0,0" VerticalAlignment="Top"/>
                     </Grid>
 
                     <!-- Content Grids -->
@@ -237,7 +236,7 @@
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="Sales Pulse" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12" />
+                                        <TextBlock Text="Sales Report Report (Year)" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12" />
                                         <ItemsControl x:Name="icDashboardSalesTrend" Grid.Row="1">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -336,7 +335,7 @@
                                         <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="60">
                                             <DataGridTextColumn.ElementStyle>
                                                 <Style TargetType="TextBlock">
-                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="TextAlignment" Value="Left"/>
                                                     <Setter Property="Margin" Value="5,0"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Stock}" Value="0">
@@ -373,7 +372,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="150"/>
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" Margin="0,0,0,15">

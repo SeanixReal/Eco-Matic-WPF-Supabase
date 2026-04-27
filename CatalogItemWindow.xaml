@@ -1,7 +1,7 @@
 <Window x:Class="Eco_Matic.CatalogItemWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Catalog Item" Height="780" Width="420"
+        Title="Catalog Item" Height="670" Width="420"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterOwner"
         MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown">

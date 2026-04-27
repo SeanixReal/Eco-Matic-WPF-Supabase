@@ -616,7 +616,6 @@
                                         <!-- LCD Display (Arduino/LCD Emulator) -->
                                         <Border Grid.Row="4"
                                             Margin="0,0,0,8"
-                                            MinHeight="118"
                                             Background="#0A1208" 
                                             BorderBrush="#1A2B18" 
                                             BorderThickness="2" 
@@ -624,7 +623,7 @@
                                             Padding="12">
                                             <Grid>
                                                 <TextBlock x:Name="lblLcdDisplay"
-                                                       Text="ECO-MATIC v1.1&#x0a;SYSTEM READY..." 
+                                                       Text="ECO-MATIC v1&#x0a;SYSTEM READY..." 
                                                        Foreground="#42FF42" 
                                                        FontFamily="Consolas" 
                                                        FontSize="13"
@@ -634,7 +633,7 @@
                                                     </TextBlock.Effect>
                                                 </TextBlock>
                                                 <!-- Scanlines -->
-                                                <Rectangle Opacity="0.05" IsHitTestVisible="False">
+                                                <Rectangle Opacity="0.05" IsHitTestVisible="False" Margin="0,0,0,32">
                                                     <Rectangle.Fill>
                                                         <VisualBrush TileMode="Tile" Viewport="0,0,1,3" ViewportUnits="Absolute">
                                                             <VisualBrush.Visual>

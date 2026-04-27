@@ -24,6 +24,19 @@ This is the single canonical documentation folder for the current Eco-Matic code
 - user manual
 - archived proposal material in `archive/`
 
+## Presentation-Ready Pack
+
+Use these when preparing for pitch day:
+
+- `PRESENTATION_READY_MASTER_INDEX.md`
+- `FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md`
+- `FINAL_PROJECT_POWERPOINT_CONTENTS.md`
+- `FINAL_PROJECT_PRESENTATION_SCRIPT.md`
+- `PITCH_TIMED_SCRIPT_10_MIN_STRICT.md`
+- `PITCH_ONE_PAGE_CUE_CARD.md`
+- `ADVANCED_QA_COMPLEX_FUNCTIONS.md`
+- `CODEBASE_ATLAS_EVERY_FILE.md`
+
 Relevant SQL docs for the current inventory model:
 
 - `sql/README.md`
