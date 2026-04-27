@@ -113,7 +113,7 @@
                                         <TextBlock Text="{Binding Address}"
                                                    Margin="0,6,0,0"
                                                    Foreground="#52637F"
-                                                   FontSize="12"
+                                                   FontSize="10"
                                                    TextWrapping="Wrap"
                                                    MaxHeight="48" />
                                         <Border Margin="0,10,0,0"
