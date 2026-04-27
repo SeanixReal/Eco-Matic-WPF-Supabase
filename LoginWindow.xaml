@@ -54,7 +54,7 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0"
-                               Text="Admin Login"
+                               Text="Login"
                                FontSize="26"
                                FontWeight="Bold"
                                Foreground="#2E77E6"
@@ -64,7 +64,7 @@
                                Foreground="#6A7891"
                                Text="Enter your credentials to access the console." />
 
-                    <TextBlock Grid.Row="2" Text="Username" Foreground="#6A7891" FontWeight="SemiBold" Margin="0,0,0,5" />
+                    <TextBlock Grid.Row="2" Text="Email/Username" Foreground="#6A7891" FontWeight="SemiBold" Margin="0,0,0,5" />
                     <TextBox x:Name="txtUsername"
                              Grid.Row="3"
                              Height="40"

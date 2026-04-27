@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterOwner"
         MouseLeftButtonDown="WindowFrame_MouseLeftButtonDown"
         Loaded="Window_Loaded">
-    <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1">
+    <Border Background="White" CornerRadius="12" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,-68">
         <Border.Effect>
             <DropShadowEffect Color="#10000000" BlurRadius="15" ShadowDepth="4"/>
         </Border.Effect>
@@ -20,7 +20,7 @@
             <TextBlock Text="Register Staff" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
 
             <StackPanel Grid.Row="1">
-                <TextBlock Text="Username:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
+                <TextBlock Text="Email/Username:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
                 <TextBox x:Name="txtUsername" Height="35" Padding="5,8" BorderBrush="#CBD5E1" Margin="0,0,0,10"/>
 
                 <TextBlock x:Name="lblPassword" Text="Password:" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>

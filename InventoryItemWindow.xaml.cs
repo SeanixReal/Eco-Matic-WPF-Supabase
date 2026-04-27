@@ -34,7 +34,6 @@ namespace Eco_Matic
             _completedSlots = completedSlots;
             TitleContent.Text = "Required Machine Setup";
             txtSlotId.Text = SlotIdHelper.Normalize(suggestedSlotId) ?? suggestedSlotId;
-            txtSetupSummary.Text = $"Assign slot {completedSlots + 1} of at least {minimumRequiredSlots} required slots for this new vending machine.";
             btnSave.Content = "Save Slot";
         }
 
@@ -122,7 +121,6 @@ namespace Eco_Matic
         {
             _initialItemId = itemId;
             TitleContent.Text = "Edit Machine Slot";
-            txtSetupSummary.Text = "Update the assigned slot while keeping the same 12-slot and 15-stock limits.";
             txtSlotId.Text = SlotIdHelper.Normalize(slotId) ?? slotId;
             txtStock.Text = stock.ToString(CultureInfo.InvariantCulture);
             txtSlotPrice.Text = slotPrice.HasValue ? slotPrice.Value.ToString("0.00", CultureInfo.InvariantCulture) : "";

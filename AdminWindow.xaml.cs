@@ -332,6 +332,14 @@ namespace Eco_Matic
 
             await RefreshMachinesAndInventoryAsync();
 
+            if (deleted)
+            {
+                LogMachineEvent(
+                    machineId,
+                    "MACHINE_SETUP_ROLLBACK",
+                    $"Machine {machineId} '{locationName}' was removed because required slot setup was not completed.");
+            }
+
             if (!deleted)
             {
                 MessageBox.Show(this,
@@ -412,6 +420,11 @@ namespace Eco_Matic
                     continue;
                 }
 
+                LogMachineEvent(
+                    machineId,
+                    "INVENTORY_SLOT_ADDED",
+                    $"Machine {machineId} setup slot {slotId}: item ID {selectedItemId.Value}, initial stock {initialStock}, slot price {DescribeSlotPrice(slotPriceOverride)}.");
+
                 assignedSlots++;
             }
 
@@ -457,6 +470,10 @@ namespace Eco_Matic
 
                         if (added)
                         {
+                            LogMachineEvent(
+                                machineId,
+                                "INVENTORY_SLOT_ADDED",
+                                $"Machine {machineId} slot {slotId}: item ID {selectedItemId.Value}, initial stock {initialStock}, slot price {DescribeSlotPrice(slotPriceOverride)}.");
                             await LoadInventoryGridAsync(machineId);
                         }
                     }
@@ -473,6 +490,9 @@ namespace Eco_Matic
             if (cboInventoryMachine.SelectedValue is int machineId && dgInventory.SelectedItem is System.Data.DataRowView row)
             {
                 int inventoryId = Convert.ToInt32(row["_InventoryID"]);
+                string slotId = row["Slot"].ToString() ?? "";
+                string itemName = row["Item"].ToString() ?? "Unknown Item";
+                int previousStock = Convert.ToInt32(row["Stock"]);
                 var restockWindow = new RestockWindow();
                 restockWindow.Owner = this;
                 if (restockWindow.ShowDialog() == true)
@@ -486,6 +506,10 @@ namespace Eco_Matic
 
                     if (restocked)
                     {
+                        LogMachineEvent(
+                            machineId,
+                            "RESTOCK",
+                            $"Machine {machineId} slot {slotId} ({itemName}) restocked by +{restockQuantity}. Previous stock: {previousStock}.");
                         await LoadInventoryGridAsync(machineId);
                     }
                 }
@@ -504,6 +528,7 @@ namespace Eco_Matic
                 int itemId = Convert.ToInt32(row["_ItemID"]);
                 string slotId = row["Slot"].ToString() ?? "";
                 int stock = Convert.ToInt32(row["Stock"]);
+                int currentMaxCapacity = Convert.ToInt32(row["Max Capacity"]);
                 decimal? slotPrice = row.Row.Table.Columns.Contains("Slot Price") && row["Slot Price"] != DBNull.Value
                     ? Convert.ToDecimal(row["Slot Price"])
                     : null;
@@ -518,7 +543,7 @@ namespace Eco_Matic
                     int? selectedItemId = editWindow.SelectedItemId;
                     string updatedSlotId = editWindow.SlotId;
                     int updatedStock = editWindow.InitialStock;
-                    int maxCapacity = editWindow.MaxCapacity;
+                    int updatedMaxCapacity = editWindow.MaxCapacity;
                     decimal? updatedSlotPrice = editWindow.SlotPriceOverride;
 
                     if (selectedItemId.HasValue)
@@ -526,11 +551,15 @@ namespace Eco_Matic
                         bool updated = await RunStoreMutationAsync(() =>
                         {
                             var store = new Data.SupabaseStore();
-                            return store.UpdateMachineInventoryAssignment(inventoryId, machineId, updatedSlotId, selectedItemId.Value, updatedStock, maxCapacity, updatedSlotPrice);
+                            return store.UpdateMachineInventoryAssignment(inventoryId, machineId, updatedSlotId, selectedItemId.Value, updatedStock, updatedMaxCapacity, updatedSlotPrice);
                         }, "Update machine slot");
 
                         if (updated)
                         {
+                            LogMachineEvent(
+                                machineId,
+                                "INVENTORY_SLOT_UPDATED",
+                                $"Machine {machineId} slot {slotId}->{updatedSlotId}, item ID {itemId}->{selectedItemId.Value}, stock {stock}->{updatedStock}, max {currentMaxCapacity}->{updatedMaxCapacity}, slot price {DescribeSlotPrice(slotPrice)}->{DescribeSlotPrice(updatedSlotPrice)}.");
                             await LoadInventoryGridAsync(machineId);
                         }
                     }
@@ -548,6 +577,8 @@ namespace Eco_Matic
             {
                 int inventoryId = Convert.ToInt32(row["_InventoryID"]);
                 string name = row["Item"].ToString() ?? "";
+                string slotId = row["Slot"].ToString() ?? "";
+                int previousStock = Convert.ToInt32(row["Stock"]);
 
                 if (MessageBox.Show($"Are you sure you want to permanently delete '{name}'?", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
@@ -559,6 +590,10 @@ namespace Eco_Matic
 
                     if (deleted)
                     {
+                        LogMachineEvent(
+                            machineId,
+                            "INVENTORY_SLOT_REMOVED",
+                            $"Machine {machineId} slot {slotId} ({name}) removed from inventory. Previous stock: {previousStock}.");
                         await LoadInventoryGridAsync(machineId);
                     }
                 }
@@ -617,6 +652,9 @@ namespace Eco_Matic
 
             int inventoryId = Convert.ToInt32(row["_InventoryID"]);
             string itemName = row["Item"].ToString() ?? "this item";
+            string slotId = row["Slot"].ToString() ?? "";
+            int currentStock = Convert.ToInt32(row["Stock"]);
+            int maxCapacity = Convert.ToInt32(row["Max Capacity"]);
 
             if (MessageBox.Show(
                     $"Restock '{itemName}' to max capacity?",
@@ -635,6 +673,10 @@ namespace Eco_Matic
 
             if (restocked)
             {
+                LogMachineEvent(
+                    machineId,
+                    "RESTOCK_MAX",
+                    $"Machine {machineId} slot {slotId} ({itemName}) restocked to max capacity {maxCapacity} from {currentStock}.");
                 await LoadInventoryGridAsync(machineId);
             }
             else
@@ -720,6 +762,28 @@ namespace Eco_Matic
             }
 
             return $"machine_id IN ({string.Join(",", _assignedMachineIds.OrderBy(id => id))})";
+        }
+
+        private static string DescribeSlotPrice(decimal? slotPrice)
+        {
+            return slotPrice.HasValue ? $"₱{slotPrice.Value:0.00}" : "default";
+        }
+
+        private static string DescribeCoordinates(double? latitude, double? longitude)
+        {
+            return latitude.HasValue && longitude.HasValue
+                ? $"{latitude.Value:0.00000}, {longitude.Value:0.00000}"
+                : "not set";
+        }
+
+        private static string DescribeAddress(string address)
+        {
+            return string.IsNullOrWhiteSpace(address) ? "not set" : address.Trim();
+        }
+
+        private static void LogMachineEvent(int machineId, string eventType, string details, decimal amount = 0m)
+        {
+            DataStore.LogEvent(machineId, eventType, details, amount);
         }
 
         private void BtnLogout_Click(object sender, RoutedEventArgs e)
@@ -1298,6 +1362,11 @@ namespace Eco_Matic
 
                 if (machineId.HasValue)
                 {
+                    LogMachineEvent(
+                        machineId.Value,
+                        "MACHINE_CREATED",
+                        $"Machine {machineId.Value} '{locationName}' created. Address: {DescribeAddress(address)}. Coordinates: {DescribeCoordinates(latitude, longitude)}.");
+
                     bool setupCompleted = await RunRequiredMachineSetupAsync(machineId.Value, locationName);
                     await RefreshMachinesAndInventoryAsync();
 
@@ -1374,6 +1443,10 @@ namespace Eco_Matic
 
                     if (deleted)
                     {
+                        LogMachineEvent(
+                            machineId,
+                            "MACHINE_DELETED",
+                            $"Machine {machineId} '{machineName}' was deleted.");
                         await RefreshMachinesAndInventoryAsync();
                     }
                     else
@@ -1415,6 +1488,10 @@ namespace Eco_Matic
 
                     if (updated)
                     {
+                        LogMachineEvent(
+                            machineId,
+                            "MACHINE_UPDATED",
+                            $"Machine {machineId} updated: name '{loc}' -> '{updatedLocationName}', status '{status}' -> '{updatedStatus}', address '{DescribeAddress(address)}' -> '{DescribeAddress(updatedAddress)}', coordinates {DescribeCoordinates(latitude, longitude)} -> {DescribeCoordinates(updatedLatitude, updatedLongitude)}.");
                         await RefreshMachinesAndInventoryAsync();
                         MessageBox.Show("Machine updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     }

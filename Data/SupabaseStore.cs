@@ -1130,6 +1130,16 @@ public partial class SupabaseStore
                 return false;
             }
 
+            if (TryFindDuplicateCatalogItemName(name, out _))
+            {
+                System.Windows.MessageBox.Show(
+                    "An item with the same name already exists in the global catalog. Reuse the existing item or rename this one.",
+                    "Duplicate Item",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return false;
+            }
+
             // 1. Create new master item
             var inserted = Run(_client.PostAsync("items", new
             {

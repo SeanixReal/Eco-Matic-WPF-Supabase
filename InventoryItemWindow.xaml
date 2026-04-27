@@ -18,7 +18,6 @@
             </Grid.RowDefinitions>
 
             <TextBlock x:Name="TitleContent" Text="Assign Item to Machine Slot" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10"/>
-            <TextBlock x:Name="txtSetupSummary" Text="Update the assigned slot while keeping the same 12-slot and 15-stock limits." FontSize="13" Foreground="#64748B" TextWrapping="Wrap" Margin="0,0,0,20"/>
 
             <StackPanel Grid.Row="1" Margin="0,0,0,20">
 
