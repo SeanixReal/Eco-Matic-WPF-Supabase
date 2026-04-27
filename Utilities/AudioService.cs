@@ -70,6 +70,25 @@ namespace Eco_Matic.Utilities
         }
 
         /// <summary>
+        /// Stops any ongoing speech.
+        /// </summary>
+        public static void StopSpeech()
+        {
+            _synthesizer.SpeakAsyncCancelAll();
+        }
+
+        /// <summary>
+        /// Stops all audio (BGM, SFX, and Speech).
+        /// </summary>
+        public static void StopAllAudio()
+        {
+            _bgmPlayer.Stop();
+            _sfxPlayer.Stop();
+            _synthesizer.SpeakAsyncCancelAll();
+            _currentBgmPath = null;
+        }
+
+        /// <summary>
         /// Plays a short sound effect.
         /// </summary>
         public static void PlaySfx(string filePath)

@@ -1,5 +1,6 @@
 using System.Windows;
 using Eco_Matic.Data;
+using Eco_Matic.Utilities;
 
 namespace Eco_Matic;
 
@@ -85,6 +86,8 @@ public partial class ReceiptWindow : Window
         }
 
         btnPrint.IsEnabled = false;
+        AudioService.StopAllAudio();
+        await Task.Delay(1500); // Allow Bluetooth bandwidth to clear
         var printResult = await Task.Run(() => ReceiptPrinterService.Instance.TryPrintReceipt(_transaction));
         btnPrint.IsEnabled = true;
         ApplyPrintResult(printResult);

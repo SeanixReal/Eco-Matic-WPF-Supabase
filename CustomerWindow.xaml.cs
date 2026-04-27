@@ -7,7 +7,6 @@ using System.Windows.Media.Animation;
 using System.ComponentModel;
 using System.Threading;
 using System.Windows.Threading;
-using System.Windows.Threading;
 using Eco_Matic.Data;
 using Eco_Matic.Utilities;
 
@@ -44,6 +43,7 @@ public partial class CustomerWindow : Window
     private Transaction _activeSession = new();
     private bool _isRefreshingInventory;
     private CancellationTokenSource? _liveInventoryRefreshCts;
+    private CancellationTokenSource? _dispenseCts;
     private int _consecutiveRefreshFailures;
     private int _pendingBackendWrites;
     private bool _allowWindowClose;
@@ -124,6 +124,10 @@ public partial class CustomerWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
+        _dispenseCts?.Cancel();
+        _dispenseCts?.Dispose();
+        _dispenseCts = null;
+
         AudioService.StopBackgroundMusic();
         AudioService.SpeakAsync("Thank you for using Eco-Matic. Have a nice day!");
         if (_dispenseTimer != null)
@@ -1072,29 +1076,39 @@ public partial class CustomerWindow : Window
         opacityAnim.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
         opacityAnim.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.18)), new QuadraticEase { EasingMode = EasingMode.EaseOut }));
         imgDispense.BeginAnimation(UIElement.OpacityProperty, opacityAnim);
-
-        _ = FinishDispenseSequenceAsync(product);
+        
+        _dispenseCts?.Cancel();
+        _dispenseCts?.Dispose();
+        _dispenseCts = new CancellationTokenSource();
+        _ = FinishDispenseSequenceAsync(product, _dispenseCts.Token);
     }
 
-    private async Task FinishDispenseSequenceAsync(VendingItem product)
+    private async Task FinishDispenseSequenceAsync(VendingItem product, CancellationToken ct)
     {
-        AudioService.PlaySfx("Assets/Audio/coin_dispense.mp3");
-        AudioService.SpeakAsync($"Dispensing {product.Name}");
-        // Wait for the motor's open cycle (1.5 seconds)
-        await Task.Delay(1500);
-        
-        _isDispensing = false;
-        imgDispenseOpacityReset();
-        SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
-        AudioService.SpeakAsync($"Please take your {product.Name}. {product.DispenseMessage}");
-
-        // Wait enough time for customer to read the message and motor to finish closing
-        await Task.Delay(4000);
-
-        if (!_isDispensing)
+        try
         {
-            imgDispense.Visibility = Visibility.Hidden;
-            SetDispenseStatus("ECO-MATIC READY\nCASH OR RECYCLE", Brushes.LightGray);
+            AudioService.PlaySfx("Assets/Audio/coin_dispense.mp3");
+            AudioService.SpeakAsync($"Dispensing {product.Name}");
+            // Wait for the motor's open cycle (1.5 seconds)
+            await Task.Delay(1500, ct);
+
+            _isDispensing = false;
+            imgDispenseOpacityReset();
+            SetDispenseStatus($"TAKE YOUR ITEM\n{product.DispenseMessage}", Brushes.MediumSeaGreen);
+            AudioService.SpeakAsync($"Please take your {product.Name}. {product.DispenseMessage}");
+
+            // Wait enough time for customer to read the message and motor to finish closing
+            await Task.Delay(3000, ct);
+
+            if (!_isDispensing)
+            {
+                imgDispense.Visibility = Visibility.Hidden;
+                SetDispenseStatus("ECO-MATIC READY\nCASH OR RECYCLE", Brushes.LightGray);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Silently handle cancellation
         }
     }
 
@@ -1184,15 +1198,16 @@ public partial class CustomerWindow : Window
             completedSession = FinalizeActiveSession();
             await Task.Run(() => DataStore.SaveCompletedReceipt(completedSession));
             _arduino?.SendMessage("PRINTING RECEIPT");
+            
+            _dispenseCts?.Cancel();
+            _dispenseCts?.Dispose();
+            _dispenseCts = null;
+            
+            AudioService.StopAllAudio();
             AudioService.PlaySfx("Assets/Audio/coin_dispense.mp3");
+            await Task.Delay(1500); // Allow Bluetooth bandwidth to clear
             printResult = await Task.Run(() => ReceiptPrinterService.Instance.TryPrintReceipt(completedSession));
             _arduino?.SendMessage(printResult.Success ? "RECEIPT COMPLETE" : "RECEIPT FAILED");
-            
-            // Give the user a nice thank you message after the receipt flow
-            await Task.Delay(1000);
-            _arduino?.SendMessage("THANK YOU FOR\nUSING ECO-MATIC");
-            AudioService.SpeakAsync("Thank you for using Eco-Matic. Please come again!");
-            await Task.Delay(2000);
 
             var receipt = new ReceiptWindow(completedSession, printResult)
             {
