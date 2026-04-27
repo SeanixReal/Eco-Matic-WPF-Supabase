@@ -68,12 +68,10 @@ public partial class ReceiptWindow : Window
     {
         if (printResult == null)
         {
-            lblPrintStatus.Text = "Printer status unavailable.";
             btnPrint.Content = "Print";
             return;
         }
 
-        lblPrintStatus.Text = printResult.Message;
         btnPrint.Content = printResult.Success ? "Reprint" : "Print Again";
     }
 
@@ -81,7 +79,6 @@ public partial class ReceiptWindow : Window
     {
         if (_transaction == null)
         {
-            lblPrintStatus.Text = "No transaction data is available to print.";
             return;
         }
 
