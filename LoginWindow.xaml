@@ -1,7 +1,7 @@
 <Window x:Class="Eco_Matic.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Admin Login"
+        Title="Eco-Matic Login"
         Height="420"
         Width="480"
         WindowStartupLocation="CenterOwner"
@@ -62,7 +62,7 @@
                     <TextBlock Grid.Row="1"
                                Margin="0,0,0,24"
                                Foreground="#6A7891"
-                               Text="Enter your credentials to access the console." />
+                               Text="Enter your credentials to access your account." />
 
                     <TextBlock Grid.Row="2" Text="Email/Username" Foreground="#6A7891" FontWeight="SemiBold" Margin="0,0,0,5" />
                     <TextBox x:Name="txtUsername"

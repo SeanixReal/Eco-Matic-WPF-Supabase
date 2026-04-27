@@ -35,7 +35,7 @@ namespace Eco_Matic
             }
 
             btnClose.IsEnabled = false;
-            txtWelcome.Text = "Loading RFID account...";
+            txtWelcome.Text = "Synchronizing account...";
 
             var result = await Task.Run(() =>
             {

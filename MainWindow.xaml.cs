@@ -304,18 +304,29 @@ namespace Eco_Matic
                 var loginResult = await System.Threading.Tasks.Task.Run(() =>
                 {
                     var store = new Eco_Matic.Data.SupabaseStore();
-                    return store.AuthenticateUserAccess(username, password);
+                    var adminAuth = store.AuthenticateUserAccess(username, password);
+                    
+                    if (adminAuth.Role != null)
+                    {
+                        return new { Type = "Admin", Role = (string?)adminAuth.Role, MachineIds = adminAuth.AssignedMachineIds, Rfid = (string?)null };
+                    }
+
+                    string? customerRfid = store.AuthenticateCustomer(username, password);
+                    if (customerRfid != null)
+                    {
+                        return new { Type = "Customer", Role = (string?)null, MachineIds = new List<int>(), Rfid = (string?)customerRfid };
+                    }
+
+                    return new { Type = "None", Role = (string?)null, MachineIds = new List<int>(), Rfid = (string?)null };
                 });
 
                 Mouse.OverrideCursor = null;
                 btnAdmin.IsEnabled = true;
-                string? role = loginResult.Role;
-                List<int> machineIds = loginResult.AssignedMachineIds;
 
-                if (role != null)
+                if (loginResult.Type == "Admin")
                 {
                     Hide();
-                    var adminWindow = new AdminWindow(role, machineIds)
+                    var adminWindow = new AdminWindow(loginResult.Role!, loginResult.MachineIds)
                     {
                         Owner = this
                     };
@@ -326,10 +337,21 @@ namespace Eco_Matic
                     };
                     adminWindow.Show();
                 }
+                else if (loginResult.Type == "Customer")
+                {
+                    var dashboard = new CustomerDashboardWindow(loginResult.Rfid!);
+                    dashboard.Owner = this;
+                    dashboard.ShowDialog();
+                    
+                    if (dashboard.SaveSucceeded)
+                    {
+                        _activeCustomerWindow?.MarkPendingPointsSaved(dashboard.SavedPoints);
+                    }
+                }
                 else
                 {
                     MessageBox.Show(this,
-                        "Incorrect authentication.",
+                        "Incorrect credentials. If you are a customer, use your registered email and password.",
                         "Access Denied",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);

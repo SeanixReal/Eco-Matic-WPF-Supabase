@@ -1,26 +1,84 @@
 <Window x:Class="Eco_Matic.CustomerDashboardWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Eco-Matic eWallet" Height="350" Width="600" WindowStartupLocation="CenterOwner" ResizeMode="NoResize" Background="#F8FAFC">
-    <Grid Margin="20">
+        Title="Eco-Matic | Customer Dashboard" 
+        Height="360" 
+        Width="580" 
+        WindowStartupLocation="CenterOwner" 
+        ResizeMode="NoResize" 
+        Background="#F8FAFC">
+
+    <Grid Margin="30">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Customer Dashboard" FontSize="22" FontWeight="Bold" Foreground="#1E293B"/>
-            <TextBlock x:Name="txtWelcome" Text="Welcome, User" FontSize="14" Foreground="#64748B" Margin="0,2,0,0"/>
+        <!-- Title and User Info -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,25">
+            <TextBlock Text="Customer Dashboard" 
+                       FontSize="24" 
+                       FontWeight="Bold" 
+                       Foreground="#0F172A"/>
+            <TextBlock x:Name="txtWelcome" 
+                       Text="Welcome, User" 
+                       FontSize="15" 
+                       Foreground="#64748B" 
+                       Margin="0,4,0,0"/>
         </StackPanel>
 
-        <Border Grid.Row="1" Background="#2FA66A" CornerRadius="8" Padding="20" Margin="0,0,0,20">
+        <!-- Balance Card -->
+        <Border Grid.Row="1" 
+                Background="#2FA66A" 
+                CornerRadius="12" 
+                Padding="30" 
+                VerticalAlignment="Top">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="15" Color="#2FA66A" Opacity="0.2" ShadowDepth="5" />
+            </Border.Effect>
             <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="Eco-Credit Balance" Foreground="#D1FAE5" FontSize="14" HorizontalAlignment="Center"/>
-                <TextBlock x:Name="txtBalance" Text="0" Foreground="White" FontSize="36" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                <TextBlock Text="Eco-Credit Balance" 
+                           Foreground="#D1FAE5" 
+                           FontSize="14" 
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Opacity="0.9"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                    <TextBlock x:Name="txtBalance" 
+                               Text="0" 
+                               Foreground="White" 
+                               FontSize="48" 
+                               FontWeight="Bold" 
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text=" pts" 
+                               Foreground="#D1FAE5" 
+                               FontSize="20" 
+                               FontWeight="SemiBold" 
+                               VerticalAlignment="Bottom" 
+                               Margin="4,0,0,10"/>
+                </StackPanel>
             </StackPanel>
         </Border>
 
-        <Button x:Name="btnClose" Grid.Row="3" Content="Log Out / Close" Padding="10" Margin="0,20,0,0" Background="#F1F5F9" Foreground="#475569" BorderBrush="#CBD5E1" Click="BtnClose_Click"/>
+        <!-- Actions -->
+        <Button x:Name="btnClose" 
+                Grid.Row="2" 
+                Content="Log Out / Close" 
+                Height="45"
+                Padding="20,0"
+                Cursor="Hand"
+                Background="#FFFFFF" 
+                Foreground="#475569" 
+                BorderBrush="#E2E8F0" 
+                BorderThickness="1"
+                FontWeight="SemiBold"
+                Click="BtnClose_Click">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="8"/>
+                </Style>
+            </Button.Resources>
+        </Button>
     </Grid>
 </Window>

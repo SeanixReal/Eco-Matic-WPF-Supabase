@@ -28,6 +28,22 @@ namespace Eco_Matic.Data
             catch { return false; }
         }
 
+        public string? AuthenticateCustomer(string email, string pass)
+        {
+            try
+            {
+                var rows = Run(_client.GetAsync("customers",
+                    $"select=rfid_tag&email=eq.{Uri.EscapeDataString(email)}&password_hash=eq.{Uri.EscapeDataString(pass)}"));
+
+                if (rows.Count > 0)
+                {
+                    return rows[0]?["rfid_tag"]?.GetValue<string>();
+                }
+            }
+            catch { }
+            return null;
+        }
+
         public bool RegisterCustomer(string rfid, string email, string pass)
         {
             try
