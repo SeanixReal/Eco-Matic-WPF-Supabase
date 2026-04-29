@@ -68,6 +68,7 @@ This layer connects the UI to external systems.
 - `Data/SupabaseStore.cs`
   - main application data service
   - contains CRUD and reporting operations
+  - writes audit events for inventory, restock, catalog, machine, customer-credit, sale, and recycle activity through the existing `event_logs` table
   - returns `DataTable` objects because WPF `DataGrid` binding is used throughout the admin screens
 - `Data/SupabaseStore_Customers.cs`
   - extends `SupabaseStore` with customer RFID operations
@@ -133,6 +134,7 @@ Important current behavior:
 3. If the RFID exists:
    - `CustomerDashboardWindow` is opened
    - pending recycle points are saved into the `customers` table
+   - the active customer window first attaches any current-session purchases without an RFID to this card, then transaction history is shown from exact matching RFID purchase rows in `event_logs`
 4. If the RFID does not exist:
    - `CustomerRegistrationWindow` is opened first
    - after registration, the dashboard can open
@@ -140,8 +142,8 @@ Important current behavior:
 Important implementation note:
 
 - recycle points are persisted to the customer account
-- the current purchase flow is still cash-based in `CustomerWindow`
-- the RFID customer account is used for registration, identification, and point saving, not for deducting payment during purchase
+- the customer window keeps a session RFID lock once purchases exist, so a later scan from another RFID can view that account but cannot steal the current session's transaction history
+- purchases can use cash, QR-paid balance, or available eco-points; RFID identifies the account used for saved points and customer transaction history
 
 ### 3.3 Admin Flow
 
@@ -161,8 +163,10 @@ Important admin split:
 - the `Items` tab manages the shared global catalog in `items`
 - the `Inventory` tab manages per-machine slot assignment, stock, and optional slot-specific price override in `machine_inventory`
 - the `Inventory` tab has a selected-row quick action that restocks only the chosen item to its max capacity
-- the `Machines` tab manages machine identity and physical placement information
+- the `Machines` tab manages machine identity and physical placement information; a new machine can be registered without immediately assigning stock
 - the `Sales Report` tab can be filtered by date period and by a single vending machine, or left on all machines
+- the `Sales Report` tab defaults to the Week filter and calculates revenue trend, product mix, best-selling items, machine revenue, category revenue, peak sales periods, top machine, transaction count, unit count, and average sale from the filtered sales rows
+- the `Logs` tab defaults to Week and includes the machine name when an event is machine-scoped
 - stock monitoring now includes the vending machine name beside low-stock rows so alerts show where the problem is
 
 ## 4. Why the Architecture Looks Like This
@@ -221,14 +225,15 @@ The current backend revolves around these main entities:
 - `customers`
 - `receipt_sessions`
 - `receipt_session_lines`
-- `esp32_telemetry`
-- `esp32_commands`
+- `recyclable_items`
+- `qr_payment_intents`
+- `user_machine_assignments`
 
 One important detail for presentation:
 
 - `customers` is logically related to RFID and eco-credits
 - but it is not currently linked by foreign key to `sales_transactions`
-- the connection is done at application level through RFID scanning and `PendingPoints`
+- customer transaction history is therefore derived from purchase-related `event_logs` entries that include the RFID in the description, not from a direct customer-sales relationship
 
 Important vending-machine detail:
 
@@ -266,7 +271,7 @@ For the current codebase, the accurate implementation is:
 - REST access to Supabase
 - optional local `OfflineMySqlStore` cache for customer-mode offline sync
 
-Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed and the live schema now also includes receipt-history and ESP32-support tables.
+Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed and the live schema now also includes receipt history, QR payment intents, recyclable item definitions, and multi-machine staff assignments.
 
 For the live Supabase audit status, migrations, and current auth/RLS findings, see `docs/SUPABASE_AUDIT.md` and `docs/SUPABASE_MCP_ANALYSIS.md`.
 

@@ -54,6 +54,10 @@ namespace Eco_Matic.Data
                     email,
                     password_hash = pass
                 }));
+                if (result.Count > 0)
+                {
+                    LogEvent("CUSTOMER_REGISTERED", $"Registered customer account {email} with RFID ({rfid}).");
+                }
                 return result.Count > 0;
             }
             catch { return false; }
@@ -108,9 +112,12 @@ namespace Eco_Matic.Data
         {
             try
             {
+                var current = GetCustomerInfo(rfid);
                 Run(_client.PatchAsync("customers",
                     $"rfid_tag=eq.{Uri.EscapeDataString(rfid)}",
                     new { eco_credits = newCredits }));
+                string customerLabel = string.IsNullOrWhiteSpace(current.Email) ? "customer account" : current.Email;
+                LogEvent("CUSTOMER_CREDIT_UPDATED", $"Updated eco-credit balance for {customerLabel} RFID ({rfid}): {current.EcoCredits} -> {newCredits}.");
                 return true;
             }
             catch { return false; }
@@ -120,8 +127,11 @@ namespace Eco_Matic.Data
         {
             try
             {
+                var current = GetCustomerInfo(rfid);
                 Run(_client.DeleteAsync("customers",
                     $"rfid_tag=eq.{Uri.EscapeDataString(rfid)}"));
+                string customerLabel = string.IsNullOrWhiteSpace(current.Email) ? "customer account" : current.Email;
+                LogEvent("CUSTOMER_DELETED", $"Deleted {customerLabel} RFID ({rfid}); previous balance {current.EcoCredits}.");
                 return true;
             }
             catch { return false; }

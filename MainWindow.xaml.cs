@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Data;
 using Eco_Matic.Data;
 using Eco_Matic.Utilities;
 
@@ -102,7 +103,19 @@ namespace Eco_Matic
 
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        var dashboard = new CustomerDashboardWindow(rfid);
+                        bool allowSessionRfid = _activeCustomerWindow?.CanUseRfidForCurrentSession(rfid) ?? true;
+                        DataTable? sessionHistory = null;
+                        if (allowSessionRfid)
+                        {
+                            _activeCustomerWindow?.PrepareRfidForCurrentSession(rfid);
+                            sessionHistory = _activeCustomerWindow?.GetCurrentSessionTransactionHistory(rfid);
+                        }
+                        else
+                        {
+                            arduino.SendMessage("SESSION RFID LOCKED");
+                        }
+
+                        var dashboard = new CustomerDashboardWindow(rfid, allowSessionRfid, sessionHistory);
                         dashboard.Owner = this;
                         dashboard.ShowDialog();
 
@@ -117,7 +130,18 @@ namespace Eco_Matic
                             arduino.SendMessage("NO POINTS SAVED");
                         }
 
-                        _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);
+                        if (allowSessionRfid)
+                        {
+                            _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);
+                        }
+                        else
+                        {
+                            MessageBox.Show(this,
+                                "This vending session already has purchases attached to another RFID card, so this card was shown only for account viewing. Finish the current session before switching cards.",
+                                "RFID Session Locked",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+                        }
                     });
                 }
                 else
@@ -132,7 +156,19 @@ namespace Eco_Matic
                         registerWindow.Owner = this;
                         if (registerWindow.ShowDialog() == true)
                         {
-                            var dashboard = new CustomerDashboardWindow(rfid);
+                            bool allowSessionRfid = _activeCustomerWindow?.CanUseRfidForCurrentSession(rfid) ?? true;
+                            DataTable? sessionHistory = null;
+                            if (allowSessionRfid)
+                            {
+                                _activeCustomerWindow?.PrepareRfidForCurrentSession(rfid);
+                                sessionHistory = _activeCustomerWindow?.GetCurrentSessionTransactionHistory(rfid);
+                            }
+                            else
+                            {
+                                arduino.SendMessage("SESSION RFID LOCKED");
+                            }
+
+                            var dashboard = new CustomerDashboardWindow(rfid, allowSessionRfid, sessionHistory);
                             dashboard.Owner = this;
                             dashboard.ShowDialog();
 
@@ -148,7 +184,18 @@ namespace Eco_Matic
                                 Eco_Matic.Utilities.AudioService.PlaySfx("Assets/Audio/success.mp3");
                             }
 
-                            _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);
+                            if (allowSessionRfid)
+                            {
+                                _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);
+                            }
+                            else
+                            {
+                                MessageBox.Show(this,
+                                    "This vending session already has purchases attached to another RFID card, so this newly registered card was not attached to the current purchase history.",
+                                    "RFID Session Locked",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Information);
+                            }
                         }
                         else
                         {
@@ -339,13 +386,35 @@ namespace Eco_Matic
                 }
                 else if (loginResult.Type == "Customer")
                 {
-                    var dashboard = new CustomerDashboardWindow(loginResult.Rfid!);
+                    string rfid = loginResult.Rfid!;
+                    bool allowSessionRfid = _activeCustomerWindow?.CanUseRfidForCurrentSession(rfid) ?? true;
+                    DataTable? sessionHistory = null;
+                    if (allowSessionRfid)
+                    {
+                        _activeCustomerWindow?.PrepareRfidForCurrentSession(rfid);
+                        sessionHistory = _activeCustomerWindow?.GetCurrentSessionTransactionHistory(rfid);
+                    }
+
+                    var dashboard = new CustomerDashboardWindow(rfid, allowSessionRfid, sessionHistory);
                     dashboard.Owner = this;
                     dashboard.ShowDialog();
                     
                     if (dashboard.SaveSucceeded)
                     {
                         _activeCustomerWindow?.MarkPendingPointsSaved(dashboard.SavedPoints);
+                    }
+
+                    if (allowSessionRfid)
+                    {
+                        _activeCustomerWindow?.SetLinkedRfidCustomer(rfid, dashboard.CustomerEmail, dashboard.FinalBalance);
+                    }
+                    else
+                    {
+                        MessageBox.Show(this,
+                            "This vending session already has purchases attached to another RFID account, so this login was shown only for account viewing.",
+                            "Customer Session Locked",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
                     }
                 }
                 else

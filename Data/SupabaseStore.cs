@@ -36,6 +36,17 @@ public partial class SupabaseStore
         public string? NormalizedSlotId { get; init; }
     }
 
+    private sealed class InventoryAuditContext
+    {
+        public int InventoryId { get; init; }
+        public int MachineId { get; init; }
+        public string MachineName { get; init; } = "Machine";
+        public string SlotId { get; init; } = string.Empty;
+        public string ItemName { get; init; } = "Unknown item";
+        public int Stock { get; init; }
+        public int MaxCapacity { get; init; }
+    }
+
     private List<MachineSlotRecord> GetMachineSlotRecords(int machineId)
     {
         var list = new List<MachineSlotRecord>();
@@ -121,6 +132,61 @@ public partial class SupabaseStore
     private static object? ToDbNumber(decimal? value)
     {
         return value.HasValue ? value.Value : null;
+    }
+
+    private static string BuildQuery(params string[] parts)
+    {
+        return string.Join("&", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private InventoryAuditContext? GetInventoryAuditContext(int inventoryId)
+    {
+        var rows = Run(_client.GetAsync("machine_inventory",
+            $"select=inventory_id,machine_id,slot_id,stock_level,max_capacity,items(name),vending_machines(location_name)&inventory_id=eq.{inventoryId}&limit=1"));
+
+        if (rows.Count == 0)
+        {
+            return null;
+        }
+
+        var node = rows[0];
+        string rawSlot = node?["slot_id"]?.GetValue<string>() ?? "";
+        return new InventoryAuditContext
+        {
+            InventoryId = node?["inventory_id"]?.GetValue<int>() ?? inventoryId,
+            MachineId = node?["machine_id"]?.GetValue<int>() ?? 0,
+            MachineName = node?["vending_machines"]?["location_name"]?.GetValue<string>() ?? "Machine",
+            SlotId = SlotIdHelper.Normalize(rawSlot) ?? rawSlot,
+            ItemName = node?["items"]?["name"]?.GetValue<string>() ?? "Unknown item",
+            Stock = node?["stock_level"]?.GetValue<int>() ?? 0,
+            MaxCapacity = node?["max_capacity"]?.GetValue<int>() ?? 15
+        };
+    }
+
+    private string GetItemName(int itemId)
+    {
+        try
+        {
+            var rows = Run(_client.GetAsync("items", $"select=name&item_id=eq.{itemId}&limit=1"));
+            return rows.Count > 0 ? rows[0]?["name"]?.GetValue<string>() ?? $"Item {itemId}" : $"Item {itemId}";
+        }
+        catch
+        {
+            return $"Item {itemId}";
+        }
+    }
+
+    private string GetMachineName(int machineId)
+    {
+        try
+        {
+            var rows = Run(_client.GetAsync("vending_machines", $"select=location_name&machine_id=eq.{machineId}&limit=1"));
+            return rows.Count > 0 ? rows[0]?["location_name"]?.GetValue<string>() ?? $"Machine {machineId}" : $"Machine {machineId}";
+        }
+        catch
+        {
+            return $"Machine {machineId}";
+        }
     }
 
     public bool CanConnect()
@@ -247,6 +313,10 @@ public partial class SupabaseStore
                 dispense_message = dispenseMessage,
                 examine_message = examineMessage
             }));
+            if (result.Count > 0)
+            {
+                LogEvent("CATALOG_ITEM_CREATED", $"Created catalog item '{name}' ({type}) at ₱{price:0.00}.");
+            }
             return result.Count > 0;
         }
         catch (Exception ex)
@@ -270,6 +340,7 @@ public partial class SupabaseStore
                 return false;
             }
 
+            string previousName = GetItemName(itemId);
             Run(_client.PatchAsync("items", $"item_id=eq.{itemId}", new
             {
                 name,
@@ -280,6 +351,7 @@ public partial class SupabaseStore
                 dispense_message = dispenseMessage,
                 examine_message = examineMessage
             }));
+            LogEvent("CATALOG_ITEM_UPDATED", $"Updated catalog item #{itemId}: '{previousName}' -> '{name}', type {type}, price ₱{price:0.00}.");
             return true;
         }
         catch (Exception ex)
@@ -329,7 +401,9 @@ public partial class SupabaseStore
                 return false;
             }
 
+            string itemName = GetItemName(itemId);
             Run(_client.DeleteAsync("items", $"item_id=eq.{itemId}"));
+            LogEvent("CATALOG_ITEM_DELETED", $"Deleted catalog item #{itemId} '{itemName}'.");
             return true;
         }
         catch (Exception ex)
@@ -705,7 +779,13 @@ public partial class SupabaseStore
                 return null;
             }
 
-            return result[0]?["machine_id"]?.GetValue<int>();
+            int machineId = result[0]?["machine_id"]?.GetValue<int>() ?? 0;
+            if (machineId > 0)
+            {
+                LogEvent("MACHINE_CREATED", $"Registered machine #{machineId} '{locationName}'.", machineId: machineId);
+            }
+
+            return machineId > 0 ? machineId : null;
         }
         catch { return null; }
     }
@@ -719,7 +799,9 @@ public partial class SupabaseStore
     {
         try
         {
+            string machineName = GetMachineName(machineId);
             Run(_client.DeleteAsync("vending_machines", $"machine_id=eq.{machineId}"));
+            LogEvent("MACHINE_DELETED", $"Deleted machine #{machineId} '{machineName}'.");
             return true;
         }
         catch { return false; }
@@ -747,6 +829,7 @@ public partial class SupabaseStore
                     new { location_name = locationName, status }));
             }
 
+            LogEvent("MACHINE_UPDATED", $"Updated machine #{machineId} '{locationName}' status to {status}.", machineId: machineId);
             return true;
         }
         catch { return false; }
@@ -1088,6 +1171,9 @@ public partial class SupabaseStore
                     max_capacity = 15,
                     slot_price = ToDbNumber(slotPrice)
                 }));
+                string itemName = GetItemName(itemId);
+                string machineName = GetMachineName(machineId);
+                LogEvent("SLOT_ASSIGNED", $"Assigned '{itemName}' to {machineName} slot {normalizedSlotId} with stock {stock}/15.", machineId: machineId);
             }
             catch when (!slotPrice.HasValue)
             {
@@ -1099,6 +1185,9 @@ public partial class SupabaseStore
                     stock_level = stock,
                     max_capacity = 15
                 }));
+                string itemName = GetItemName(itemId);
+                string machineName = GetMachineName(machineId);
+                LogEvent("SLOT_ASSIGNED", $"Assigned '{itemName}' to {machineName} slot {normalizedSlotId} with stock {stock}/15.", machineId: machineId);
             }
             return true;
         }
@@ -1169,6 +1258,7 @@ public partial class SupabaseStore
                         max_capacity = maxCap,
                         slot_price = ToDbNumber(slotPrice)
                     }));
+                    LogEvent("SLOT_ASSIGNED", $"Created catalog item '{name}' and assigned it to {GetMachineName(machineId)} slot {normalizedSlotId} with stock {stock}/{maxCap}.", machineId: machineId);
                 }
                 catch when (!slotPrice.HasValue)
                 {
@@ -1180,6 +1270,7 @@ public partial class SupabaseStore
                         stock_level = stock,
                         max_capacity = maxCap
                     }));
+                    LogEvent("SLOT_ASSIGNED", $"Created catalog item '{name}' and assigned it to {GetMachineName(machineId)} slot {normalizedSlotId} with stock {stock}/{maxCap}.", machineId: machineId);
                 }
             }
             catch
@@ -1211,13 +1302,11 @@ public partial class SupabaseStore
     {
         try
         {
-            var rows = Run(_client.GetAsync("machine_inventory",
-                $"select=stock_level,max_capacity&inventory_id=eq.{inventoryId}"));
+            InventoryAuditContext? before = GetInventoryAuditContext(inventoryId);
+            if (before == null) return false;
 
-            if (rows.Count == 0) return false;
-
-            int max = rows[0]?["max_capacity"]?.GetValue<int>() ?? 15;
-            int stock = rows[0]?["stock_level"]?.GetValue<int>() ?? 0;
+            int max = before.MaxCapacity;
+            int stock = before.Stock;
             int total = stock + quantity;
 
             if (total > max)
@@ -1229,6 +1318,7 @@ public partial class SupabaseStore
 
             Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{inventoryId}",
                 new { stock_level = total }));
+            LogEvent("RESTOCK", $"Restocked '{before.ItemName}' on {before.MachineName} slot {before.SlotId}: {stock} -> {total} (+{quantity}), max {max}.", machineId: before.MachineId);
             return true;
         }
         catch (Exception ex)
@@ -1240,25 +1330,29 @@ public partial class SupabaseStore
 
     public void UpdateStock(int inventoryId, int newStock)
     {
+        InventoryAuditContext? before = GetInventoryAuditContext(inventoryId);
         Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{inventoryId}",
             new { stock_level = newStock }));
+        if (before != null && before.Stock != newStock)
+        {
+            LogEvent("STOCK_UPDATED", $"Updated stock for '{before.ItemName}' on {before.MachineName} slot {before.SlotId}: {before.Stock} -> {newStock}.", machineId: before.MachineId);
+        }
     }
 
     public bool RestockInventoryItemToMax(int inventoryId)
     {
         try
         {
-            var rows = Run(_client.GetAsync("machine_inventory",
-                $"select=max_capacity&inventory_id=eq.{inventoryId}"));
-
-            if (rows.Count == 0)
+            InventoryAuditContext? before = GetInventoryAuditContext(inventoryId);
+            if (before == null)
             {
                 return false;
             }
 
-            int maxCapacity = Math.Max(0, rows[0]?["max_capacity"]?.GetValue<int>() ?? 15);
+            int maxCapacity = Math.Max(0, before.MaxCapacity);
             Run(_client.PatchAsync("machine_inventory", $"inventory_id=eq.{inventoryId}",
                 new { stock_level = maxCapacity }));
+            LogEvent("RESTOCK_TO_MAX", $"Restocked '{before.ItemName}' on {before.MachineName} slot {before.SlotId} to max: {before.Stock} -> {maxCapacity}.", machineId: before.MachineId);
 
             return true;
         }
@@ -1286,6 +1380,8 @@ public partial class SupabaseStore
                 return false;
             }
 
+            InventoryAuditContext? before = GetInventoryAuditContext(inventoryId);
+
             // Update machine slot
             try
             {
@@ -1309,6 +1405,14 @@ public partial class SupabaseStore
                 }));
             }
 
+            InventoryAuditContext? after = GetInventoryAuditContext(inventoryId);
+            string oldLabel = before == null
+                ? $"slot {normalizedSlotId}"
+                : $"'{before.ItemName}' on slot {before.SlotId} ({before.Stock}/{before.MaxCapacity})";
+            string newLabel = after == null
+                ? $"item #{itemId} on slot {normalizedSlotId} ({stock}/{maxCap})"
+                : $"'{after.ItemName}' on slot {after.SlotId} ({after.Stock}/{after.MaxCapacity})";
+            LogEvent("SLOT_UPDATED", $"Updated {GetMachineName(machineId)} inventory: {oldLabel} -> {newLabel}.", machineId: machineId);
             return true;
         }
         catch (Exception ex)
@@ -1322,9 +1426,14 @@ public partial class SupabaseStore
     {
         try
         {
+            InventoryAuditContext? before = GetInventoryAuditContext(inventoryId);
             // Remove ONLY from machine inventory.
             // The item remains in the global 'items' catalog for other machines to use.
             Run(_client.DeleteAsync("machine_inventory", $"inventory_id=eq.{inventoryId}"));
+            if (before != null)
+            {
+                LogEvent("SLOT_REMOVED", $"Removed '{before.ItemName}' from {before.MachineName} slot {before.SlotId}; previous stock {before.Stock}/{before.MaxCapacity}.", machineId: before.MachineId);
+            }
             return true;
         }
         catch (Exception ex)
@@ -1344,10 +1453,11 @@ public partial class SupabaseStore
         try
         {
             var rows = Run(_client.GetAsync("event_logs",
-                "select=log_id,log_date,event_type,description&order=log_date.desc&limit=100"));
+                "select=log_id,log_date,event_type,description,machine_id,vending_machines(location_name)&order=log_date.desc&limit=100"));
 
             dt.Columns.Add("Log ID", typeof(int));
             dt.Columns.Add("Timestamp", typeof(DateTime));
+            dt.Columns.Add("Machine", typeof(string));
             dt.Columns.Add("Event", typeof(string));
             dt.Columns.Add("Notes", typeof(string));
 
@@ -1356,6 +1466,7 @@ public partial class SupabaseStore
                 dt.Rows.Add(
                     node?["log_id"]?.GetValue<int>() ?? 0,
                     DateTime.Parse(node?["log_date"]?.GetValue<string>() ?? DateTime.Now.ToString()),
+                    node?["vending_machines"]?["location_name"]?.GetValue<string>() ?? "",
                     node?["event_type"]?.GetValue<string>() ?? "",
                     node?["description"]?.GetValue<string>() ?? ""
                 );
@@ -1372,10 +1483,11 @@ public partial class SupabaseStore
         {
             string filter = BuildDateFilter("log_date", date, filterType);
             var rows = Run(_client.GetAsync("event_logs",
-                $"select=log_id,log_date,event_type,description&{filter}&order=log_date.desc"));
+                BuildQuery("select=log_id,log_date,event_type,description,machine_id,vending_machines(location_name)", filter, "order=log_date.desc")));
 
             dt.Columns.Add("Log ID", typeof(int));
             dt.Columns.Add("Timestamp", typeof(DateTime));
+            dt.Columns.Add("Machine", typeof(string));
             dt.Columns.Add("Event", typeof(string));
             dt.Columns.Add("Notes", typeof(string));
 
@@ -1384,6 +1496,7 @@ public partial class SupabaseStore
                 dt.Rows.Add(
                     node?["log_id"]?.GetValue<int>() ?? 0,
                     DateTime.Parse(node?["log_date"]?.GetValue<string>() ?? DateTime.Now.ToString()),
+                    node?["vending_machines"]?["location_name"]?.GetValue<string>() ?? "",
                     node?["event_type"]?.GetValue<string>() ?? "",
                     node?["description"]?.GetValue<string>() ?? ""
                 );
@@ -1393,7 +1506,84 @@ public partial class SupabaseStore
         return dt;
     }
 
-    public void LogEvent(string eventType, string details, decimal amount = 0m, int machineId = 1)
+    public System.Data.DataTable GetCustomerTransactionHistory(string rfid)
+    {
+        var dt = new System.Data.DataTable();
+        dt.Columns.Add("Timestamp", typeof(DateTime));
+        dt.Columns.Add("Item", typeof(string));
+        dt.Columns.Add("Quantity", typeof(int));
+        dt.Columns.Add("Paid", typeof(string));
+
+        try
+        {
+            string escapedRfid = Uri.EscapeDataString(rfid);
+            var rows = Run(_client.GetAsync("event_logs",
+                $"select=log_date,event_type,description&event_type=in.(PURCHASE,POINT_PURCHASE,CUSTOMER_TRANSACTION)&description=ilike.*{escapedRfid}*&order=log_date.desc&limit=200"));
+
+            foreach (var node in rows)
+            {
+                string details = node?["description"]?.GetValue<string>() ?? "";
+                string historyRfid = ExtractHistoryField(details, "RFID", "");
+                if (!string.Equals(historyRfid.Trim(), rfid.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                dt.Rows.Add(
+                    DateTime.Parse(node?["log_date"]?.GetValue<string>() ?? DateTime.Now.ToString()),
+                    ExtractHistoryField(details, "Item", "Unknown item"),
+                    ExtractHistoryQuantity(details),
+                    ExtractHistoryPaid(details));
+            }
+        }
+        catch
+        {
+        }
+
+        return dt;
+    }
+
+    private static string ExtractHistoryField(string details, string fieldName, string fallback)
+    {
+        string prefix = fieldName + ":";
+        foreach (string part in details.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (part.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                string value = part[prefix.Length..].Trim();
+                return string.IsNullOrWhiteSpace(value) ? fallback : value;
+            }
+        }
+
+        return fallback;
+    }
+
+    private static int ExtractHistoryQuantity(string details)
+    {
+        string quantityText = ExtractHistoryField(details, "Quantity", "1");
+        return int.TryParse(quantityText, out int quantity) && quantity > 0 ? quantity : 1;
+    }
+
+    private static string ExtractHistoryPaid(string details)
+    {
+        string paid = ExtractHistoryField(details, "Paid", "");
+        if (!string.IsNullOrWhiteSpace(paid))
+        {
+            return paid;
+        }
+
+        string legacyPaidWith = ExtractHistoryField(details, "Paid with", "");
+        if (!string.IsNullOrWhiteSpace(legacyPaidWith))
+        {
+            int parenthesisIndex = legacyPaidWith.IndexOf('(');
+            return parenthesisIndex > 0 ? legacyPaidWith[..parenthesisIndex].Trim() : legacyPaidWith;
+        }
+
+        string total = ExtractHistoryField(details, "Total", "");
+        return string.IsNullOrWhiteSpace(total) ? "-" : total;
+    }
+
+    public void LogEvent(string eventType, string details, decimal amount = 0m, int? machineId = null)
     {
         try
         {
@@ -1581,7 +1771,7 @@ public partial class SupabaseStore
     {
         try
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
             var rows = Run(_client.GetAsync("sales_transactions", "select=amount_paid,transaction_date"));
 
             decimal daily = 0, weekly = 0, monthly = 0, yearly = 0;
@@ -1589,9 +1779,7 @@ public partial class SupabaseStore
             foreach (var node in rows)
             {
                 decimal amt = node?["amount_paid"]?.GetValue<decimal>() ?? 0m;
-                var dateStr = node?["transaction_date"]?.GetValue<string>();
-                if (dateStr == null) continue;
-                var txDate = DateTime.Parse(dateStr);
+                var txDate = ParseSupabaseLocalDateTime(node?["transaction_date"]?.GetValue<string>());
 
                 if (txDate.Date == now.Date) daily += amt;
                 if (IsSameWeek(txDate, now)) weekly += amt;
@@ -1613,15 +1801,20 @@ public partial class SupabaseStore
         decimal total = 0m;
         try
         {
-            string machineFilter = machineId.HasValue ? $"&machine_id=eq.{machineId.Value}" : string.Empty;
+            string dateFilter = BuildDateFilter("transaction_date", date, filterType);
             var rows = Run(_client.GetAsync("sales_transactions",
-                $"select=transaction_id,transaction_date,machine_id,item_id,amount_paid,vending_machines(location_name),items(name,price){machineFilter}&order=transaction_date.desc"));
+                BuildQuery(
+                    "select=transaction_id,transaction_date,machine_id,item_id,amount_paid,vending_machines(location_name),items(name,type,price)",
+                    machineId.HasValue ? $"machine_id=eq.{machineId.Value}" : string.Empty,
+                    dateFilter,
+                    "order=transaction_date.desc")));
 
             dt.Columns.Add("TX ID", typeof(int));
             dt.Columns.Add("Date", typeof(DateTime));
             dt.Columns.Add("Period", typeof(string));
             dt.Columns.Add("Machine", typeof(string));
             dt.Columns.Add("Item", typeof(string));
+            dt.Columns.Add("Type", typeof(string));
             dt.Columns.Add("Quantity", typeof(int));
             dt.Columns.Add("Price", typeof(decimal));
             dt.Columns.Add("Total Paid", typeof(decimal));
@@ -1643,6 +1836,7 @@ public partial class SupabaseStore
                     BuildSalesPeriodLabel(txDate, filterType),
                     node?["vending_machines"]?["location_name"]?.GetValue<string>() ?? "",
                     node?["items"]?["name"]?.GetValue<string>() ?? "",
+                    node?["items"]?["type"]?.GetValue<string>() ?? "Misc",
                     1,
                     node?["items"]?["price"]?.GetValue<decimal>() ?? 0m,
                     paid

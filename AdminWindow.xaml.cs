@@ -39,6 +39,7 @@ namespace Eco_Matic
             public string Label { get; init; } = string.Empty;
             public string ValueText { get; init; } = string.Empty;
             public double BarWidth { get; init; }
+            public double PercentScale { get; init; }
             public decimal Value { get; init; }
             public Brush Fill { get; init; } = Brushes.SteelBlue;
         }
@@ -289,144 +290,6 @@ namespace Eco_Matic
         {
             await LoadCatalogItemsAsync();
             await RefreshSelectedInventoryAsync();
-        }
-
-        private async Task<int> GetGlobalItemCountAsync()
-        {
-            int? count = await RunStoreOperationAsync(() =>
-            {
-                var store = new Data.SupabaseStore();
-                return store.GetAllItems().Rows.Count;
-            }, "Load global item catalog");
-
-            return count ?? 0;
-        }
-
-        private async Task<string?> GetNextAvailableSlotIdAsync(int machineId)
-        {
-            return await RunStoreOperationAsync(() =>
-            {
-                var store = new Data.SupabaseStore();
-                return store.GetNextAvailableSlotId(machineId);
-            }, "Load next available slot");
-        }
-
-        private async Task<int> GetAssignedSlotCountAsync(int machineId)
-        {
-            int? count = await RunStoreOperationAsync(() =>
-            {
-                var store = new Data.SupabaseStore();
-                return store.GetAssignedSlotCount(machineId);
-            }, "Load assigned slot count");
-
-            return count ?? 0;
-        }
-
-        private async Task<bool> RollbackIncompleteMachineSetupAsync(int machineId, string locationName)
-        {
-            bool deleted = await RunStoreMutationAsync(() =>
-            {
-                var store = new Data.SupabaseStore();
-                return store.DeleteMachine(machineId);
-            }, "Rollback incomplete machine setup");
-
-            await RefreshMachinesAndInventoryAsync();
-
-            if (!deleted)
-            {
-                MessageBox.Show(this,
-                    $"The new machine at '{locationName}' could not be rolled back automatically. Please remove it manually.",
-                    "Rollback Needed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-            }
-
-            return deleted;
-        }
-
-        private async Task<bool> RunRequiredMachineSetupAsync(int machineId, string locationName)
-        {
-            int assignedSlots = await GetAssignedSlotCountAsync(machineId);
-
-            while (assignedSlots < DataStore.MaxItemSlots)
-            {
-                if (assignedSlots >= 5)
-                {
-                    var addMoreChoice = MessageBox.Show(this,
-                        $"Machine '{locationName}' now has {assignedSlots} assigned slots.\n\nDo you want to add another slot now?",
-                        "Continue Slot Setup",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Question);
-
-                    if (addMoreChoice != MessageBoxResult.Yes)
-                    {
-                        break;
-                    }
-                }
-
-                string suggestedSlotId = await GetNextAvailableSlotIdAsync(machineId) ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(suggestedSlotId))
-                {
-                    break;
-                }
-
-                var setupWindow = new InventoryItemWindow(suggestedSlotId, assignedSlots, 5)
-                {
-                    Owner = this
-                };
-
-                if (setupWindow.ShowDialog() != true)
-                {
-                    if (assignedSlots < 5)
-                    {
-                        await RollbackIncompleteMachineSetupAsync(machineId, locationName);
-                        MessageBox.Show(this,
-                            "A new vending machine must be configured with at least 5 assigned slots. The incomplete machine setup was canceled.",
-                            "Machine Setup Incomplete",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning);
-                        return false;
-                    }
-
-                    break;
-                }
-
-                int? selectedItemId = setupWindow.SelectedItemId;
-                string slotId = setupWindow.SlotId;
-                int initialStock = setupWindow.InitialStock;
-                decimal? slotPriceOverride = setupWindow.SlotPriceOverride;
-
-                if (!selectedItemId.HasValue)
-                {
-                    continue;
-                }
-
-                bool added = await RunStoreMutationAsync(() =>
-                {
-                    var store = new Data.SupabaseStore();
-                    return store.AddItemToMachineSlot(machineId, slotId, selectedItemId.Value, initialStock, slotPriceOverride);
-                }, "Assign setup slot");
-
-                if (!added)
-                {
-                    continue;
-                }
-
-                assignedSlots++;
-            }
-
-            if (assignedSlots < 5)
-            {
-                await RollbackIncompleteMachineSetupAsync(machineId, locationName);
-                MessageBox.Show(this,
-                    "The new machine was removed because it did not reach the minimum 5 assigned slots.",
-                    "Machine Setup Incomplete",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return false;
-            }
-
-            return true;
         }
 
         /// <summary>
@@ -849,7 +712,7 @@ namespace Eco_Matic
             if (cboLogsFilter == null || dpLogsDate == null) return;
 
             var store = new Data.SupabaseStore();
-            string filterType = (cboLogsFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
+            string filterType = (cboLogsFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Week";
             DateTime targetDate = dpLogsDate.SelectedDate ?? DateTime.Today;
 
             dgLogs.ItemsSource = store.GetFilteredEventLogs(targetDate, filterType).DefaultView;
@@ -862,7 +725,7 @@ namespace Eco_Matic
                 return;
             }
 
-            string filterType = (cboLogsFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
+            string filterType = (cboLogsFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Week";
             DateTime targetDate = dpLogsDate.SelectedDate ?? DateTime.Today;
 
             Mouse.OverrideCursor = Cursors.Wait;
@@ -918,7 +781,7 @@ namespace Eco_Matic
             if (cboSalesFilter == null || dpSalesDate == null) return;
             
             var store = new Data.SupabaseStore();
-            string filterType = (cboSalesFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
+            string filterType = (cboSalesFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Week";
             DateTime targetDate = dpSalesDate.SelectedDate ?? DateTime.Today;
             int? machineId = GetSelectedSalesMachineId();
             UpdateSalesDatePickerState(filterType);
@@ -941,7 +804,7 @@ namespace Eco_Matic
                 return;
             }
 
-            string filterType = (cboSalesFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Day";
+            string filterType = (cboSalesFilter.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Week";
             DateTime targetDate = dpSalesDate.SelectedDate ?? DateTime.Today;
             int? machineId = GetSelectedSalesMachineId();
             UpdateSalesDatePickerState(filterType);
@@ -1043,6 +906,17 @@ namespace Eco_Matic
                 .OrderByDescending(group => group.Revenue)
                 .ToList();
 
+            var typeGroups = salesTable.Rows.Cast<DataRow>()
+                .GroupBy(row => row["Type"]?.ToString() ?? "Misc")
+                .Select(group => new
+                {
+                    Label = string.IsNullOrWhiteSpace(group.Key) ? "Misc" : group.Key,
+                    Revenue = group.Sum(row => Convert.ToDecimal(row["Total Paid"])),
+                    Quantity = group.Sum(row => Convert.ToInt32(row["Quantity"]))
+                })
+                .OrderByDescending(group => group.Revenue)
+                .ToList();
+
             var machineGroups = salesTable.Rows.Cast<DataRow>()
                 .GroupBy(row => row["Machine"]?.ToString() ?? "Machine")
                 .Select(group => new
@@ -1054,13 +928,34 @@ namespace Eco_Matic
                 .OrderByDescending(group => group.Revenue)
                 .ToList();
 
+            var periodGroups = salesTable.Rows.Cast<DataRow>()
+                .GroupBy(row => row["Period"]?.ToString() ?? "")
+                .Select(group => new
+                {
+                    Label = string.IsNullOrWhiteSpace(group.Key) ? "No period" : group.Key,
+                    FirstDate = group.Min(row => Convert.ToDateTime(row["Date"])),
+                    Revenue = group.Sum(row => Convert.ToDecimal(row["Total Paid"])),
+                    Quantity = group.Sum(row => Convert.ToInt32(row["Quantity"]))
+                })
+                .OrderByDescending(group => group.Revenue)
+                .ToList();
+
             txtSalesTransactions.Text = transactions.ToString();
+            txtSalesUnits.Text = itemsSold.ToString();
             txtSalesAverage.Text = $"₱ {averageSale:0.00}";
             txtSalesBestItem.Text = itemGroups.Count > 0 ? $"{itemGroups[0].Label} ({itemGroups[0].Quantity})" : "-";
+            txtSalesTopMachine.Text = machineGroups.Count > 0 ? $"{machineGroups[0].Label} (₱ {machineGroups[0].Revenue:0.00})" : "-";
+            txtSalesPeakPeriod.Text = periodGroups.Count > 0 ? $"{periodGroups[0].Label} ({periodGroups[0].Quantity})" : "-";
+            txtSalesTopCategory.Text = typeGroups.Count > 0 ? $"{typeGroups[0].Label} ({typeGroups[0].Quantity})" : "-";
+            txtSalesSlowItem.Text = itemGroups.Count > 0
+                ? itemGroups.OrderBy(group => group.Quantity).ThenBy(group => group.Revenue).First().Label
+                : "-";
 
             icSalesTrend.ItemsSource = BuildTrendData(salesTable, 390);
             icTopItems.ItemsSource = BuildGroupBars(itemGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00} / {x.Quantity} sold")), 320, 5, ChartPalette[1]);
-            icMachineRevenue.ItemsSource = BuildGroupBars(machineGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00}")), 300, 5, ChartPalette[2]);
+            icMachineRevenue.ItemsSource = BuildGroupBars(machineGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00} / {x.Quantity} sold")), 300, 5, ChartPalette[2]);
+            icCategoryRevenue.ItemsSource = BuildGroupBars(typeGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00} / {x.Quantity} sold")), 300, 5, ChartPalette[4]);
+            icPeakPeriods.ItemsSource = BuildGroupBars(periodGroups.OrderBy(group => group.FirstDate).Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00} / {x.Quantity} sold")), 300, 8, ChartPalette[5]);
 
             var pieData = BuildPieData(itemGroups.Select(x => (x.Label, x.Revenue, $"₱ {x.Revenue:0.00}")), 5);
             icSalesPieLegend.ItemsSource = pieData;
@@ -1092,6 +987,7 @@ namespace Eco_Matic
                 Value = group.Revenue,
                 ValueText = $"₱ {group.Revenue:0.00}",
                 BarWidth = CalculateBarWidth(group.Revenue, maxValue, maxBarWidth),
+                PercentScale = CalculateBarScale(group.Revenue, maxValue),
                 Fill = ChartPalette[index % ChartPalette.Length]
             }).ToList();
         }
@@ -1115,6 +1011,7 @@ namespace Eco_Matic
                 Value = item.Value,
                 ValueText = item.ValueText,
                 BarWidth = CalculateBarWidth(item.Value, maxValue, maxBarWidth),
+                PercentScale = CalculateBarScale(item.Value, maxValue),
                 Fill = fill
             }).ToList();
         }
@@ -1148,6 +1045,16 @@ namespace Eco_Matic
             }
 
             return Math.Max(8, (double)(value / maxValue) * maxBarWidth);
+        }
+
+        private static double CalculateBarScale(decimal value, decimal maxValue)
+        {
+            if (maxValue <= 0 || value <= 0)
+            {
+                return 0;
+            }
+
+            return Math.Max(0.04d, Math.Min(1d, (double)(value / maxValue)));
         }
 
         private static void DrawPieChart(Canvas canvas, IReadOnlyList<ChartDatum> data)
@@ -1270,18 +1177,6 @@ namespace Eco_Matic
                 return;
             }
 
-            int globalItemCount = await GetGlobalItemCountAsync();
-            if (globalItemCount == 0)
-            {
-                MessageBox.Show(this,
-                    "Add at least one global item first. A new vending machine now requires at least 5 assigned slots during setup.",
-                    "Global Items Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                await SetActiveViewAsync("Items");
-                return;
-            }
-
             var addMach = new AddMachineWindow { Owner = this };
             if (addMach.ShowDialog() == true)
             {
@@ -1298,14 +1193,7 @@ namespace Eco_Matic
 
                 if (machineId.HasValue)
                 {
-                    bool setupCompleted = await RunRequiredMachineSetupAsync(machineId.Value, locationName);
                     await RefreshMachinesAndInventoryAsync();
-
-                    if (!setupCompleted)
-                    {
-                        return;
-                    }
-
                     await SetActiveViewAsync("Inventory");
                     cboInventoryMachine.SelectedValue = machineId.Value;
                 }
@@ -1330,31 +1218,6 @@ namespace Eco_Matic
                 btnAddMachine.ToolTip = canAddMachine
                     ? "Register a new vending machine"
                     : "Maximum of 4 vending machines reached for the current project scope";
-            }
-        }
-
-        private async Task PromptToAddGlobalItemsAsync()
-        {
-            bool hasGlobalItems = await Task.Run(() =>
-            {
-                var store = new Data.SupabaseStore();
-                return store.GetAllItems().Rows.Count > 0;
-            });
-
-            if (hasGlobalItems)
-            {
-                return;
-            }
-
-            var choice = MessageBox.Show(this,
-                "This vending machine was created, but the global item catalog is still empty.\n\nAdd global items now so you can assign them to machine slots next.",
-                "Add Global Items",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Information);
-
-            if (choice == MessageBoxResult.Yes)
-            {
-                await SetActiveViewAsync("Items");
             }
         }
 
@@ -1517,6 +1380,46 @@ namespace Eco_Matic
             };
         }
 
+        private bool CatalogItemNameExists(string itemName, int? ignoreItemId = null)
+        {
+            string normalizedName = itemName.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedName))
+            {
+                return false;
+            }
+
+            foreach (object item in dgItems.Items)
+            {
+                if (item is not DataRowView row)
+                {
+                    continue;
+                }
+
+                int rowItemId = Convert.ToInt32(row["ID"]);
+                if (ignoreItemId.HasValue && rowItemId == ignoreItemId.Value)
+                {
+                    continue;
+                }
+
+                string existingName = row["Name"]?.ToString()?.Trim() ?? string.Empty;
+                if (string.Equals(existingName, normalizedName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void ShowDuplicateCatalogItemMessage(string itemName)
+        {
+            MessageBox.Show(this,
+                $"A global item named '{itemName.Trim()}' already exists.\n\nUse the existing item or choose a different name.",
+                "Duplicate Item",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+
         private async void BtnAddCatalogItem_Click(object sender, RoutedEventArgs e)
         {
             var editor = new CatalogItemWindow { Owner = this };
@@ -1529,6 +1432,12 @@ namespace Eco_Matic
                 string imagePath = editor.ImagePath;
                 string dispenseMessage = editor.DispenseMessage;
                 string examineMessage = editor.ExamineMessage;
+
+                if (CatalogItemNameExists(itemName))
+                {
+                    ShowDuplicateCatalogItemMessage(itemName);
+                    return;
+                }
 
                 bool added = await RunStoreMutationAsync(() =>
                 {
@@ -1573,6 +1482,12 @@ namespace Eco_Matic
                 string updatedImagePath = editor.ImagePath;
                 string updatedDispenseMessage = editor.DispenseMessage;
                 string updatedExamineMessage = editor.ExamineMessage;
+
+                if (CatalogItemNameExists(updatedItemName, itemId))
+                {
+                    ShowDuplicateCatalogItemMessage(updatedItemName);
+                    return;
+                }
 
                 bool updated = await RunStoreMutationAsync(() =>
                 {

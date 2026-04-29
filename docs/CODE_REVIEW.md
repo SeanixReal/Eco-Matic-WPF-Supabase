@@ -103,12 +103,13 @@ Current expectation:
 - keep real `.env` ignored and local-only
 - rotate the current anon key because it was already committed in earlier history
 
-### 4. Several foreign keys are still missing covering indexes
+### 4. Foreign-key covering indexes are now applied
 
-The live Supabase performance advisor currently reports missing covering indexes for:
+The live Supabase performance advisor previously reported missing covering indexes for:
 
 - `event_logs.machine_id`
 - `machine_inventory.item_id`
+- `receipt_session_lines.recycle_item_id`
 - `sales_transactions.machine_id`
 - `sales_transactions.item_id`
 - `users.assigned_machine_id`
@@ -118,28 +119,33 @@ Why this matters:
 
 - current live row counts are small, so the app still works fine in class/demo conditions
 - those joins will become slower as the machine, inventory, sales, and user tables grow
-- the missing indexes are now a concrete live-database maintenance task, not just a theoretical optimization
+- the `add_missing_foreign_key_indexes` Supabase migration added indexes for these existing columns without adding or removing tables
 
-Recommended next fix:
+Current status:
 
-- add indexes in a tracked Supabase migration so future environments stay aligned
+- the unindexed-foreign-key advisor findings are resolved
+- new indexes may show as `unused_index` until the live app runs enough queries for Supabase to observe usage
 
-### 5. Schema surface is ahead of real data coverage
+### 5. Receipt and audit data are now exercised
 
-The live project now includes:
+The live project now has real rows in the operational history tables:
 
 - `receipt_sessions`
 - `receipt_session_lines`
-- `esp32_commands`
-- `esp32_telemetry`
-
-But those tables are currently empty in the audited environment.
+- `sales_transactions`
+- `event_logs`
+- `qr_payment_intents`
 
 Why this matters:
 
-- the schema is ready for receipt history and ESP32 integration
-- documentation should mention these tables because they are real
-- the app still needs more exercised runtime data and testing around those paths
+- dashboards and sales reports should be checked against real mixed-date data, not only seed assumptions
+- event-log descriptions now carry audit context for restocks, slot changes, customer credit changes, and RFID account history
+- customers are still not linked to sales by a foreign key, so customer account history remains an application-level event-log view
+- current-session purchases are attached to the first RFID used for that vending session before the dashboard loads, and a later different RFID cannot take over that session's transaction history
+
+Recommended next fix:
+
+- if true per-customer purchase history is required later, add a tracked migration that introduces an explicit customer or RFID reference instead of parsing audit descriptions
 
 ## Secondary Findings
 
@@ -148,7 +154,7 @@ Why this matters:
 Examples that needed correction:
 
 - MySQL was described as the active backend even though the code uses Supabase
-- eco-credits were described as a payment method even though purchases are still cash-based
+- eco-credit behavior needed clarification: purchases can use cash/QR balance or point payment, while RFID links saved credits and purchase-history attribution
 - inventory was described as strictly 12 items before the service layer enforced that limit
 
 This review pass updated the main docs to reflect the actual implementation.
@@ -196,12 +202,13 @@ RFID implementation rule:
 - the main frontend windows are understandable
 - the codebase is small enough to demo and explain well
 - the database shape supports multi-machine growth
+- machine registration no longer forces immediate stock setup, so physical machine setup and inventory assignment are cleaner separate workflows
 - the hardware integration is isolated enough to discuss cleanly during presentation
 
 ## Best Next Improvements
 
 1. replace plain-text passwords with real hashing
 2. rotate the exposed Supabase anon key and keep `.env` local-only
-3. add Supabase indexes for the currently unindexed foreign keys
+3. add a database-side uniqueness/slot-range constraint to complement the service-layer checks
 4. redesign backend access before attempting real least-privilege RLS tightening
-5. add a database-side uniqueness/slot-range constraint to complement the service-layer checks
+5. add automated smoke tests for inventory, reporting, RFID history, and staff assignment flows

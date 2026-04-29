@@ -44,7 +44,7 @@ Delivery style: Clear, calm, confident, persuasive, and technically grounded
 
 ### Slide 9 - Deployment Path and Roadmap (8:20-9:15)
 
-"We document the system transparently. Current functionality is ready for pilot-style demonstrations, and known limitations are clearly identified. For example, RFID is used for registration and recycle-credit saving, while purchases are still cash/QR flow. Next steps focus on stronger security and broader integration depth."
+"We document the system transparently. Current functionality is ready for pilot-style demonstrations, and known limitations are clearly identified. For example, RFID is used for registration, recycle-credit saving, point-payment identity, and transaction history, while next steps focus on stronger security and broader integration depth."
 
 ### Slide 10 - Client Ask and Exit (9:15-10:00)
 
@@ -94,7 +94,7 @@ Answer:
 
 Answer:
 
-"Key limitations include credential-security hardening needs and the current separation where RFID is for registration and credit saving while purchases are still cash/QR based. These are identified as next engineering priorities."
+"Key limitations include credential-security hardening needs and the current separation where customer transaction history is application-layer event-log matching rather than a dedicated sales foreign key. These are identified as next engineering priorities."
 
 ### Q8: Why should a potential client adopt Eco-Matic instead of staying manual?
 

@@ -1,6 +1,6 @@
 # Full Class Diagram
 
-This diagram includes all top-level C# classes, interfaces, enums, records, and important private helper types found in the current codebase.
+This diagram includes all top-level C# classes, interfaces, enums, records, and important private helper types found in the current codebase. It was rechecked against the C# source on 2026-04-30 before the presentation push.
 
 ```mermaid
 classDiagram
@@ -17,17 +17,20 @@ classDiagram
     class AdminWindow {
         -SupabaseStore _store
         -string _currentUserRole
-        -int? _assignedMachineId
+        -HashSet~int~ _assignedMachineIds
         +LoadDashboardMetrics()
         +LoadInventoryGrid(int)
         +LoadCatalogItems()
         +LoadSalesData()
+        +UpdateSalesReportVisuals(DataTable, decimal, string)
+        +CatalogItemNameExists(string, int?)
     }
 
     class AdminWindow_ChartDatum {
         +string Label
         +string ValueText
         +double BarWidth
+        +double PercentScale
         +decimal Value
         +Brush Fill
     }
@@ -36,10 +39,14 @@ classDiagram
         -decimal _insertedMoney
         -ArduinoService _arduino
         +MarkPendingPointsSaved(int)
-        +SetLinkedRfidCustomer(string, string, int)
+        +bool SetLinkedRfidCustomer(string, string, int)
+        +bool CanUseRfidForCurrentSession(string)
+        +bool PrepareRfidForCurrentSession(string)
+        +DataTable GetCurrentSessionTransactionHistory(string)
     }
 
     class CustomerWindow_SlotControls
+    class CustomerWindow_SessionPurchaseHistoryRecord
     class CustomerWindow_VendingItemOption {
         +int CatalogItemId
         +string Name
@@ -128,6 +135,7 @@ classDiagram
         +string Password
         +int RoleId
         +int? AssignedMachineId
+        +List~int~ AssignedMachineIds
     }
 
     class PointAmountWindow {
@@ -172,6 +180,8 @@ classDiagram
         +UpdateMachineInventoryAssignment(...)
         +RecordSale(int, int, decimal)
         +GetFilteredSales(DateTime, string, int?)
+        +GetFilteredEventLogs(DateTime, string)
+        +GetCustomerTransactionHistory(string)
         +GetInventoryManagerRoleId()
         +UpdateUserMachineAssignments(int, IEnumerable~int~)
         +InsertQueuedReceiptSession(Transaction)
@@ -184,6 +194,16 @@ classDiagram
         +int InventoryId
         +string RawSlotId
         +string? NormalizedSlotId
+    }
+
+    class SupabaseStore_InventoryAuditContext {
+        +int InventoryId
+        +int MachineId
+        +string MachineName
+        +string SlotId
+        +string ItemName
+        +int Stock
+        +int MaxCapacity
     }
 
     class SupabaseClient {
@@ -245,6 +265,15 @@ classDiagram
         +SendCustomerSessionActive()
         +SendCustomerSessionAfk()
         +SendMessage(string)
+    }
+
+    class AudioService {
+        <<static>>
+        +PlayBackgroundMusic(string)
+        +StopBackgroundMusic()
+        +StopAllAudio()
+        +PlaySfx(string)
+        +SpeakAsync(string)
     }
 
     class AppEnvironment {
@@ -409,6 +438,7 @@ classDiagram
     App --> MainWindow
     MainWindow --> ArduinoService : RFID events
     MainWindow --> SupabaseStore : RFID/customer checks
+    MainWindow --> AudioService : voice and SFX
     MainWindow ..> LoginWindow
     MainWindow ..> MachineSelectionWindow
     MainWindow ..> CustomerRegistrationWindow
@@ -429,6 +459,7 @@ classDiagram
 
     CustomerWindow --> DataStore : active session state
     CustomerWindow --> ArduinoService : LCD/status
+    CustomerWindow --> AudioService : voice and SFX
     CustomerWindow --> QrPaymentService : QR payment
     CustomerWindow ..> PointAmountWindow
     CustomerWindow ..> QrPaymentWindow
@@ -436,6 +467,7 @@ classDiagram
     CustomerWindow ..> ReceiptWindow
     CustomerWindow o-- CustomerWindow_SlotControls
     CustomerWindow o-- CustomerWindow_VendingItemOption
+    CustomerWindow o-- CustomerWindow_SessionPurchaseHistoryRecord
 
     MachineSelectionWindow o-- VendingMachineModel
     AddMachineWindow ..> MapPickerWindow
@@ -459,6 +491,7 @@ classDiagram
 
     SupabaseStore --> SupabaseClient
     SupabaseStore o-- SupabaseStore_MachineSlotRecord
+    SupabaseStore o-- SupabaseStore_InventoryAuditContext
     SupabaseStore ..> RecyclableItemDefinition
     SupabaseStore ..> Transaction
     SupabaseClient --> AppEnvironment

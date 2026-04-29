@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-This ERD reflects the live Supabase public schema verified through the Supabase MCP tool on 2026-04-26.
+This ERD reflects the live Supabase public schema verified through the Supabase MCP tool on 2026-04-30 and rechecked during the final presentation audit.
 
 ```mermaid
 erDiagram
@@ -16,8 +16,6 @@ erDiagram
     VENDING_MACHINES ||--o{ RECEIPT_SESSIONS : issues
     RECEIPT_SESSIONS ||--o{ RECEIPT_SESSION_LINES : contains
     RECYCLABLE_ITEMS o|--o{ RECEIPT_SESSION_LINES : describes_recycle_line
-    VENDING_MACHINES ||--o{ ESP32_TELEMETRY : reports
-    VENDING_MACHINES ||--o{ ESP32_COMMANDS : receives
 
     ROLES {
         int role_id PK
@@ -156,37 +154,21 @@ erDiagram
         timestamptz paid_at
     }
 
-    ESP32_TELEMETRY {
-        int telemetry_id PK
-        int machine_id FK
-        string device_id
-        decimal temperature
-        decimal humidity
-        bool door_open
-        string power_status
-        timestamptz recorded_at
-    }
-
-    ESP32_COMMANDS {
-        int command_id PK
-        int machine_id FK
-        string command_type
-        jsonb payload
-        string status
-        timestamptz created_at
-        timestamptz executed_at
-    }
 ```
 
 ## How to Explain It
 
 - `items` is the global product catalog.
 - `machine_inventory` is the per-machine slot table for stock, capacity, and optional slot price.
-- `vending_machines` is the parent for inventory, staff machine assignments, sales, event logs, telemetry, ESP32 commands, and receipt sessions.
+- `vending_machines` is the parent for inventory, staff machine assignments, sales, event logs, and receipt sessions.
 - `receipt_sessions` and `receipt_session_lines` store complete receipt history.
-- `customers` stores RFID customers and eco-credit balances. It is not currently connected to sales by a foreign key.
+- `customers` stores RFID customers and eco-credit balances. It is not currently connected to sales or event logs by a foreign key.
+- Customer account transaction history is implemented at the application layer by reading purchase-related `event_logs.description` entries that include the RFID tag.
+- Current-session purchase history can be attached to the first RFID scanned for that vending session, but this is still application-layer event-log behavior rather than a database foreign key.
 - `user_machine_assignments` lets one inventory manager manage multiple assigned vending machines. `users.assigned_machine_id` remains as a legacy primary assignment for compatibility.
 - `qr_payment_intents` supports QR payment through the `qr-payment-confirm` Edge Function. Its `machine_id` is a nullable logical reference in the current live schema, not an enforced foreign key.
+- The 2026-04-30 staff-editor, sales-report spacing, and duplicate global-item warning fixes are UI-only and do not change the database relationships shown here.
+- The `add_missing_foreign_key_indexes` migration adds indexes to existing foreign-key columns only. It improves lookup/delete performance but does not add entities or relationships to the ERD.
 
 Use this defense line:
 

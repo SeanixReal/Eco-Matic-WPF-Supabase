@@ -235,8 +235,9 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="Sales Report Report (Year)" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12" />
+                                        <TextBlock Text="Sales Report (Year)" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12" />
                                         <ItemsControl x:Name="icDashboardSalesTrend" Grid.Row="1">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -286,6 +287,7 @@
                                     <DataGrid x:Name="dgRecentActivity" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" Background="Transparent" RowBackground="White" AlternatingRowBackground="#F8FAFC" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#E2E8F0" BorderThickness="0">
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Date" Binding="{Binding Path='Timestamp', StringFormat='{}{0:MM/dd/yyyy HH:mm:ss}'}" Width="150"/>
+                                            <DataGridTextColumn Header="Machine" Binding="{Binding Path='Machine'}" Width="140"/>
                                             <DataGridTextColumn Header="Type" Binding="{Binding Path='Event'}" Width="120"/>
                                             <DataGridTextColumn Header="Details" Binding="{Binding Path='Notes'}" Width="*"/>
                                         </DataGrid.Columns>
@@ -460,7 +462,7 @@
 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <TextBlock Text="Filter By:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
-                                    <ComboBox x:Name="cboLogsFilter" Width="100" Margin="0,0,10,0" SelectedIndex="0" SelectionChanged="LogsFilter_Changed" VerticalContentAlignment="Center">
+                                    <ComboBox x:Name="cboLogsFilter" Width="100" Margin="0,0,10,0" SelectedIndex="1" SelectionChanged="LogsFilter_Changed" VerticalContentAlignment="Center">
                                         <ComboBoxItem Content="Day"/>
                                         <ComboBoxItem Content="Week"/>
                                         <ComboBoxItem Content="Month"/>
@@ -476,7 +478,8 @@
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Log ID" Binding="{Binding Path='Log ID'}" Width="80"/>
                                         <DataGridTextColumn Header="Timestamp" Binding="{Binding Path='Timestamp'}" Width="180"/>
-                                        <DataGridTextColumn Header="Event" Binding="{Binding Path='Event'}" Width="100"/>
+                                        <DataGridTextColumn Header="Machine" Binding="{Binding Path='Machine'}" Width="150"/>
+                                        <DataGridTextColumn Header="Event" Binding="{Binding Path='Event'}" Width="150"/>
                                         <DataGridTextColumn Header="Notes" Binding="{Binding Path='Notes'}" Width="*"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
@@ -495,9 +498,10 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <UniformGrid Grid.Row="0" Columns="4" Rows="1">
+                                        <UniformGrid Grid.Row="0" Columns="5" Rows="1">
                                             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
                                                 <StackPanel>
                                                     <TextBlock x:Name="txtSalesFilterLabel" Text="Sales (Today)" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
@@ -508,6 +512,12 @@
                                                 <StackPanel>
                                                     <TextBlock Text="TRANSACTIONS" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
                                                     <TextBlock x:Name="txtSalesTransactions" Text="0" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="UNITS SOLD" Foreground="#64748B" FontSize="13" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesUnits" Text="0" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0"/>
                                                 </StackPanel>
                                             </Border>
                                             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
@@ -528,7 +538,7 @@
                                             <TextBlock Text="Machine:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
                                             <ComboBox x:Name="cboSalesMachine" Width="190" Margin="0,0,14,8" SelectionChanged="SalesFilter_Changed" DisplayMemberPath="location_name" SelectedValuePath="machine_id" VerticalContentAlignment="Center"/>
                                             <TextBlock Text="Filter By:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#64748B" FontWeight="Bold"/>
-                                            <ComboBox x:Name="cboSalesFilter" Width="105" Margin="0,0,10,8" SelectedIndex="0" SelectionChanged="SalesFilter_Changed" VerticalContentAlignment="Center">
+                                            <ComboBox x:Name="cboSalesFilter" Width="105" Margin="0,0,10,8" SelectedIndex="1" SelectionChanged="SalesFilter_Changed" VerticalContentAlignment="Center">
                                                 <ComboBoxItem Content="Day"/>
                                                 <ComboBoxItem Content="Week"/>
                                                 <ComboBoxItem Content="Month"/>
@@ -537,6 +547,33 @@
                                             </ComboBox>
                                             <DatePicker x:Name="dpSalesDate" Width="130" Margin="0,0,0,8" SelectedDateChanged="SalesFilter_Changed" VerticalContentAlignment="Center" VerticalAlignment="Center"/>
                                         </WrapPanel>
+
+                                        <UniformGrid Grid.Row="2" Columns="4" Rows="1" Margin="0,8,0,0">
+                                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="TOP MACHINE" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesTopMachine" Text="-" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="PEAK PERIOD" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesPeakPeriod" Text="-" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="TOP CATEGORY" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesTopCategory" Text="-" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Style="{StaticResource CardBorderStyle}">
+                                                <StackPanel>
+                                                    <TextBlock Text="SLOWEST SOLD ITEM" Foreground="#64748B" FontSize="12" FontWeight="Medium"/>
+                                                    <TextBlock x:Name="txtSalesSlowItem" Text="-" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </UniformGrid>
                                     </Grid>
 
                                     <Grid Margin="0,0,0,16">
@@ -558,8 +595,12 @@
                                                                     <ColumnDefinition Width="90"/>
                                                                 </Grid.ColumnDefinitions>
                                                                 <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center"/>
-                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center">
-                                                                    <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="{Binding Fill}" CornerRadius="7"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center" ClipToBounds="True">
+                                                                    <Border HorizontalAlignment="Stretch" Background="{Binding Fill}" CornerRadius="7" RenderTransformOrigin="0,0.5">
+                                                                        <Border.RenderTransform>
+                                                                            <ScaleTransform ScaleX="{Binding PercentScale}"/>
+                                                                        </Border.RenderTransform>
+                                                                    </Border>
                                                                 </Border>
                                                                 <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                                             </Grid>
@@ -609,13 +650,17 @@
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="110"/>
                                                                     <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="90"/>
+                                                                    <ColumnDefinition Width="130"/>
                                                                 </Grid.ColumnDefinitions>
                                                                 <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center">
-                                                                    <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="#2FA66A" CornerRadius="7"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center" ClipToBounds="True">
+                                                                    <Border HorizontalAlignment="Stretch" Background="{Binding Fill}" CornerRadius="7" RenderTransformOrigin="0,0.5">
+                                                                        <Border.RenderTransform>
+                                                                            <ScaleTransform ScaleX="{Binding PercentScale}"/>
+                                                                        </Border.RenderTransform>
+                                                                    </Border>
                                                                 </Border>
-                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis"/>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -633,13 +678,80 @@
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="120"/>
                                                                     <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="90"/>
+                                                                    <ColumnDefinition Width="135"/>
                                                                 </Grid.ColumnDefinitions>
                                                                 <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center">
-                                                                    <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="#FFCE4A" CornerRadius="7"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center" ClipToBounds="True">
+                                                                    <Border HorizontalAlignment="Stretch" Background="{Binding Fill}" CornerRadius="7" RenderTransformOrigin="0,0.5">
+                                                                        <Border.RenderTransform>
+                                                                            <ScaleTransform ScaleX="{Binding PercentScale}"/>
+                                                                        </Border.RenderTransform>
+                                                                    </Border>
                                                                 </Border>
-                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,10,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Category Revenue" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                                                <ItemsControl x:Name="icCategoryRevenue">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,9">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="110"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="125"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center" ClipToBounds="True">
+                                                                    <Border HorizontalAlignment="Stretch" Background="{Binding Fill}" CornerRadius="7" RenderTransformOrigin="0,0.5">
+                                                                        <Border.RenderTransform>
+                                                                            <ScaleTransform ScaleX="{Binding PercentScale}"/>
+                                                                        </Border.RenderTransform>
+                                                                    </Border>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" Margin="10,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Peak Sales Periods" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                                                <ItemsControl x:Name="icPeakPeriods">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid Margin="0,0,0,9">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="80"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="125"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding Label}" Foreground="#64748B" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                <Border Grid.Column="1" Height="14" Background="#EAF1FB" CornerRadius="7" VerticalAlignment="Center" ClipToBounds="True">
+                                                                    <Border HorizontalAlignment="Stretch" Background="{Binding Fill}" CornerRadius="7" RenderTransformOrigin="0,0.5">
+                                                                        <Border.RenderTransform>
+                                                                            <ScaleTransform ScaleX="{Binding PercentScale}"/>
+                                                                        </Border.RenderTransform>
+                                                                    </Border>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Foreground="#1E293B" FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis"/>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
@@ -661,6 +773,7 @@
                                                     <DataGridTextColumn Header="Date" Binding="{Binding Path='Date'}" Width="150"/>
                                                     <DataGridTextColumn Header="Machine" Binding="{Binding Path='Machine'}" Width="150"/>
                                                     <DataGridTextColumn Header="Item" Binding="{Binding Path='Item'}" Width="120"/>
+                                                    <DataGridTextColumn Header="Type" Binding="{Binding Path='Type'}" Width="90"/>
                                                     <DataGridTextColumn Header="Qty" Binding="{Binding Path='Quantity'}" Width="40"/>
                                                     <DataGridTextColumn Header="Price" Binding="{Binding Path='Price', StringFormat='₱{0:N2}'}" Width="80"/>
                                                     <DataGridTextColumn Header="Total Paid" Binding="{Binding Path='Total Paid', StringFormat='₱{0:N2}'}" Width="*" />

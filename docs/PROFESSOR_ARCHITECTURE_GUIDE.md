@@ -64,7 +64,7 @@ When you show the ERD, focus on the meaning of each table and the reason the rel
 - `items` is the master catalog of products.
 - `machine_inventory` is the most important bridge table because it tells us which machine contains which item in which slot, at what stock level, and at what machine-specific override price if needed.
 - `sales_transactions` stores every purchase.
-- `event_logs` stores activity history for auditing and dashboard reporting.
+- `event_logs` stores activity history for auditing, dashboard reporting, restock/slot changes, and RFID account history.
 - `customers` stores RFID users and their eco-credit balances.
 
 ### Strong point to say
@@ -86,6 +86,8 @@ You can also say:
 If your professor asks why `customers` is not connected to sales by foreign key, say:
 
 > In the current implementation, RFID customers are mainly used for registration and saving recycle credits. Sales are recorded independently, and the connection between vending activity and customer RFID is handled at application level instead of a direct foreign key relationship.
+
+The customer dashboard history follows that same rule: it reads RFID-tagged purchase entries from `event_logs` and displays item, quantity, and paid cash/points rather than joining customers directly to sales.
 
 That answer is honest and technically correct.
 
@@ -156,7 +158,15 @@ You can also explain the admin inventory flow:
 1. admin creates or edits a shared product in the `Items` tab
 2. admin assigns that product to a specific machine slot in the `Inventory` tab
 3. that slot stores machine-specific stock and optional price override
-4. customer mode reads the configured slot and shows the correct item for that machine
+4. restock and slot changes write audit entries into `event_logs`
+5. customer mode reads the configured slot and shows the correct item for that machine
+
+You can also explain the sales analytics flow:
+
+1. admin opens the Sales Report, which defaults to Week
+2. `SupabaseStore.GetFilteredSales()` loads the selected date range and optional machine scope
+3. `AdminWindow.UpdateSalesReportVisuals()` groups the rows by item, machine, category, and period
+4. the UI shows KPI cards, trend bars, product mix, best-selling items, machine revenue, category revenue, peak periods, and transaction details
 
 You can also explain the machine-location setup flow:
 
@@ -166,6 +176,7 @@ You can also explain the machine-location setup flow:
 4. `MapLocationService` reverse-geocodes that point into a readable address
 5. admin can still manually edit the address before saving
 6. `SupabaseStore` saves the machine name, address, and coordinates into `vending_machines`
+7. inventory assignment is handled afterward in the Inventory view, so a new machine can be registered empty and stocked later
 
 ## 6.1 Honest Current Limitations
 
@@ -173,7 +184,7 @@ If your professor asks what still needs improvement, you can answer honestly wit
 
 - the customer UI currently supports 12 visible vending slots, so backend inventory should stay aligned with that limit
 - the inventory model is now intentionally split between a shared item catalog and machine-specific slot assignment
-- RFID currently saves recycle credits, but purchases are still cash-based in the present implementation
+- RFID account history is application-layer event-log matching because customers are not foreign-keyed to sales records
 - the project uses a practical MVVM-lite approach rather than a full MVVM architecture
 
 That answer is strong because it shows you understand both the design and the remaining technical debt.

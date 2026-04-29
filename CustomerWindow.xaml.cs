@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.ComponentModel;
+using System.Data;
 using System.Threading;
 using System.Windows.Threading;
 using Eco_Matic.Data;
@@ -20,6 +21,7 @@ public partial class CustomerWindow : Window
     private static readonly Random AnimationRandom = new();
 
     private readonly List<RecycleEntry> _recycleEntries = new();
+    private readonly List<SessionPurchaseHistoryRecord> _sessionPurchaseHistory = new();
     private readonly Dictionary<int, SlotControls> _slots = new();
     private readonly List<Product> _products = new();
 
@@ -73,6 +75,17 @@ public partial class CustomerWindow : Window
         public int CatalogItemId { get; set; }
         public string Name { get; set; } = string.Empty;
         public override string ToString() => Name;
+    }
+
+    private sealed class SessionPurchaseHistoryRecord
+    {
+        public string EventType { get; init; } = "PURCHASE";
+        public string ItemName { get; init; } = string.Empty;
+        public int Quantity { get; init; } = 1;
+        public string PaidText { get; init; } = string.Empty;
+        public decimal Amount { get; init; }
+        public string? Rfid { get; set; }
+        public bool LoggedWithRfid { get; set; }
     }
 
     public CustomerWindow(
@@ -501,15 +514,82 @@ public partial class CustomerWindow : Window
         UpdateDoneButtonState();
     }
 
-    public void SetLinkedRfidCustomer(string rfid, string email, int ecoCredits)
+    public bool SetLinkedRfidCustomer(string rfid, string email, int ecoCredits)
     {
-        _linkedRfid = rfid;
+        if (!PrepareRfidForCurrentSession(rfid))
+        {
+            SetDispenseStatus("SESSION LOCKED TO FIRST RFID", SoldOutRed);
+            return false;
+        }
+
         _linkedCustomerEmail = email;
         _availableEcoCredits = Math.Max(0, ecoCredits);
         _payWithPoints = false;
         UpdateMoneyDisplay();
 
         SetDispenseStatus($"{GetLinkedCustomerLabel()} {_availableEcoCredits} PTS", Brushes.MediumSeaGreen);
+        return true;
+    }
+
+    public bool CanUseRfidForCurrentSession(string rfid)
+    {
+        string normalizedRfid = NormalizeRfid(rfid);
+        if (string.IsNullOrWhiteSpace(normalizedRfid))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(_linkedRfid))
+        {
+            return true;
+        }
+
+        if (string.Equals(_linkedRfid, normalizedRfid, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return _activeSession.Items.Count == 0;
+    }
+
+    public bool PrepareRfidForCurrentSession(string rfid)
+    {
+        string normalizedRfid = NormalizeRfid(rfid);
+        if (!CanUseRfidForCurrentSession(normalizedRfid))
+        {
+            return false;
+        }
+
+        bool changedRfid = !string.Equals(_linkedRfid, normalizedRfid, StringComparison.OrdinalIgnoreCase);
+        _linkedRfid = normalizedRfid;
+        if (changedRfid)
+        {
+            _linkedCustomerEmail = null;
+            _availableEcoCredits = 0;
+        }
+
+        AttachUnloggedPurchaseHistoryToRfid(normalizedRfid);
+        UpdateMoneyDisplay();
+        return true;
+    }
+
+    public DataTable GetCurrentSessionTransactionHistory(string rfid)
+    {
+        var table = new DataTable();
+        table.Columns.Add("Timestamp", typeof(DateTime));
+        table.Columns.Add("Item", typeof(string));
+        table.Columns.Add("Quantity", typeof(int));
+        table.Columns.Add("Paid", typeof(string));
+
+        string normalizedRfid = NormalizeRfid(rfid);
+        foreach (SessionPurchaseHistoryRecord record in _sessionPurchaseHistory
+            .Where(record => record.LoggedWithRfid &&
+                             string.Equals(record.Rfid, normalizedRfid, StringComparison.OrdinalIgnoreCase)))
+        {
+            table.Rows.Add(DateTime.Now, record.ItemName, record.Quantity, record.PaidText);
+        }
+
+        return table;
     }
 
     private string GetLinkedCustomerLabel()
@@ -533,6 +613,7 @@ public partial class CustomerWindow : Window
         _linkedRfid = null;
         _linkedCustomerEmail = null;
         _payWithPoints = false;
+        _sessionPurchaseHistory.Clear();
         DataStore.PendingPoints = 0;
         _activeSession = new Transaction
         {
@@ -654,6 +735,59 @@ public partial class CustomerWindow : Window
         _activeSession.TotalAmount = _activeSession.Items.Sum(item => item.LineTotal);
         _activeSession.AmountPaid = _totalMoneyInserted;
         _activeSession.Change = _totalChangeReturned + _insertedMoney;
+    }
+
+    private SessionPurchaseHistoryRecord AddSessionPurchaseHistory(
+        string eventType,
+        VendingItem product,
+        string paidText,
+        decimal amount,
+        string? rfid)
+    {
+        string? normalizedRfid = string.IsNullOrWhiteSpace(rfid) ? null : NormalizeRfid(rfid);
+        var record = new SessionPurchaseHistoryRecord
+        {
+            EventType = eventType,
+            ItemName = product.Name,
+            Quantity = 1,
+            PaidText = paidText,
+            Amount = amount,
+            Rfid = normalizedRfid,
+            LoggedWithRfid = !string.IsNullOrWhiteSpace(normalizedRfid)
+        };
+
+        _sessionPurchaseHistory.Add(record);
+        return record;
+    }
+
+    private void AttachUnloggedPurchaseHistoryToRfid(string rfid)
+    {
+        string normalizedRfid = NormalizeRfid(rfid);
+        if (string.IsNullOrWhiteSpace(normalizedRfid))
+        {
+            return;
+        }
+
+        foreach (SessionPurchaseHistoryRecord record in _sessionPurchaseHistory.Where(record => !record.LoggedWithRfid).ToList())
+        {
+            record.Rfid = normalizedRfid;
+            record.LoggedWithRfid = true;
+
+            string details = BuildPurchaseLogDetails(normalizedRfid, record.ItemName, record.Quantity, record.PaidText);
+            QueueBackgroundStoreAction(() =>
+                DataStore.LogEvent(_machineId, "CUSTOMER_TRANSACTION", details, record.Amount));
+        }
+    }
+
+    private static string BuildPurchaseLogDetails(string? rfid, string itemName, int quantity, string paidText)
+    {
+        string rfidDetails = string.IsNullOrWhiteSpace(rfid) ? string.Empty : $"RFID: {NormalizeRfid(rfid)} | ";
+        return $"{rfidDetails}Item: {itemName} | Quantity: {quantity} | Paid: {paidText}";
+    }
+
+    private static string NormalizeRfid(string rfid)
+    {
+        return rfid.Trim().ToUpperInvariant();
     }
 
     private Transaction FinalizeActiveSession()
@@ -932,7 +1066,10 @@ public partial class CustomerWindow : Window
 
         int inventoryId = product.DbInventoryId;
         int updatedStock = product.Stock;
-        string logDetails = $"Item: {product.Name} | Quantity: 1 | Price: ₱{product.Price:0.00} | Total: ₱{product.Price:0.00}";
+        string? purchaseRfid = string.IsNullOrWhiteSpace(_linkedRfid) ? null : _linkedRfid;
+        string paidText = $"₱{product.Price:0.00}";
+        AddSessionPurchaseHistory("PURCHASE", product, paidText, product.Price, purchaseRfid);
+        string logDetails = BuildPurchaseLogDetails(purchaseRfid, product.Name, 1, paidText);
         QueueBackgroundStoreAction(() =>
         {
             DataStore.SaveInventory(_machineId, CreateInventorySaveSnapshot(inventoryId, updatedStock));
@@ -995,10 +1132,10 @@ public partial class CustomerWindow : Window
 
         int inventoryId = product.DbInventoryId;
         int updatedStock = product.Stock;
-        string pointSource = savedPointsSpent > 0
-            ? $"session points: {pendingPointsSpent}, saved RFID points: {savedPointsSpent}"
-            : $"session points: {pendingPointsSpent}";
-        string logDetails = $"Item: {product.Name} | Quantity: 1 | Paid with {pointsCost} eco points ({pointSource}) | Total: ₱{product.Price:0.00}";
+        string? purchaseRfid = string.IsNullOrWhiteSpace(_linkedRfid) ? null : _linkedRfid;
+        string paidText = $"{pointsCost} eco points";
+        AddSessionPurchaseHistory("POINT_PURCHASE", product, paidText, product.Price, purchaseRfid);
+        string logDetails = BuildPurchaseLogDetails(purchaseRfid, product.Name, 1, paidText);
         QueueBackgroundStoreAction(() =>
         {
             DataStore.SaveInventory(_machineId, CreateInventorySaveSnapshot(inventoryId, updatedStock));

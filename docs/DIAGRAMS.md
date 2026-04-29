@@ -2,7 +2,7 @@
 
 This is the diagram index for the current WPF + Supabase codebase.
 
-Database details were verified against the live Supabase project through the Supabase MCP tool on 2026-04-26. The live public schema currently exposes 14 tables, all with RLS enabled, plus the active `qr-payment-confirm` Edge Function.
+Database details were verified against the live Supabase project through the Supabase MCP tool on 2026-04-30. The live public schema currently exposes the Supabase-backed vending, inventory, sales, event log, customer, receipt, recyclable item, QR payment, and staff-assignment tables used by the app.
 
 ## Diagram Files
 
@@ -26,4 +26,3 @@ Database details were verified against the live Supabase project through the Sup
 Use this sentence during your defense:
 
 > The ERD explains how persistent data is stored in the database, while the class diagrams explain how software objects collaborate at runtime inside the WPF application.
-

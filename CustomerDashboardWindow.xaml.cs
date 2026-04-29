@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Data;
 using Eco_Matic.Data;
 
 namespace Eco_Matic
@@ -6,16 +7,20 @@ namespace Eco_Matic
     public partial class CustomerDashboardWindow : Window
     {
         private readonly string _rfid;
+        private readonly bool _allowPendingPointSave;
+        private readonly DataTable? _supplementalHistory;
 
         public int SavedPoints { get; private set; }
         public int FinalBalance { get; private set; }
         public string CustomerEmail { get; private set; } = string.Empty;
         public bool SaveSucceeded { get; private set; }
 
-        public CustomerDashboardWindow(string rfid)
+        public CustomerDashboardWindow(string rfid, bool allowPendingPointSave = true, DataTable? supplementalHistory = null)
         {
             InitializeComponent();
             _rfid = rfid;
+            _allowPendingPointSave = allowPendingPointSave;
+            _supplementalHistory = supplementalHistory;
             Loaded += CustomerDashboardWindow_Loaded;
         }
 
@@ -46,7 +51,7 @@ namespace Eco_Matic
                 bool saveSucceeded = false;
                 bool saveFailed = false;
 
-                if (DataStore.PendingPoints > 0)
+                if (_allowPendingPointSave && DataStore.PendingPoints > 0)
                 {
                     int pointsToSave = DataStore.PendingPoints;
                     finalBalance += pointsToSave;
@@ -64,13 +69,16 @@ namespace Eco_Matic
                     }
                 }
 
+                var history = db.GetCustomerTransactionHistory(rfid);
+
                 return new
                 {
                     info.Email,
                     FinalBalance = finalBalance,
                     SavedPoints = savedPoints,
                     SaveSucceeded = saveSucceeded,
-                    SaveFailed = saveFailed
+                    SaveFailed = saveFailed,
+                    History = history
                 };
             });
 
@@ -99,7 +107,36 @@ namespace Eco_Matic
                 txtBalance.Text = "0";
             }
 
+            MergeSupplementalHistory(result.History, _supplementalHistory);
+            dgAccountHistory.ItemsSource = result.History.DefaultView;
+
             btnClose.IsEnabled = true;
+        }
+
+        private static void MergeSupplementalHistory(DataTable history, DataTable? supplementalHistory)
+        {
+            if (supplementalHistory == null || supplementalHistory.Rows.Count == 0)
+            {
+                return;
+            }
+
+            foreach (DataRow supplementalRow in supplementalHistory.Rows)
+            {
+                bool alreadyPresent = history.Rows.Cast<DataRow>().Any(row =>
+                    string.Equals(row["Item"]?.ToString(), supplementalRow["Item"]?.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(row["Paid"]?.ToString(), supplementalRow["Paid"]?.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                    Convert.ToInt32(row["Quantity"]) == Convert.ToInt32(supplementalRow["Quantity"]));
+
+                if (alreadyPresent)
+                {
+                    continue;
+                }
+
+                history.ImportRow(supplementalRow);
+            }
+
+            DataView sorted = history.DefaultView;
+            sorted.Sort = "Timestamp DESC";
         }
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)

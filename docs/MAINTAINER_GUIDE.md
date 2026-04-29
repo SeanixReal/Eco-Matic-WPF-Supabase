@@ -40,8 +40,14 @@ For current architecture and review status, use:
 - admin users open on the Dashboard view after successful login
 - `AdminWindow` loads dashboard, inventory, global items, logs, sales, machines, users, and customers
 - inventory managers only load the Inventory page for their assigned vending machines
+- global item add/edit checks the current catalog grid for duplicate item names and shows a clear warning before calling Supabase
 - the Inventory page supports quantity restocking and a selected-item action to restock directly to max capacity
-- the Sales Report can filter all machines or one vending machine, using the selected date as the anchor for Day, Week, Month, or Year
+- newly registered vending machines are allowed to start with zero assigned inventory slots; admins assign stock afterward from the Inventory view
+- the Sales Report defaults to Week and can filter all machines or one vending machine, using the selected date as the anchor for Day, Week, Month, or Year
+- analytics now include revenue trend, product mix, best-selling items, machine revenue, category revenue, peak sales periods, top machine, transaction count, unit count, and average sale for the active filter
+- the Event Logs page also defaults to Week so recent operational activity is visible without switching filters
+- the staff editor keeps Register/Cancel outside the scrolling machine list so assignments can grow without hiding the action buttons
+- restocks, slot assignment/removal/update, stock changes, catalog edits, machine edits, customer registration, and credit updates are written to `event_logs`
 - machine setup/edit now stores a machine name, an editable address, and optional coordinates
 - `MapPickerWindow` plus `MapLocationService` auto-fill an address from a clicked map point
 
@@ -51,6 +57,9 @@ For current architecture and review status, use:
 - `MainWindow` checks whether the customer exists
 - the app opens registration or customer dashboard
 - pending recycle points are saved into the customer account
+- before the dashboard opens, the active `CustomerWindow` attaches any unlinked current-session purchases to the first valid RFID for that session
+- after a session has purchases attached to one RFID, a different RFID can view its dashboard but cannot take over the active session's transaction history or pending point save
+- the dashboard shows recent transaction history by filtering purchase-related `event_logs` for the exact scanned RFID value, plus current-session rows that may still be writing in the background
 
 ## Important Invariants to Protect
 
@@ -60,9 +69,10 @@ For current architecture and review status, use:
 - machine-specific stock and optional price override belong in `machine_inventory`
 - machine identity belongs in `vending_machines.location_name`
 - machine address and coordinates belong in `vending_machines.address_text`, `latitude`, and `longitude`
-- current purchase logic is cash-based
-- RFID is currently for identity and recycle-credit saving, not item payment
+- purchases can use inserted cash/QR-paid balance or eco-points when point payment is toggled
+- RFID is currently for identity, recycle-credit saving, point payment, and purchase-history attribution
 - `DataStore` is the in-memory customer session state, so changes there affect the vending UX directly
+- customer account transaction history is purchase-log based because the current schema does not foreign-key customers to sales records
 - customer mode now depends on the local MySQL cache and sync queue for offline resilience
 - admin mode and RFID persistence still require internet access
 
@@ -76,9 +86,11 @@ For current architecture and review status, use:
 - make sure the COM port for Arduino matches the machine you are using
 - make sure images referenced in the database actually exist in runtime-accessible paths
 - make sure each demo machine has a readable machine name and address because both are now surfaced to the customer and available on receipts
+- make sure any newly registered demo machine has inventory assigned before opening it in Customer Mode; registration itself no longer forces initial stock
 - make sure the live `roles` table has `Admin` and `Inventory Manager`; staff creation expects `Inventory Manager`
 - make sure `user_machine_assignments` exists when using multiple assigned vending machines
 - demo sales rows use deterministic `client_sync_id` values and can be reseeded without stacking duplicates
+- Supabase migration `add_missing_foreign_key_indexes` adds indexes on existing foreign-key columns only; it does not add or remove tables
 
 ## Highest-Risk Technical Debt
 
@@ -97,9 +109,9 @@ For current architecture and review status, use:
 3. harden migration/runtime checks for databases missing `slot_price`
 4. add automated tests around inventory validation and machine independence
 5. consider transactional backend/RPC helpers for multi-step writes
-6. add Supabase indexes for the currently unindexed foreign keys called out in `docs/SUPABASE_AUDIT.md`
-7. expand offline sync support beyond customer mode if the product needs it later
-8. redesign backend/auth before attempting strict RLS on live Supabase tables
+6. expand offline sync support beyond customer mode if the product needs it later
+7. redesign backend/auth before attempting strict RLS on live Supabase tables
+8. monitor Supabase advisor results after demo traffic; newly created indexes can appear unused until queries hit them
 
 ## If You Ask AI To Help
 
