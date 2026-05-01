@@ -35,9 +35,9 @@ classDiagram
         +PendingPoints
     }
 
-    class OfflineSyncCoordinator {
-        +ChooseDataSource()
-        +QueueCustomerModeWrites()
+    class SupabaseSessionCoordinator {
+        +CheckSupabaseAvailability()
+        +PersistCustomerSessionWrites()
     }
 
     class SupabaseStore {
@@ -69,8 +69,8 @@ classDiagram
     CustomerWindow --> DataStore
     CustomerWindow --> QrPaymentService
     AdminWindow --> SupabaseStore
-    DataStore --> OfflineSyncCoordinator
-    OfflineSyncCoordinator --> SupabaseStore
+    DataStore --> SupabaseSessionCoordinator
+    SupabaseSessionCoordinator --> SupabaseStore
     SupabaseStore --> SupabaseClient
     VendingItem <|-- Product
     DataStore o-- Product
@@ -83,7 +83,7 @@ classDiagram
 - `CustomerWindow` is the customer vending workflow.
 - `AdminWindow` is the management console for admins and inventory-only shell for assigned inventory managers.
 - `DataStore` keeps active customer-session state in memory.
-- `OfflineSyncCoordinator` decides whether customer mode uses Supabase or local cached data.
+- `SupabaseSessionCoordinator` routes customer-mode data through Supabase.
 - `SupabaseStore` is the main app-level database service.
 - `SupabaseClient` is the low-level HTTP/PostgREST wrapper.
 - `ArduinoService` isolates serial RFID/LCD communication.

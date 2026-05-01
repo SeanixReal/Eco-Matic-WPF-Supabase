@@ -82,7 +82,7 @@ Answer:
 
 Answer:
 
-"Customer mode has offline-aware behavior after initial sync through local cache and replay mechanisms. Admin mode and RFID account persistence are currently online-oriented."
+"Customer mode now uses the same live Supabase data path as admin and RFID account persistence. If Supabase is unavailable, the app shows a connectivity message instead of falling back to a local database."
 
 ### Q6: Why not full MVVM?
 

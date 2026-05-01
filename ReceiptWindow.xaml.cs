@@ -26,7 +26,10 @@ public partial class ReceiptWindow : Window
             lblMachineName.Text = "Machine: -";
             lblMachineAddress.Text = "Address: -";
             lblTotal.Text = "Total:  PHP 0.00";
-            lblPaid.Text = "Paid:   PHP 0.00";
+            lblPaid.Text = "Cash/QR Paid: PHP 0.00";
+            lblPointsUsed.Text = "Points Used: 0";
+            lblPointsEarned.Text = "Points Earned: 0";
+            lblPointBalance.Text = "Point Balance: -";
             lblChange.Text = "Change: PHP 0.00";
             return;
         }
@@ -45,6 +48,15 @@ public partial class ReceiptWindow : Window
             string slotLabel = string.IsNullOrWhiteSpace(item.SlotId) ? "" : $"[S{item.SlotId}] ";
             string line = $"{item.Quantity}x  {slotLabel}{item.ProductName,-16} PHP {item.LineTotal:F2}";
             itemsList.Items.Add(line);
+
+            if (item.WasPaidWithPoints)
+            {
+                itemsList.Items.Add($"    paid with {item.PointsSpent} eco points");
+            }
+            else if (item.CashPaid > 0m)
+            {
+                itemsList.Items.Add($"    paid with PHP {item.CashPaid:F2}");
+            }
         }
 
         foreach (var recycle in transaction.RecycledItems)
@@ -60,7 +72,14 @@ public partial class ReceiptWindow : Window
         }
 
         lblTotal.Text = $"Total:  PHP {transaction.TotalAmount:F2}";
-        lblPaid.Text = $"Paid:   PHP {transaction.AmountPaid:F2}";
+        lblPaid.Text = $"Cash/QR Paid: PHP {transaction.AmountPaid:F2}";
+        lblPointsUsed.Text = transaction.EcoPointsSpent > 0
+            ? $"Points Used: {transaction.EcoPointsSpent} ({transaction.SessionPointsSpent} session, {transaction.SavedEcoCreditsSpent} saved)"
+            : "Points Used: 0";
+        lblPointsEarned.Text = $"Points Earned: {transaction.RecyclePointsTotal}";
+        lblPointBalance.Text = transaction.EcoCreditBalanceAfter.HasValue
+            ? $"RFID Balance After: {transaction.EcoCreditBalanceAfter.Value} pts"
+            : $"Unsaved Points Left: {transaction.UnsavedSessionPointsRemaining} pts";
         lblChange.Text = $"Change: PHP {transaction.Change:F2}";
     }
 

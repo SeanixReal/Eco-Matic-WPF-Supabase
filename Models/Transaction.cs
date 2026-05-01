@@ -29,7 +29,11 @@ public class TransactionItem
     public string ProductName { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
+    public string PaymentMethod { get; set; } = "Cash";
+    public decimal CashPaid { get; set; }
+    public int PointsSpent { get; set; }
     public decimal LineTotal => Quantity * UnitPrice;
+    public bool WasPaidWithPoints => PointsSpent > 0;
 }
 
 public class Transaction
@@ -48,7 +52,13 @@ public class Transaction
     public decimal TotalAmount { get; set; }
     public decimal AmountPaid { get; set; }
     public decimal Change { get; set; }
+    public int EcoPointsSpent { get; set; }
+    public int SessionPointsSpent { get; set; }
+    public int SavedEcoCreditsSpent { get; set; }
+    public int UnsavedSessionPointsRemaining { get; set; }
+    public int? EcoCreditBalanceAfter { get; set; }
     public string Source { get; set; } = "online";
     public int RecyclePointsTotal => RecycledItems.Sum(entry => entry.TotalPoints);
+    public int NetSessionPoints => RecyclePointsTotal - SessionPointsSpent;
     public bool HasActivity => Items.Count > 0 || RecycledItems.Count > 0 || AmountPaid > 0m || Change > 0m;
 }

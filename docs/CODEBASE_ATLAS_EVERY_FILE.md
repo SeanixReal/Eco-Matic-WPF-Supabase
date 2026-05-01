@@ -9,7 +9,7 @@ Use this to build full confidence before presentation and Q and A.
 - Entry: MainWindow
 - User flows: CustomerWindow and AdminWindow
 - Session state: DataStore
-- Data source routing: OfflineSyncCoordinator
+- Supabase session routing: SupabaseSessionCoordinator
 - Cloud API: SupabaseStore and SupabaseClient
 - Hardware: ArduinoService
 - Payments: QrPaymentService + Supabase Edge Function
@@ -19,7 +19,7 @@ Use this to build full confidence before presentation and Q and A.
 
 ### Configuration and Project Metadata
 
-- .env - local runtime settings (Supabase keys, local MySQL fallback, printer settings, Arduino port)
+- .env - local runtime settings (Supabase keys, printer settings, Arduino port)
 - .env.example - template for required environment variables
 - .gitattributes - git file behavior rules
 - .gitignore - ignored files/folders
@@ -95,9 +95,7 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 - Data/DataStore.cs - static customer-session state (products, transaction state, pending points)
 - Data/Esp32SupabaseClient.ino - microcontroller-side Supabase HTTP prototype file
 - Data/MapLocationService.cs - reverse geocoding service (OpenStreetMap Nominatim)
-- Data/OfflineModels.cs - offline queue/cache model classes and enums
-- Data/OfflineMySqlStore.cs - local MySQL cache schema, queue persistence, dirty-stock tracking
-- Data/OfflineSyncCoordinator.cs - data-source routing (Supabase vs LocalMySql), queueing behavior
+- Data/SupabaseSessionCoordinator.cs - Supabase availability checks and customer-session persistence routing
 - Data/QrPaymentService.cs - calls Supabase Edge Function for QR intent/status/pay actions
 - Data/ReceiptPrinterService.cs - receipt print routing (Windows queue / serial), printer setting resolution
 - Data/SupabaseClient.cs - low-level HTTP wrapper for PostgREST/RPC/functions
@@ -225,7 +223,7 @@ Read in this order:
 2. CustomerWindow.xaml.cs
 3. AdminWindow.xaml.cs
 4. Data/DataStore.cs
-5. Data/OfflineSyncCoordinator.cs
+5. Data/SupabaseSessionCoordinator.cs
 
 ### Pass 2 (40 minutes) - Data and hardware confidence
 
@@ -235,7 +233,7 @@ Read in this order:
 2. Data/SupabaseStore.cs
 3. Data/SupabaseStore_Customers.cs
 4. Data/ArduinoService.cs
-5. Data/OfflineMySqlStore.cs
+5. Data/ReceiptPrinterService.cs
 
 ### Pass 3 (30 minutes) - Diagram + defense confidence
 
@@ -249,8 +247,8 @@ Read in this order:
 ## 13) The 12 Functions You Must Be Able to Explain
 
 - MainWindow Arduino_OnCardScanned
-- OfflineSyncCoordinator PrepareCustomerModeAsync
-- OfflineSyncCoordinator CanUseOnlineOnlyFeature
+- SupabaseSessionCoordinator PrepareCustomerModeAsync
+- SupabaseSessionCoordinator CanUseSupabaseFeature
 - DataStore SaveCompletedReceipt
 - CustomerWindow SelectButton_Click
 - CustomerWindow PurchaseWithPointsAsync

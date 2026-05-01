@@ -1,5 +1,5 @@
--- Supabase/Postgres migration for offline sync replay idempotency.
--- Apply this before using the local offline queue replay feature.
+-- Supabase/Postgres migration for idempotent app writes with client_sync_id.
+-- Apply this when older schemas are missing client_sync_id on activity tables.
 
 ALTER TABLE public.sales_transactions
 ADD COLUMN IF NOT EXISTS client_sync_id UUID NULL;

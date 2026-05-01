@@ -37,7 +37,7 @@ public partial class MachineSelectionWindow : Window
         try
         {
             var dt = await System.Threading.Tasks.Task.Run(
-                () => OfflineSyncCoordinator.Instance.GetMachineLookupForCustomer(preferFreshWhenOnline: true));
+                () => SupabaseSessionCoordinator.Instance.GetMachineLookupForCustomer());
             var machines = new List<VendingMachineModel>();
 
             foreach (System.Data.DataRow row in dt.Rows)
@@ -62,10 +62,6 @@ public partial class MachineSelectionWindow : Window
             {
                 txtStatus.Text = "No active vending machines currently exist in the database.";
                 txtStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(214, 90, 90));
-            }
-            else if (DataStore.IsOffline)
-            {
-                txtStatus.Text = "Showing local MySQL demo machine locations for this session.";
             }
             else
             {

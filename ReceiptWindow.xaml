@@ -92,7 +92,10 @@
                                     Padding="10">
                                 <StackPanel>
                                     <TextBlock x:Name="lblTotal" FontFamily="Consolas" FontSize="14" Text="Total:  PHP 0.00" />
-                                    <TextBlock x:Name="lblPaid" FontFamily="Consolas" FontSize="14" Text="Paid:   PHP 0.00" />
+                                    <TextBlock x:Name="lblPaid" FontFamily="Consolas" FontSize="14" Text="Cash/QR Paid: PHP 0.00" />
+                                    <TextBlock x:Name="lblPointsUsed" FontFamily="Consolas" FontSize="14" Text="Points Used: 0" />
+                                    <TextBlock x:Name="lblPointsEarned" FontFamily="Consolas" FontSize="14" Text="Points Earned: 0" />
+                                    <TextBlock x:Name="lblPointBalance" FontFamily="Consolas" FontSize="14" Text="Point Balance: -" />
                                     <TextBlock x:Name="lblChange" FontFamily="Consolas" FontSize="14" Text="Change: PHP 0.00" />
                                 </StackPanel>
                             </Border>

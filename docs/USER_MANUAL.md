@@ -27,12 +27,15 @@ The customer flow is centered on the vending machine UI.
 - examine items
 - buy available products
 - add recycle points during the session
+- pay with available eco-points when point payment is toggled
 - receive a receipt and change
 
 ### Important current behavior
 
+- the main menu shows a small Supabase connectivity status in the lower-left corner; it disappears after a few seconds when connected and stays visible if data features need internet
 - purchases can use cash buttons or the QR payment modal
 - recycle points are tracked separately from inserted cash
+- receipts show cash/QR paid, eco-points used, recycle points earned, and remaining point balances instead of mixing point purchases into the PHP paid total
 - RFID is used for customer identity, saving recycle points, showing transaction history, and spending saved eco-points when the customer chooses point payment
 - QR payment uses a Supabase Edge Function to mark the scanned payment intent as paid; the phone shows a simple confirmation message after scanning
 
@@ -55,7 +58,8 @@ The admin side is controlled through `AdminWindow`.
 
 - admin login opens on the dashboard by default
 - view dashboard metrics
-- manage the global item catalog, with a warning when a new or edited item name duplicates an existing catalog item
+- manage the global item catalog, with a foreground warning when a new or edited item name duplicates an existing catalog item
+- delete global catalog items; assigned vending slots become empty, and sold items are removed from active catalog use while old sales reports remain readable
 - manage machine inventory
 - monitor low-stock and out-of-stock slots
 - restock items by quantity
@@ -117,10 +121,9 @@ The current code marks low-stock alerts when stock is `3` or below.
 - customer purchases can deduct saved RFID credits only when the customer has linked a card and toggles point payment
 - the app is designed around a fixed 12-slot customer UI
 - images are intentionally local-first rather than cloud-dependent for reliable classroom demos
-- customer mode can now load from a locally cached MySQL snapshot and replay queued sales/logs later after one successful online sync
-- admin mode and RFID account updates still require internet access
+- customer mode, admin mode, and RFID account updates require internet access and live Supabase connectivity
 - if your live Supabase schema is older, run `docs/sql/migrations/supabase/migration_increment3.sql` before expecting per-machine price overrides to work
-- run `docs/sql/migrations/supabase/migration_increment4.sql` before expecting offline replay deduplication to work safely
+- run `docs/sql/migrations/supabase/migration_increment4.sql` if your live schema is older and missing `client_sync_id` columns on activity tables
 - see `docs/SUPABASE_AUDIT.md` for the latest live schema and security findings
 
 ## 8. Where To Read More

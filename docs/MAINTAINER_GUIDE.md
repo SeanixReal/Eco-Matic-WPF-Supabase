@@ -30,7 +30,7 @@ For current architecture and review status, use:
 - machine cards now show both machine name and address when available
 - inventory is loaded into `DataStore`
 - `CustomerWindow` runs the vending session
-- `ReceiptWindow` now shows machine name and address on-screen as well as in the print path
+- `ReceiptWindow` now shows machine name, address, cash/QR paid amount, points used, points earned, and remaining point balances on-screen as well as in the print path
 - stock, logs, and sales are pushed through `SupabaseStore`
 
 ### Admin flow
@@ -40,7 +40,7 @@ For current architecture and review status, use:
 - admin users open on the Dashboard view after successful login
 - `AdminWindow` loads dashboard, inventory, global items, logs, sales, machines, users, and customers
 - inventory managers only load the Inventory page for their assigned vending machines
-- global item add/edit checks the current catalog grid for duplicate item names and shows a clear warning before calling Supabase
+- global item add/edit checks the current catalog grid for duplicate item names and shows a clear owned warning before calling Supabase
 - the Inventory page supports quantity restocking and a selected-item action to restock directly to max capacity
 - newly registered vending machines are allowed to start with zero assigned inventory slots; admins assign stock afterward from the Inventory view
 - the Sales Report defaults to Week and can filter all machines or one vending machine, using the selected date as the anchor for Day, Week, Month, or Year
@@ -67,18 +67,21 @@ For current architecture and review status, use:
 - `machine_inventory` should stay aligned with those 12 visible slots
 - shared item identity belongs in `items`
 - machine-specific stock and optional price override belong in `machine_inventory`
+- catalog delete must clear matching `machine_inventory` rows before removing the item from active use
+- deleted catalog items should stay physically present in `items` with `is_active = false`, `deleted_at`, and `deleted_reason` so sales reports keep their historical item names/types
 - machine identity belongs in `vending_machines.location_name`
 - machine address and coordinates belong in `vending_machines.address_text`, `latitude`, and `longitude`
 - purchases can use inserted cash/QR-paid balance or eco-points when point payment is toggled
 - RFID is currently for identity, recycle-credit saving, point payment, and purchase-history attribution
+- point purchases must stay separate from PHP paid totals; receipts use `Transaction.EcoPointsSpent`, `SessionPointsSpent`, and `SavedEcoCreditsSpent` for the point side of the payment
 - `DataStore` is the in-memory customer session state, so changes there affect the vending UX directly
 - customer account transaction history is purchase-log based because the current schema does not foreign-key customers to sales records
-- customer mode now depends on the local MySQL cache and sync queue for offline resilience
-- admin mode and RFID persistence still require internet access
+- customer mode, admin mode, and RFID persistence require live Supabase connectivity
 
 ## Things To Be Careful About Before Demoing
 
 - make sure the selected machine does not exceed 12 active inventory entries
+- check the lower-left Supabase connectivity badge on the main menu before beginning the live demo
 - make sure slot IDs are kept consistent and simple
 - make sure the live Supabase project has already applied `sql/migrations/supabase/migration_increment3.sql` and `sql/migrations/supabase/migration_increment4.sql`
 - make sure the live Supabase project has also applied `sql/migrations/supabase/migration_increment5.sql`
@@ -96,9 +99,8 @@ For current architecture and review status, use:
 
 - passwords are currently stored and compared directly
 - the Supabase anon key was previously exposed in source/history and should still be rotated in Supabase
-- startup now depends on a valid repo-root `.env` file for both Supabase and local MySQL settings
+- startup now depends on a valid repo-root `.env` file for Supabase settings
 - runtime behavior depends on the database having the new `slot_price` column
-- offline customer mode depends on the local MySQL cache being reachable on the demo laptop
 - map picking depends on WebView2 and internet access for reverse geocoding, although the address can still be typed manually
 - live Supabase anon policies are currently too permissive, but safe tightening is blocked by the current direct-client architecture
 
@@ -109,7 +111,7 @@ For current architecture and review status, use:
 3. harden migration/runtime checks for databases missing `slot_price`
 4. add automated tests around inventory validation and machine independence
 5. consider transactional backend/RPC helpers for multi-step writes
-6. expand offline sync support beyond customer mode if the product needs it later
+6. add an intentional offline design later if the product needs disconnected operation
 7. redesign backend/auth before attempting strict RLS on live Supabase tables
 8. monitor Supabase advisor results after demo traffic; newly created indexes can appear unused until queries hit them
 
@@ -117,7 +119,7 @@ For current architecture and review status, use:
 
 Tell the AI these facts up front:
 
-- backend is Supabase, not MySQL
+- backend is Supabase
 - docs live in `docs/`
 - `DataStore` is the customer session cache
 - the customer UI currently has only 12 slots

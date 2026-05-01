@@ -22,9 +22,10 @@ This is the WPF user interface.
   - acts as the entry point
   - routes users to customer mode or admin mode
   - listens for RFID scans from Arduino
+  - shows a startup Supabase connectivity badge so demo readiness is visible before opening data-heavy flows
 - `CustomerWindow.xaml.cs`
   - handles the vending machine experience
-  - manages money insertion, item selection, recycle points in the current session, and receipt flow
+  - manages money insertion, QR-paid balance, item selection, recycle points, point payment, and receipt flow
 - `AdminWindow.xaml.cs`
   - acts as the admin control center
   - loads dashboard, inventory, global items, sales, logs, machines, users, and customer data for admins
@@ -42,6 +43,7 @@ This is the WPF user interface.
   - `CustomerRegistrationWindow`
   - `CustomerDashboardWindow`
   - `ReceiptWindow`
+    - displays sale lines, recycle lines, cash/QR paid amount, eco-points used, eco-points earned, remaining unsaved points, and RFID balance when available
 
 ### B. Application and Session Layer
 
@@ -53,13 +55,13 @@ This layer keeps temporary application state that is useful while a vending sess
   - keeps the in-session product list
   - tracks the latest transaction and pending recycle points
 
-This is important because not every UI action needs to call the backend immediately. The customer screen works against an in-memory session model and now reads from a durable local cache before replaying queued customer writes back to Supabase.
+This is important because not every UI action needs to query the backend for display state. The customer screen works against an in-memory session model, while persistence is sent through the Supabase-backed session coordinator.
 
 Important limitation:
 
 - `DataStore` is still the in-memory session layer used by the customer UI
-- durable offline storage and replay are handled by the local MySQL cache plus sync queue
-- admin mode and RFID customer account writes are still online-only in v1
+- `SupabaseSessionCoordinator` is the Supabase-only path for customer-mode inventory, sales, event logs, and receipts
+- customer mode, admin mode, and RFID customer account writes now require live Supabase connectivity
 
 ### C. Service and Integration Layer
 
@@ -73,6 +75,9 @@ This layer connects the UI to external systems.
 - `Data/SupabaseStore_Customers.cs`
   - extends `SupabaseStore` with customer RFID operations
   - implemented as a partial class to keep customer-specific logic separate
+- `Data/SupabaseSessionCoordinator.cs`
+  - checks Supabase availability for customer mode
+  - routes customer-session inventory, sale, log, and receipt persistence to `SupabaseStore`
 - `Data/SupabaseClient.cs`
   - low-level REST client for Supabase PostgREST
   - performs `GET`, `POST`, `PATCH`, `DELETE`, and RPC calls
@@ -102,6 +107,7 @@ This layer contains the main business objects used inside the application.
   - `TransactionItem`
   - `RecycleEntry`
   - `EventLogEntry`
+  - point-payment receipt fields are kept on `Transaction` and `TransactionItem` so the customer-facing receipt can distinguish cash/QR payment from eco-credit usage
 
 ## 3. Main Runtime Flows
 
@@ -110,17 +116,17 @@ This layer contains the main business objects used inside the application.
 1. `MainWindow` opens `MachineSelectionWindow`.
 2. The machine selection screen shows the machine name and address to help the customer identify the correct kiosk.
 3. The selected machine ID is stored through `DataStore.Initialize(machineId)`.
-4. `DataStore` loads the machine inventory from the local offline cache.
+4. `DataStore` loads the machine inventory through `SupabaseSessionCoordinator`.
 5. `CustomerWindow` displays the 12-slot vending layout using the in-memory `DataStore.Products` list.
 6. When the customer buys an item:
    - money is validated in the UI
    - stock is decreased in memory
-   - `DataStore.SaveInventory()` updates the local cache and marks dirty stock for replay
-   - `DataStore.LogEvent()` queues a customer event log for replay
-   - `DataStore.RecordSale()` queues a sales record for replay
+   - `DataStore.SaveInventory()` updates Supabase stock through `SupabaseSessionCoordinator`
+   - `DataStore.LogEvent()` writes a customer event log through Supabase
+   - `DataStore.RecordSale()` writes a sales record through Supabase
    - a receipt can be shown through `ReceiptWindow`
    - the on-screen receipt can show the selected machine name and address
-   - the printed receipt can include the selected machine name and address
+   - the on-screen and printed receipt include cash/QR paid amount, point usage, recycle points earned, and remaining point balances
 
 Important current behavior:
 
@@ -144,6 +150,7 @@ Important implementation note:
 - recycle points are persisted to the customer account
 - the customer window keeps a session RFID lock once purchases exist, so a later scan from another RFID can view that account but cannot steal the current session's transaction history
 - purchases can use cash, QR-paid balance, or available eco-points; RFID identifies the account used for saved points and customer transaction history
+- point purchases no longer inflate the PHP paid amount on the receipt; the session records points spent separately from cash/QR value
 
 ### 3.3 Admin Flow
 
@@ -162,6 +169,8 @@ Important admin split:
 
 - the `Items` tab manages the shared global catalog in `items`
 - the `Inventory` tab manages per-machine slot assignment, stock, and optional slot-specific price override in `machine_inventory`
+- deleting a catalog item first clears matching `machine_inventory` slot assignments so the customer vending machine refreshes with those slots empty
+- catalog delete is a soft delete on `items`: `is_active = false`, `deleted_at`, and `deleted_reason`; active catalog and inventory assignment screens filter on `is_active = true`
 - the `Inventory` tab has a selected-row quick action that restocks only the chosen item to its max capacity
 - the `Machines` tab manages machine identity and physical placement information; a new machine can be registered without immediately assigning stock
 - the `Sales Report` tab can be filtered by date period and by a single vending machine, or left on all machines
@@ -195,6 +204,8 @@ This is a strong database design choice:
 - `machine_inventory` stores which machine has which item in which slot, with stock, capacity, and optional machine-specific price
 
 That separation avoids duplicated product definitions across machines.
+
+Catalog deletion respects that split: slot rows are removed immediately, while the catalog row is soft-deleted so `sales_transactions` can still join back to the original item name/type for historical reporting.
 
 ## 5. Current Folder Map
 
@@ -262,14 +273,14 @@ Current staff-role detail:
 
 ## 8. Known Documentation Mismatch in the Repository
 
-Some older archived or non-canonical files in the repository still describe the project as MySQL-driven through `MySqlStore`.
+Some older archived or non-canonical files in the repository may still describe a previous local database direction.
 
 For the current codebase, the accurate implementation is:
 
 - `SupabaseStore`
 - `SupabaseClient`
+- `SupabaseSessionCoordinator`
 - REST access to Supabase
-- optional local `OfflineMySqlStore` cache for customer-mode offline sync
 
 Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed and the live schema now also includes receipt history, QR payment intents, recyclable item definitions, and multi-machine staff assignments.
 
@@ -284,7 +295,6 @@ The latest review found these implementation caveats:
 - RFID is used for registration and recycle-credit saving, not for direct purchase payment
 - password fields are currently stored and compared directly even though some field names still say `password_hash`
 - the image strategy is local-first rather than Supabase Storage-first to keep classroom/demo behavior reliable
-- customer mode now supports durable offline cache-and-replay after one successful online sync
-- admin mode and RFID persistence still require live connectivity
+- customer mode, admin mode, and RFID persistence require live Supabase connectivity
 
 See `docs/CODE_REVIEW.md` for the detailed review.

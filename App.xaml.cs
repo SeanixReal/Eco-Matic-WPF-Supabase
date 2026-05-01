@@ -44,12 +44,12 @@ namespace Eco_Matic
             {
                 try
                 {
-                    OfflineSyncCoordinator.Instance.InitializeApplication();
+                    SupabaseSessionCoordinator.Instance.InitializeApplication();
                 }
                 catch
                 {
-                    // Customer-mode source availability is checked on demand.
-                    // Startup should stay responsive even if MySQL or Supabase is slow/unavailable.
+                    // Customer-mode Supabase availability is checked on demand.
+                    // Startup should stay responsive even if Supabase is slow/unavailable.
                 }
             });
         }

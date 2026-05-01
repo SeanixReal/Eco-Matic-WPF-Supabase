@@ -1,5 +1,6 @@
 using System.Windows;
 using Eco_Matic.Data;
+using MessageBox = Eco_Matic.Utilities.WindowDialog;
 
 namespace Eco_Matic
 {
@@ -17,9 +18,9 @@ namespace Eco_Matic
 
         private async void BtnRegister_Click(object sender, RoutedEventArgs e)
         {
-            if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
+            if (!SupabaseSessionCoordinator.Instance.CanUseSupabaseFeature(out string connectivityMessage))
             {
-                MessageBox.Show(this, offlineMessage, "Registration Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, connectivityMessage, "Registration Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

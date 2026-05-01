@@ -6,15 +6,12 @@ This flowchart shows the whole application from startup through customer mode, a
 flowchart TD
     A([Launch Eco-Matic WPF App]) --> B[App loads configuration]
     B --> C[MainWindow opens]
-    C --> D[Initialize ArduinoService and OfflineSyncCoordinator]
+    C --> D[Initialize ArduinoService and SupabaseSessionCoordinator]
     D --> E{Supabase reachable?}
     E -- Yes --> F[Use Supabase as live data source]
-    E -- No --> G{Local MySQL demo cache configured?}
-    G -- Yes --> H[Use local customer-mode cache]
-    G -- No --> I[Mark data source unavailable for customer mode]
+    E -- No --> I[Show connectivity-required state for data features]
 
     F --> J{User action}
-    H --> J
     I --> J
 
     J -- Customer button --> K{Can enter customer mode?}
@@ -47,18 +44,12 @@ flowchart TD
     Z -- No --> R
     Z -- Yes --> AA[Decrease product stock in memory]
     AA --> AB[DataStore.SaveInventory]
-    AB --> AC{Current data source}
-    AC -- Supabase --> AD[Patch machine_inventory stock]
-    AC -- Local cache --> AE[Save dirty inventory locally]
+    AB --> AD[Patch machine_inventory stock in Supabase]
     AD --> AF[Record sale and event log]
-    AE --> AF
     AF --> AG[Build Transaction and receipt lines]
     AG --> AH[DataStore.SaveCompletedReceipt]
-    AH --> AI{Current data source}
-    AI -- Supabase --> AJ[Insert receipt_sessions and receipt_session_lines]
-    AI -- Local cache --> AK[Queue receipt session for replay]
+    AH --> AJ[Insert receipt_sessions and receipt_session_lines]
     AJ --> AL[Show ReceiptWindow and optional print]
-    AK --> AL
     AL --> AM{Continue customer session?}
     AM -- Yes --> R
     AM -- No --> J

@@ -78,7 +78,7 @@ Important responsibilities:
 - stores active products in `Products`
 - stores active recyclable definitions in `RecyclableItems`
 - stores completed session transactions in `Transactions`
-- calls `OfflineSyncCoordinator` for inventory saves, sale recording, event logging, and receipt persistence
+- calls `SupabaseSessionCoordinator` for inventory saves, sale recording, event logging, and receipt persistence
 
 ### `SupabaseStore`
 
@@ -93,11 +93,12 @@ Important responsibilities:
 - authentication through `AuthenticateUser`
 - machine CRUD through `GetVendingMachines`, `CreateMachine`, `UpdateMachine`, and `DeleteMachine`
 - global product catalog CRUD through `GetCatalogItems`, `AddCatalogItem`, `UpdateCatalogItem`, and `DeleteCatalogItem`
+- catalog deletion clears machine slot assignments first, then soft-deletes the `items` row so sales reports keep historical item labels
 - machine inventory CRUD through `GetMachineInventory`, `AddItemToMachineSlot`, `UpdateMachineInventoryAssignment`, `RestockInventoryItem`, and `UpdateStock`
 - sales/report data through `RecordSale`, `GetFilteredSales`, `GetSalesTotals`, and `GetDashboardMetrics`
 - machine-scoped sales reporting through the optional machine filter in `GetFilteredSales`
 - RFID customer operations through the partial class in `SupabaseStore_Customers.cs`
-- receipt replay through `InsertQueuedReceiptSession`
+- receipt history persistence through `InsertQueuedReceiptSession`
 
 ### `SupabaseClient`
 
@@ -115,32 +116,17 @@ Important responsibilities:
 - sends RPC requests when needed
 - builds Edge Function URLs through `GetFunctionUrl`
 
-### `OfflineSyncCoordinator`
+### `SupabaseSessionCoordinator`
 
-`OfflineSyncCoordinator` chooses whether customer mode uses live Supabase or local MySQL demo cache.
+`SupabaseSessionCoordinator` centralizes Supabase availability checks and customer-session persistence.
 
 Professor explanation:
 
-> The coordinator protects customer mode from total failure when Supabase is unavailable. If Supabase is reachable, it uses live data. If not, and local demo cache is configured, it can read cached machines/inventory and queue customer-mode changes.
+> The coordinator keeps customer-mode data access Supabase-only. It checks whether Supabase is reachable, loads machine lookup and inventory, and routes inventory, sale, log, and receipt writes to `SupabaseStore`.
 
 Important note:
 
-Admin mode and RFID account persistence are online-oriented. The offline path is mainly for customer mode inventory/sales/log/receipt behavior.
-
-### `OfflineMySqlStore`
-
-`OfflineMySqlStore` is the durable local customer-mode cache and queue store.
-
-Professor explanation:
-
-> This class is not the main database anymore. It is a local fallback cache used only when customer mode cannot reach Supabase and local demo mode is configured.
-
-Important responsibilities:
-
-- caches machine lookup and machine inventory
-- stores dirty inventory changes
-- queues sales and event logs
-- stores unsynced receipt sessions
+Customer mode, admin mode, and RFID account persistence all require live Supabase connectivity in the current build.
 
 ### `ArduinoService`
 
@@ -232,8 +218,8 @@ These classes are smaller dialogs or support screens:
 The app connects to Supabase in layers:
 
 1. WPF windows call `SupabaseStore` or `DataStore`.
-2. `DataStore` calls `OfflineSyncCoordinator` for customer-mode persistence.
-3. `OfflineSyncCoordinator` calls `SupabaseStore` when live Supabase is available.
+2. `DataStore` calls `SupabaseSessionCoordinator` for customer-mode persistence.
+3. `SupabaseSessionCoordinator` calls `SupabaseStore`.
 4. `SupabaseStore` calls `SupabaseClient`.
 5. `SupabaseClient` sends HTTP requests to Supabase PostgREST.
 6. Supabase PostgREST reads/writes PostgreSQL tables in the `public` schema.
@@ -292,6 +278,12 @@ HTTP mapping:
 Use this answer:
 
 > `items` is the global product catalog, while `machine_inventory` is the stock inside a specific machine slot. If stock were stored in `items`, the system could not correctly support the same product in multiple machines with different quantities or prices.
+
+### What happens when a catalog item is deleted?
+
+Use this answer:
+
+> The app first deletes any `machine_inventory` rows for that item, so the affected vending slots become empty. Then it soft-deletes the `items` row with `is_active = false`, `deleted_at`, and `deleted_reason`. Active catalog screens hide it, but sales reports can still join old transactions to the product name/type.
 
 ### Why is slot ID in `machine_inventory`?
 
@@ -381,7 +373,7 @@ Answer:
 
 Answer:
 
-> Customer mode can use a configured local MySQL demo cache after the app has local data. `OfflineSyncCoordinator` chooses the data source. Admin mode and RFID account persistence still expect live Supabase.
+> Customer mode requires live Supabase connectivity. If Supabase is unreachable, the app shows a connectivity message instead of using a local database fallback.
 
 ### Q: What are the most important database relationships?
 
@@ -419,7 +411,7 @@ Answer:
 2. `CustomerWindow.xaml.cs`: customer vending workflow
 3. `AdminWindow.xaml.cs`: admin workflows and role-sensitive management
 4. `Data/DataStore.cs`: active customer session state
-5. `Data/OfflineSyncCoordinator.cs`: Supabase/local source selection
+5. `Data/SupabaseSessionCoordinator.cs`: Supabase-only customer session data path
 6. `Data/SupabaseStore.cs`: application-level database methods
 7. `Data/SupabaseStore_Customers.cs`: RFID customer table operations
 8. `Data/SupabaseClient.cs`: low-level Supabase REST client

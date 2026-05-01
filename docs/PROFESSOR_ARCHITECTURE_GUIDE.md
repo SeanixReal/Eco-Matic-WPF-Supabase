@@ -43,14 +43,14 @@ Say that the project is divided into four parts:
 
 - centered around `SupabaseStore`
 - hides all backend operations behind simple methods
-- also includes `OfflineSyncCoordinator` for customer-mode cache and replay
+- also includes `SupabaseSessionCoordinator` for customer-mode Supabase availability and session persistence
 - also includes `ArduinoService` for hardware communication and `ImageLoader` for safe image loading
 
 ### D. Data Layer
 
 - live relational tables such as `users`, `items`, `machine_inventory`, `sales_transactions`, and `receipt_sessions`
 - accessed through `SupabaseClient` using HTTP requests to Supabase
-- customer mode also keeps a durable local MySQL cache through `OfflineMySqlStore`
+- customer mode now uses Supabase directly; the old local database fallback path has been removed
 
 ## 4. How to Explain the ERD
 
@@ -72,6 +72,8 @@ When you show the ERD, focus on the meaning of each table and the reason the rel
 > I separated `items` from `machine_inventory` because the same product definition can be reused by different machines, while each machine still has its own slot and stock values.
 
 That is a good database normalization argument.
+
+For catalog deletion, the app clears `machine_inventory` assignments first so the vending machine becomes empty in those slots. Then it soft-deletes the `items` row by setting `is_active = false`, `deleted_at`, and `deleted_reason`. Active catalog and inventory screens filter to `is_active = true`, while historical sales reports can still join old sales to the original item name and type.
 
 You can extend it with:
 
@@ -141,13 +143,13 @@ The easiest runtime flow to defend is the vending flow:
 
 1. `MainWindow` opens machine selection
 2. the machine selection screen shows the machine name and address so the user can identify the correct kiosk
-3. `DataStore.Initialize()` loads the chosen machine inventory through the offline-sync layer
+3. `DataStore.Initialize()` loads the chosen machine inventory through `SupabaseSessionCoordinator`
 4. `CustomerWindow` displays products from `DataStore.Products`
 5. the user inserts money and selects an item
 6. stock is reduced in memory
-7. `DataStore.SaveInventory()` updates the local cache and sync pipeline
-8. `DataStore.LogEvent()` writes or queues an event log
-9. `DataStore.RecordSale()` stores or queues the sale
+7. `DataStore.SaveInventory()` updates stock through Supabase
+8. `DataStore.LogEvent()` writes an event log through Supabase
+9. `DataStore.RecordSale()` stores the sale through Supabase
 10. `ReceiptWindow` can show the selected machine name and address on-screen
 11. the printed receipt can include the selected machine name and address
 
@@ -209,6 +211,12 @@ Suggested answer:
 
 > Stock belongs to a machine slot, not to the global product definition. A product like Coca Cola can exist in many machines, but each machine can have a different stock level and slot assignment.
 
+### Why not always physically delete sold catalog items?
+
+Suggested answer:
+
+> Sales reports still need the old product name and type. I use soft delete on `items`, so deleted products disappear from active catalog and vending workflows but remain available for historical joins from `sales_transactions`.
+
 ### How is role-based access control enforced?
 
 Suggested answer:
@@ -225,13 +233,13 @@ Suggested answer:
 
 Suggested answer:
 
-> `SupabaseStore` handles cloud persistence, `OfflineSyncCoordinator` handles the durable local cache and replay path, and `DataStore` holds temporary in-memory state for the active vending session. That lets the customer UI react quickly while still supporting customer-mode offline behavior.
+> `SupabaseStore` handles cloud persistence, `SupabaseSessionCoordinator` centralizes customer-mode Supabase availability and session writes, and `DataStore` holds temporary in-memory state for the active vending session. That lets the customer UI react quickly while still keeping backend access in service classes.
 
-### Does the app support offline sync?
+### Does the app support disconnected operation?
 
 Suggested answer:
 
-> Yes, but only for customer mode after one successful online sync. The current build keeps a durable local MySQL cache of machine and inventory data, writes customer-mode changes into that cache first, and then replays queued sales, logs, and receipt sessions back to Supabase when connectivity returns. Admin mode and RFID account persistence are still online-only.
+> No. The current build is intentionally Supabase-only. If Supabase is unreachable, customer/admin data features show a connectivity message instead of using a local database fallback.
 
 ### Why add map-based machine location if there is already a text field?
 

@@ -7,6 +7,7 @@ Database details were verified against the live Supabase project through the Sup
 ## Diagram Files
 
 - [Entity Relationship Diagram](diagrams/ERD.md)
+- [Simplified Grouped Class Diagram](diagrams/SIMPLIFIED_CLASS_DIAGRAM.md)
 - [Full Class Diagram](diagrams/FULL_CLASS_DIAGRAM.md)
 - [Short Foundational Class Diagram](diagrams/FOUNDATIONAL_CLASS_DIAGRAM.md)
 - [Entire Program Flowchart](diagrams/PROGRAM_FLOWCHART.md)
@@ -17,9 +18,10 @@ Database details were verified against the live Supabase project through the Sup
 
 1. Start with the [Entire Program Flowchart](diagrams/PROGRAM_FLOWCHART.md) to explain how the app behaves from startup to exit.
 2. Show the [Entity Relationship Diagram](diagrams/ERD.md) to explain persistent data.
-3. Show the [Short Foundational Class Diagram](diagrams/FOUNDATIONAL_CLASS_DIAGRAM.md) for the main software structure.
-4. Use the [Full Class Diagram](diagrams/FULL_CLASS_DIAGRAM.md) only when your professor asks for complete class coverage.
-5. Use the [Database Connection Sequence Diagram](diagrams/DATABASE_CONNECTION_FLOW.md) when explaining Supabase/PostgREST.
+3. Show the [Simplified Grouped Class Diagram](diagrams/SIMPLIFIED_CLASS_DIAGRAM.md) for the main software structure by UI, models, services, and infrastructure.
+4. Use the [Short Foundational Class Diagram](diagrams/FOUNDATIONAL_CLASS_DIAGRAM.md) when you need an even smaller overview.
+5. Use the [Full Class Diagram](diagrams/FULL_CLASS_DIAGRAM.md) only when your professor asks for complete class coverage.
+6. Use the [Database Connection Sequence Diagram](diagrams/DATABASE_CONNECTION_FLOW.md) when explaining Supabase/PostgREST.
 
 ## Key Explanation
 

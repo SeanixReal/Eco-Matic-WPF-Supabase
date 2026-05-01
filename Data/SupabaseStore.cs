@@ -9,8 +9,8 @@ namespace Eco_Matic.Data;
 
 /// <summary>
 /// Data store backed by Supabase (PostgREST).
-/// Drop-in replacement for MySqlStore — all methods are synchronous wrappers
-/// around async calls so the existing WPF code doesn't need to change.
+/// Application data service backed by Supabase. Methods are synchronous wrappers
+/// around async calls so the existing WPF window code can keep simple call sites.
 /// </summary>
 public partial class SupabaseStore
 {
@@ -197,7 +197,7 @@ public partial class SupabaseStore
     private static InvalidOperationException BuildClientSyncColumnException(string tableName, Exception innerException)
     {
         return new InvalidOperationException(
-            $"Supabase sync replay requires the nullable client_sync_id column on {tableName}. Apply the repo migration for client_sync_id first.",
+            $"Supabase writes require the nullable client_sync_id column on {tableName}. Apply the repo migration for client_sync_id first.",
             innerException);
     }
 
@@ -210,7 +210,7 @@ public partial class SupabaseStore
         var dt = new System.Data.DataTable();
         try
         {
-            var rows = Run(_client.GetAsync("items", "select=item_id,name,type,price,calories,image_path,dispense_message,examine_message&order=name.asc"));
+            var rows = Run(_client.GetAsync("items", "select=item_id,name,type,price,calories,image_path,dispense_message,examine_message&is_active=eq.true&order=name.asc"));
             dt.Columns.Add("item_id", typeof(int));
             dt.Columns.Add("name", typeof(string));
             dt.Columns.Add("type", typeof(string));
@@ -222,8 +222,9 @@ public partial class SupabaseStore
 
             foreach (var node in rows)
             {
+                int itemId = node?["item_id"]?.GetValue<int>() ?? 0;
                 dt.Rows.Add(
-                    node?["item_id"]?.GetValue<int>() ?? 0,
+                    itemId,
                     node?["name"]?.GetValue<string>() ?? "",
                     node?["type"]?.GetValue<string>() ?? "Misc",
                     node?["price"]?.GetValue<decimal>() ?? 0m,
@@ -244,7 +245,7 @@ public partial class SupabaseStore
         try
         {
             var rows = Run(_client.GetAsync("items",
-                "select=item_id,name,type,price,calories,image_path,dispense_message,examine_message&order=item_id.asc"));
+                "select=item_id,name,type,price,calories,image_path,dispense_message,examine_message&is_active=eq.true&order=item_id.asc"));
             var usageRows = Run(_client.GetAsync("machine_inventory", "select=item_id"));
             var usageCounts = new Dictionary<int, int>();
 
@@ -370,16 +371,17 @@ public partial class SupabaseStore
             return false;
         }
 
-        var rows = Run(_client.GetAsync("items", "select=item_id,name"));
+        var rows = Run(_client.GetAsync("items", "select=item_id,name&is_active=eq.true"));
         foreach (var node in rows)
         {
+            int existingItemId = node?["item_id"]?.GetValue<int>() ?? 0;
             string existingName = node?["name"]?.GetValue<string>() ?? string.Empty;
             if (!string.Equals(existingName.Trim(), normalizedName, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            itemId = node?["item_id"]?.GetValue<int>() ?? 0;
+            itemId = existingItemId;
             return itemId > 0;
         }
 
@@ -391,19 +393,20 @@ public partial class SupabaseStore
         try
         {
             var usageRows = Run(_client.GetAsync("machine_inventory", $"select=inventory_id&item_id=eq.{itemId}"));
+            string itemName = GetItemName(itemId);
+
             if (usageRows.Count > 0)
             {
-                System.Windows.MessageBox.Show(
-                    "This item is still assigned to one or more machine slots. Remove those assignments first.",
-                    "Item In Use",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Warning);
-                return false;
+                Run(_client.DeleteAsync("machine_inventory", $"item_id=eq.{itemId}"));
             }
 
-            string itemName = GetItemName(itemId);
-            Run(_client.DeleteAsync("items", $"item_id=eq.{itemId}"));
-            LogEvent("CATALOG_ITEM_DELETED", $"Deleted catalog item #{itemId} '{itemName}'.");
+            Run(_client.PatchAsync("items", $"item_id=eq.{itemId}", new
+            {
+                is_active = false,
+                deleted_at = DateTime.UtcNow.ToString("O"),
+                deleted_reason = "Deleted from admin catalog"
+            }));
+            LogEvent("CATALOG_ITEM_DELETED", $"Soft-deleted catalog item #{itemId} '{itemName}' and cleared {usageRows.Count} machine slot(s); sales history remains available.");
             return true;
         }
         catch (Exception ex)
@@ -800,11 +803,40 @@ public partial class SupabaseStore
         try
         {
             string machineName = GetMachineName(machineId);
+            Run(_client.DeleteAsync("user_machine_assignments", $"machine_id=eq.{machineId}"));
+            Run(_client.PatchAsync("users", $"assigned_machine_id=eq.{machineId}", new JsonObject
+            {
+                ["assigned_machine_id"] = null
+            }));
+            Run(_client.DeleteAsync("machine_inventory", $"machine_id=eq.{machineId}"));
+            Run(_client.DeleteAsync("sales_transactions", $"machine_id=eq.{machineId}"));
+            Run(_client.DeleteAsync("receipt_sessions", $"machine_id=eq.{machineId}"));
+            TryDeleteOptionalRows("qr_payment_intents", $"machine_id=eq.{machineId}");
+            Run(_client.DeleteAsync("event_logs", $"machine_id=eq.{machineId}"));
             Run(_client.DeleteAsync("vending_machines", $"machine_id=eq.{machineId}"));
             LogEvent("MACHINE_DELETED", $"Deleted machine #{machineId} '{machineName}'.");
             return true;
         }
-        catch { return false; }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Failed to delete machine #{machineId}. {ex.Message}",
+                "Delete Machine",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+            return false;
+        }
+    }
+
+    private void TryDeleteOptionalRows(string table, string filter)
+    {
+        try
+        {
+            Run(_client.DeleteAsync(table, filter));
+        }
+        catch
+        {
+        }
     }
 
     public bool UpdateMachine(int machineId, string locationName, string addressText, string status, double? latitude = null, double? longitude = null)

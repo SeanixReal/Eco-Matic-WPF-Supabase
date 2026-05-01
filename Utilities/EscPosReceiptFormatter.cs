@@ -43,14 +43,22 @@ public static class EscPosReceiptFormatter
 
         AddLeftLine(bytes, Divider());
         AddLeftLine(bytes, TwoColumn("Subtotal", transaction.TotalAmount.ToString("F2")));
+        AddLeftLine(bytes, TwoColumn("Cash/QR Paid", transaction.AmountPaid.ToString("F2")));
+        if (transaction.EcoPointsSpent > 0)
+        {
+            AddLeftLine(bytes, TwoColumn("Points Used", transaction.EcoPointsSpent.ToString()));
+            AddLeftLine(bytes, TwoColumn(" Session Points", transaction.SessionPointsSpent.ToString()));
+            AddLeftLine(bytes, TwoColumn(" Saved Credits", transaction.SavedEcoCreditsSpent.ToString()));
+        }
+
         if (transaction.RecyclePointsTotal > 0)
         {
-            AddLeftLine(bytes, TwoColumn("Eco Points", transaction.RecyclePointsTotal.ToString()));
+            AddLeftLine(bytes, TwoColumn("Points Earned", transaction.RecyclePointsTotal.ToString()));
         }
 
         AddLeftLine(bytes, TwoColumn("TOTAL", transaction.TotalAmount.ToString("F2")));
-        AddLeftLine(bytes, TwoColumn("Cash", transaction.AmountPaid.ToString("F2")));
         AddLeftLine(bytes, TwoColumn("Change", transaction.Change.ToString("F2")));
+        AddPointBalanceLines(bytes, transaction);
         AddLeftLine(bytes, Divider());
         AddCenterLine(bytes, "THANK YOU FOR BUYING!", emphasize: true);
         AddCenterLine(bytes, "PLEASE COME AGAIN");
@@ -89,14 +97,22 @@ public static class EscPosReceiptFormatter
         lines.AddRange(BuildItemLines(transaction));
         lines.Add(Divider());
         lines.Add(TwoColumn("Subtotal", transaction.TotalAmount.ToString("F2")));
+        lines.Add(TwoColumn("Cash/QR Paid", transaction.AmountPaid.ToString("F2")));
+        if (transaction.EcoPointsSpent > 0)
+        {
+            lines.Add(TwoColumn("Points Used", transaction.EcoPointsSpent.ToString()));
+            lines.Add(TwoColumn(" Session Points", transaction.SessionPointsSpent.ToString()));
+            lines.Add(TwoColumn(" Saved Credits", transaction.SavedEcoCreditsSpent.ToString()));
+        }
+
         if (transaction.RecyclePointsTotal > 0)
         {
-            lines.Add(TwoColumn("Eco Points", transaction.RecyclePointsTotal.ToString()));
+            lines.Add(TwoColumn("Points Earned", transaction.RecyclePointsTotal.ToString()));
         }
 
         lines.Add(TwoColumn("TOTAL", transaction.TotalAmount.ToString("F2")));
-        lines.Add(TwoColumn("Cash", transaction.AmountPaid.ToString("F2")));
         lines.Add(TwoColumn("Change", transaction.Change.ToString("F2")));
+        lines.AddRange(BuildPointBalanceLines(transaction));
         lines.Add(Divider());
         lines.Add(Center("THANK YOU FOR BUYING!"));
         lines.Add(Center("PLEASE COME AGAIN"));
@@ -142,6 +158,14 @@ public static class EscPosReceiptFormatter
                 : itemName;
 
             yield return TwoColumn($"{firstLineName}", $"{pricing} {total}");
+            if (item.WasPaidWithPoints)
+            {
+                yield return $"  Paid with {item.PointsSpent} eco pts";
+            }
+            else if (item.CashPaid > 0m)
+            {
+                yield return $"  Paid with PHP {item.CashPaid:F2}";
+            }
 
             if (itemName.Length > availableNameWidth)
             {
@@ -155,6 +179,33 @@ public static class EscPosReceiptFormatter
         foreach (var recycle in transaction.RecycledItems)
         {
             yield return TwoColumn($"Recycle {Clean(recycle.DisplayName)}", $"+{recycle.TotalPoints}");
+        }
+    }
+
+    private static void AddPointBalanceLines(List<byte> bytes, Transaction transaction)
+    {
+        foreach (string line in BuildPointBalanceLines(transaction))
+        {
+            AddLeftLine(bytes, line);
+        }
+    }
+
+    private static IEnumerable<string> BuildPointBalanceLines(Transaction transaction)
+    {
+        if (transaction.EcoCreditBalanceAfter.HasValue)
+        {
+            yield return TwoColumn("RFID Balance", $"{transaction.EcoCreditBalanceAfter.Value} pts");
+            if (transaction.UnsavedSessionPointsRemaining > 0)
+            {
+                yield return TwoColumn("Unsaved Points", $"{transaction.UnsavedSessionPointsRemaining} pts");
+            }
+
+            yield break;
+        }
+
+        if (transaction.UnsavedSessionPointsRemaining > 0)
+        {
+            yield return TwoColumn("Unsaved Points", $"{transaction.UnsavedSessionPointsRemaining} pts");
         }
     }
 

@@ -40,7 +40,7 @@ The MCP findings required these documentation corrections:
 - document audit-log-based customer account history because there is no customer foreign key on sales records
 - update migration history to include receipt-session and machine-location migrations
 - document that the foreign-key index migration improves retrieval/delete performance without changing table relationships
-- correct the professor guide, which previously said offline sync was not supported yet
+- correct the professor guide to match the current Supabase-only runtime path
 - correct the ERD, which previously showed columns not present in the live schema
 
 ## Important Interpretation
@@ -48,12 +48,12 @@ The MCP findings required these documentation corrections:
 Two things are true at the same time:
 
 - the project is Supabase-backed for its main backend
-- the current codebase still uses a local MySQL store for customer-mode offline cache and replay
+- the current codebase no longer uses a local database fallback for customer-mode data
 
 So the accurate phrasing is:
 
 - `MySqlStore` as the old primary backend is historical
-- `OfflineMySqlStore` as a local cache is still an active part of the current runtime architecture
+- `SupabaseSessionCoordinator` is now the customer-mode runtime data path between `DataStore` and `SupabaseStore`
 
 ## Recommended Next Review Habit
 

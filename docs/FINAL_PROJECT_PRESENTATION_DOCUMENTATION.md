@@ -31,7 +31,7 @@ Eco-Matic is not only a school project. It is a deployable smart-vending platfor
 - WPF desktop application
 - Supabase PostgreSQL backend through REST
 - Arduino RFID and LCD messaging over serial communication
-- Session state and offline-aware customer mode behavior
+- Session state and Supabase-only customer mode behavior
 
 Business-facing value to emphasize:
 
@@ -83,7 +83,7 @@ Use this exact order to avoid confusion:
 
 Fallback line if internet is unstable:
 
-"Customer mode supports offline-aware behavior after initial sync, while admin and RFID persistence are online-oriented."
+"Customer mode, admin mode, and RFID persistence now use the live Supabase path. If Supabase is unavailable, the app shows a connectivity message instead of using a local database fallback."
 
 ## 6. Technical Trust Points You Must Memorize
 

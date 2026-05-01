@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Controls;
 using System.Data;
 using System.Windows.Shapes;
+using MessageBox = Eco_Matic.Utilities.WindowDialog;
 
 namespace Eco_Matic
 {
@@ -774,7 +775,7 @@ namespace Eco_Matic
         /// <summary>
         /// Orchestrates Data Retrieval for Sales, applying dynamically selected 'Temporal Ranges' (Day, Week, Month, Year).
         /// [For Presentation]: Mention how you implemented a backend Tuple parameter allowing both a DataTable
-        /// and Total Revenue sum to be extracted and calculated directly by the MySQL Engine, offloading calculations from C#.
+        /// and Total Revenue sum to be extracted directly from Supabase-backed report data.
         /// </summary>
         private void LoadSalesData()
         {
@@ -1227,7 +1228,7 @@ namespace Eco_Matic
             {
                 int machineId = Convert.ToInt32(row["ID"]);
                 string machineName = row["Name"].ToString() ?? "";
-                if (MessageBox.Show($"Are you sure you want to delete Machine {machineId} '{machineName}'? This removes its inventory and sales history.", "Delete Machine", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                if (MessageBox.Show($"Are you sure you want to delete Machine {machineId} '{machineName}'? This removes its inventory, sales, receipt history, QR payment intents, event logs, and staff assignments.", "Delete Machine", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
                 {
                     bool deleted = await RunStoreMutationAsync(() =>
                     {
@@ -1238,10 +1239,6 @@ namespace Eco_Matic
                     if (deleted)
                     {
                         await RefreshMachinesAndInventoryAsync();
-                    }
-                    else
-                    {
-                        MessageBox.Show(this, "Failed to delete the machine.", "Delete Machine", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -1512,7 +1509,7 @@ namespace Eco_Matic
 
             int itemId = Convert.ToInt32(row["ID"]);
             string name = row["Name"].ToString() ?? "";
-            if (MessageBox.Show($"Are you sure you want to permanently delete the global item '{name}'?", "Delete Global Item", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            if (MessageBox.Show($"Delete '{name}' from the active catalog?\n\nAny vending slots using it will become empty. Existing sales and receipt history will be kept.", "Delete Global Item", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             {
                 return;
             }

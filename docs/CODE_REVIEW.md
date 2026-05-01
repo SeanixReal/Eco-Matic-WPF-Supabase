@@ -1,6 +1,6 @@
 # Eco-Matic Code Review
 
-This document summarizes the current review of the codebase, especially the interaction between the WPF frontend, the Supabase backend, the local offline cache, and the Arduino integration.
+This document summarizes the current review of the codebase, especially the interaction between the WPF frontend, the Supabase backend, and the Arduino integration.
 
 ## Review Scope
 
@@ -10,7 +10,7 @@ Reviewed areas:
 - customer vending flow
 - admin inventory and reporting flow
 - Supabase data access layer
-- offline customer cache and replay path
+- Supabase-only customer session data path
 - RFID customer flow
 - current documentation accuracy
 - live Supabase schema and advisor findings
@@ -38,7 +38,7 @@ The following core logic issues are now addressed:
 - customer slot mapping uses the real normalized `slot_id`
 - the inventory model is split between a global `items` catalog and machine-specific `machine_inventory`
 - machine inventory supports optional per-slot price override
-- images remain local-first for reliable offline/demo behavior
+- images remain local-first for reliable classroom/demo behavior
 
 ## Highest-Priority Remaining Findings
 
@@ -84,12 +84,12 @@ Recommended next fix:
 
 ### 3. Runtime configuration now depends on a local `.env` file
 
-The current client now reads both Supabase and local MySQL settings from a repo-root `.env` file at startup.
+The current client now reads Supabase settings from a repo-root `.env` file at startup.
 
 Why this matters:
 
 - classroom/demo setup is clearer and does not require recompiling to switch endpoints
-- startup failures now surface missing config immediately instead of failing later in the offline bootstrap path
+- startup failures now surface missing config immediately
 - the previously exposed anon key should still be treated as leaked and rotated in Supabase
 
 Relevant code:
@@ -153,7 +153,7 @@ Recommended next fix:
 
 Examples that needed correction:
 
-- MySQL was described as the active backend even though the code uses Supabase
+- a previous local database path was described as active even though the code now uses Supabase
 - eco-credit behavior needed clarification: purchases can use cash/QR balance or point payment, while RFID links saved credits and purchase-history attribution
 - inventory was described as strictly 12 items before the service layer enforced that limit
 
@@ -164,13 +164,13 @@ This review pass updated the main docs to reflect the actual implementation.
 ## Customer mode
 
 1. `MainWindow` opens `MachineSelectionWindow`
-2. `DataStore.Initialize(machineId)` loads inventory from the local offline cache
+2. `DataStore.Initialize(machineId)` loads inventory through `SupabaseSessionCoordinator`
 3. `CustomerWindow` renders its 12-slot UI from `DataStore.Products`
 4. when a purchase happens:
    - stock is reduced in memory
-   - `DataStore.SaveInventory()` updates the local cache and marks stock for replay
-   - `DataStore.LogEvent()` queues an event log for replay
-   - `DataStore.RecordSale()` queues a sales record for replay
+   - `DataStore.SaveInventory()` updates Supabase stock
+   - `DataStore.LogEvent()` writes a Supabase event log
+   - `DataStore.RecordSale()` writes a Supabase sales record
 5. price shown to the customer comes from the machine slot override when present, otherwise the global item default
 
 ## RFID mode

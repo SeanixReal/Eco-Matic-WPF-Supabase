@@ -34,7 +34,7 @@ public static class AppEnvironment
             if (string.IsNullOrWhiteSpace(dotEnvPath))
             {
                 throw new AppConfigurationException(
-                    "No .env file was found.\n\nCopy .env.example to .env in the project root, then fill in the required Supabase and local MySQL values.");
+                    "No .env file was found.\n\nCopy .env.example to .env in the project root, then fill in the required Supabase values.");
             }
 
             LoadDotEnvFile(dotEnvPath);
@@ -130,35 +130,6 @@ public static class AppEnvironment
 
         _ = GetRequiredSupabaseApiKeyCore();
 
-        string? mysqlHost = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_HOST")?.Trim();
-        string? mysqlPort = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_PORT")?.Trim();
-        string? mysqlUser = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_USER")?.Trim();
-        string? mysqlPassword = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_PASSWORD")?.Trim();
-        string? mysqlSchema = Environment.GetEnvironmentVariable("ECOMATIC_LOCAL_MYSQL_SCHEMA")?.Trim();
-
-        bool anyMySqlSettingProvided =
-            !string.IsNullOrWhiteSpace(mysqlHost) ||
-            !string.IsNullOrWhiteSpace(mysqlPort) ||
-            !string.IsNullOrWhiteSpace(mysqlUser) ||
-            !string.IsNullOrWhiteSpace(mysqlPassword) ||
-            !string.IsNullOrWhiteSpace(mysqlSchema);
-
-        if (!anyMySqlSettingProvided)
-        {
-            return;
-        }
-
-        _ = GetRequiredCore("ECOMATIC_LOCAL_MYSQL_HOST");
-        _ = GetRequiredCore("ECOMATIC_LOCAL_MYSQL_USER");
-        _ = GetRequiredCore("ECOMATIC_LOCAL_MYSQL_PASSWORD");
-        _ = GetRequiredCore("ECOMATIC_LOCAL_MYSQL_SCHEMA");
-
-        string mysqlPortValue = GetRequiredCore("ECOMATIC_LOCAL_MYSQL_PORT");
-        if (!uint.TryParse(mysqlPortValue, out uint parsedPort) || parsedPort == 0)
-        {
-            throw new AppConfigurationException(
-                "ECOMATIC_LOCAL_MYSQL_PORT must be a valid positive integer.");
-        }
     }
 
     private static string? FindDotEnvPath(string startDirectory)
@@ -226,7 +197,6 @@ public static class AppEnvironment
             ("ECOMATIC_SUPABASE_URL", "https://your-project-ref.supabase.co") => true,
             ("ECOMATIC_SUPABASE_PUBLISHABLE_KEY", "your_supabase_publishable_key_here") => true,
             ("ECOMATIC_SUPABASE_ANON_KEY", "your_supabase_anon_key_here") => true,
-            ("ECOMATIC_LOCAL_MYSQL_PASSWORD", "your_mysql_password_here") => true,
             _ => false
         };
     }

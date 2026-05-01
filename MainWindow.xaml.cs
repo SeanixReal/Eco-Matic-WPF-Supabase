@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Data;
+using System.Windows.Media;
+using System.Windows.Threading;
 using Eco_Matic.Data;
 using Eco_Matic.Utilities;
 
@@ -52,6 +54,52 @@ namespace Eco_Matic
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
+
+            _ = RefreshConnectivityBadgeAsync();
+        }
+
+        private async Task RefreshConnectivityBadgeAsync()
+        {
+            SetConnectivityBadge("Checking Supabase...", "#FFF7E6", "#F2C66D", "#C98000", "#7A4B00", 1.0);
+
+            bool connected = await Task.Run(() =>
+                SupabaseSessionCoordinator.Instance.RefreshAvailabilityStatus());
+
+            if (connected)
+            {
+                SetConnectivityBadge("Supabase connected", "#ECFDF3", "#8AD6A8", "#1B9C67", "#0F6B43", 1.0);
+
+                var hideTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(4)
+                };
+                hideTimer.Tick += (_, _) =>
+                {
+                    hideTimer.Stop();
+                    pnlConnectivityStatus.Visibility = Visibility.Collapsed;
+                };
+                hideTimer.Start();
+                return;
+            }
+
+            SetConnectivityBadge("Supabase offline - data features need internet", "#FFF1F1", "#F1B7B7", "#D65A5A", "#9B2C2C", 1.0);
+        }
+
+        private void SetConnectivityBadge(
+            string text,
+            string background,
+            string border,
+            string dot,
+            string foreground,
+            double opacity)
+        {
+            pnlConnectivityStatus.Visibility = Visibility.Visible;
+            pnlConnectivityStatus.Opacity = opacity;
+            pnlConnectivityStatus.Background = (Brush)new BrushConverter().ConvertFromString(background)!;
+            pnlConnectivityStatus.BorderBrush = (Brush)new BrushConverter().ConvertFromString(border)!;
+            dotConnectivityStatus.Fill = (Brush)new BrushConverter().ConvertFromString(dot)!;
+            txtConnectivityStatus.Foreground = (Brush)new BrushConverter().ConvertFromString(foreground)!;
+            txtConnectivityStatus.Text = text;
         }
 
         private async void Arduino_OnCardScanned(object? sender, string rfid)
@@ -76,7 +124,7 @@ namespace Eco_Matic
 
                 bool canUseRfid = await Task.Run(() =>
                 {
-                    return OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out _);
+                    return SupabaseSessionCoordinator.Instance.CanUseSupabaseFeature(out _);
                 });
 
                 if (!canUseRfid)
@@ -86,8 +134,8 @@ namespace Eco_Matic
 
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage);
-                        MessageBox.Show(this, offlineMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Information);
+                        SupabaseSessionCoordinator.Instance.CanUseSupabaseFeature(out string connectivityMessage);
+                        MessageBox.Show(this, connectivityMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Information);
                     });
                     return;
                 }
@@ -259,7 +307,7 @@ namespace Eco_Matic
             btnCustomer.IsEnabled = false;
             Mouse.OverrideCursor = Cursors.Wait;
 
-            (bool canEnter, string entryMessage) = await OfflineSyncCoordinator.Instance.PrepareCustomerModeAsync();
+            (bool canEnter, string entryMessage) = await SupabaseSessionCoordinator.Instance.PrepareCustomerModeAsync();
             if (!canEnter)
             {
                 Mouse.OverrideCursor = null;
@@ -292,9 +340,7 @@ namespace Eco_Matic
                 if (loadedProducts.Count == 0)
                 {
                     MessageBox.Show(this,
-                        DataStore.IsOffline
-                            ? "The selected machine does not have any local MySQL demo inventory configured."
-                            : "The selected machine does not have any inventory configured in Supabase.",
+                        "The selected machine does not have any inventory configured in Supabase.",
                         "No Machine Inventory",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -317,7 +363,6 @@ namespace Eco_Matic
 
                 customerWindow.Closed += (_, _) =>
                 {
-                    OfflineSyncCoordinator.Instance.BeginBackgroundSync();
                     _openCustomerWindows = Math.Max(0, _openCustomerWindows - 1);
                     if (ReferenceEquals(_activeCustomerWindow, customerWindow))
                     {

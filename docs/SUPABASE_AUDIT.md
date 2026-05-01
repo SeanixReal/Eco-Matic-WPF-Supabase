@@ -55,14 +55,14 @@ Current live migrations reported by Supabase MCP:
 1. `20260419131253 create_ecomatic_schema`
 2. `20260419131307 enable_rls_policies`
 3. `20260422095901 add_slot_price_and_normalize_slot_ids`
-4. `20260422095906 add_client_sync_id_for_offline_replay`
+4. `20260422095906 add_client_sync_id_for_app_idempotency`
 5. `20260422151624 add_receipt_session_history`
 6. `20260423085816 add_vending_machine_address_and_coordinates`
 
 Practical interpretation:
 
 - the live project now includes the slot-price refactor
-- the live project now includes offline replay deduplication columns for sales and event logs
+- the live project now includes `client_sync_id` idempotency columns for sales and event logs
 - the live project now includes receipt session history tables
 - the live project now includes machine address and map-coordinate columns
 
@@ -140,12 +140,12 @@ Performance advisor findings:
 What is working:
 
 - the live table set matches the repo for the audited application features
-- the live project contains the slot-price, offline replay, receipt-session, and machine-location migrations
+- the live project contains the slot-price, client-sync-id, receipt-session, and machine-location migrations
 - current live inventory data is aligned with the 12-slot customer UI
 
 What is still incomplete or risky:
 
 - authentication is still custom-table auth with plain-text password handling
 - RLS is effectively open to anon because of the current direct-client architecture
-- live activity tables are mostly empty, so receipt history, ESP32 integrations, and replay paths have schema support but very little production data coverage yet
+- live activity tables are mostly empty, so receipt history and ESP32 integrations have schema support but very little production data coverage yet
 - several foreign keys still need supporting indexes

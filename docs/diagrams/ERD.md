@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-This ERD reflects the live Supabase public schema verified through the Supabase MCP tool on 2026-04-30 and rechecked during the final presentation audit.
+This ERD reflects the live Supabase public schema verified through the Supabase MCP tool on 2026-04-30 and rechecked during the final presentation audit. It was updated on 2026-05-01 for the application-level receipt point-accounting update and the `items` soft-delete catalog design in migration increment 10.
 
 ```mermaid
 erDiagram
@@ -56,6 +56,9 @@ erDiagram
         string image_path
         string dispense_message
         string examine_message
+        bool is_active
+        timestamptz deleted_at
+        text deleted_reason
         timestamptz created_at
     }
 
@@ -103,9 +106,9 @@ erDiagram
         timestamptz session_started_at
         timestamptz session_ended_at
         decimal total_amount
-        decimal amount_paid
+        decimal amount_paid "cash/QR paid by customer"
         decimal change_amount
-        int recycle_points_total
+        int recycle_points_total "points earned from recycle lines"
         string source
         timestamptz created_at
     }
@@ -160,14 +163,16 @@ erDiagram
 
 - `items` is the global product catalog.
 - `machine_inventory` is the per-machine slot table for stock, capacity, and optional slot price.
+- Catalog deletion clears matching `machine_inventory` rows, then soft-deletes the `items` row by setting `is_active = false`, `deleted_at`, and `deleted_reason`. This keeps `sales_transactions` historical joins intact.
 - `vending_machines` is the parent for inventory, staff machine assignments, sales, event logs, and receipt sessions.
 - `receipt_sessions` and `receipt_session_lines` store complete receipt history.
+- Receipt point usage is currently reflected in the application `Transaction` object, receipt screen, printed receipt, and purchase event logs. The live `receipt_sessions` table still stores cash/QR paid amount and recycle points earned, but it does not yet have dedicated persisted columns for points spent or final RFID balance.
 - `customers` stores RFID customers and eco-credit balances. It is not currently connected to sales or event logs by a foreign key.
 - Customer account transaction history is implemented at the application layer by reading purchase-related `event_logs.description` entries that include the RFID tag.
 - Current-session purchase history can be attached to the first RFID scanned for that vending session, but this is still application-layer event-log behavior rather than a database foreign key.
 - `user_machine_assignments` lets one inventory manager manage multiple assigned vending machines. `users.assigned_machine_id` remains as a legacy primary assignment for compatibility.
 - `qr_payment_intents` supports QR payment through the `qr-payment-confirm` Edge Function. Its `machine_id` is a nullable logical reference in the current live schema, not an enforced foreign key.
-- The 2026-04-30 staff-editor, sales-report spacing, and duplicate global-item warning fixes are UI-only and do not change the database relationships shown here.
+- The 2026-05-01 foreground warning dialog and receipt point-usage fixes are application/UI changes and do not add database relationships shown here.
 - The `add_missing_foreign_key_indexes` migration adds indexes to existing foreign-key columns only. It improves lookup/delete performance but does not add entities or relationships to the ERD.
 
 Use this defense line:

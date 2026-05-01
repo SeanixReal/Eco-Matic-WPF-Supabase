@@ -10,7 +10,7 @@ public static class DataStore
 {
     public const int MaxItemSlots = 12;
     public const int MaxStockPerItem = 15;
-    private static readonly Eco_Matic.Data.OfflineSyncCoordinator OfflineSync = Eco_Matic.Data.OfflineSyncCoordinator.Instance;
+    private static readonly Eco_Matic.Data.SupabaseSessionCoordinator SupabaseSession = Eco_Matic.Data.SupabaseSessionCoordinator.Instance;
 
     public static List<Product> Products { get; } = new();
     public static List<RecyclableItemDefinition> RecyclableItems { get; } = new();
@@ -26,9 +26,6 @@ public static class DataStore
     public static string ActiveMachineDisplayName { get; set; } = "Main Lobby";
     public static string ActiveMachineAddress { get; set; } = string.Empty;
     public static int PendingPoints { get; set; } = 0;
-    public static bool IsOffline { get; set; }
-    public static bool HasCompletedInitialSync { get; set; }
-    public static DateTime? LastSuccessfulSyncUtc { get; set; }
 
     public static bool Initialize(int machineId = 1)
     {
@@ -60,17 +57,17 @@ public static class DataStore
 
     public static void SaveInventory()
     {
-        OfflineSync.SaveInventorySnapshot(ActiveMachineId, Products);
+        SupabaseSession.SaveInventorySnapshot(ActiveMachineId, Products);
     }
 
     public static void SaveInventory(Product product)
     {
-        OfflineSync.SaveInventoryItem(ActiveMachineId, product);
+        SupabaseSession.SaveInventoryItem(ActiveMachineId, product);
     }
 
     public static void SaveInventory(int machineId, Product product)
     {
-        OfflineSync.SaveInventoryItem(machineId, product);
+        SupabaseSession.SaveInventoryItem(machineId, product);
     }
 
     public static bool RefreshActiveMachineInventory()
@@ -92,29 +89,29 @@ public static class DataStore
 
     public static void LogEvent(string eventType, string details, decimal amount = 0m)
     {
-        OfflineSync.QueueEventLog(ActiveMachineId, eventType, details, amount);
+        SupabaseSession.LogEvent(ActiveMachineId, eventType, details, amount);
     }
 
     public static void LogEvent(int machineId, string eventType, string details, decimal amount = 0m)
     {
-        OfflineSync.QueueEventLog(machineId, eventType, details, amount);
+        SupabaseSession.LogEvent(machineId, eventType, details, amount);
     }
 
     public static void RecordSale(int inventoryId, decimal amountPaid)
     {
-        OfflineSync.QueueSale(ActiveMachineId, inventoryId, amountPaid);
+        SupabaseSession.RecordSale(ActiveMachineId, inventoryId, amountPaid);
     }
 
     public static void RecordSale(int machineId, int inventoryId, decimal amountPaid)
     {
-        OfflineSync.QueueSale(machineId, inventoryId, amountPaid);
+        SupabaseSession.RecordSale(machineId, inventoryId, amountPaid);
     }
 
     public static void SaveCompletedReceipt(Transaction transaction)
     {
         Transactions.Add(transaction);
         LastTransaction = transaction;
-        OfflineSync.QueueReceiptSession(transaction);
+        SupabaseSession.SaveReceiptSession(transaction);
     }
 
     public static List<EventLogEntry> ReadLogs()
@@ -218,16 +215,9 @@ public static class DataStore
         try
         {
             List<RecyclableItemDefinition> refreshedItems;
-            if (OfflineSync.CurrentSource == SessionDataSource.Supabase)
-            {
-                var store = new Eco_Matic.Data.SupabaseStore();
-                refreshedItems = store.GetActiveRecyclableItems();
-                if (refreshedItems.Count == 0)
-                {
-                    refreshedItems = GetFallbackRecyclableCatalog();
-                }
-            }
-            else
+            var store = new Eco_Matic.Data.SupabaseStore();
+            refreshedItems = store.GetActiveRecyclableItems();
+            if (refreshedItems.Count == 0)
             {
                 refreshedItems = GetFallbackRecyclableCatalog();
             }
@@ -247,7 +237,7 @@ public static class DataStore
     private static bool TryLoadProducts(int machineId, out List<Product> loadedProducts)
     {
         loadedProducts = new List<Product>();
-        var dt = OfflineSync.GetMachineInventory(machineId);
+        var dt = SupabaseSession.GetMachineInventory(machineId);
 
         if (dt.Rows.Count == 0)
         {

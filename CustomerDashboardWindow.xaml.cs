@@ -32,9 +32,9 @@ namespace Eco_Matic
 
         private async Task LoadCustomerDataAsync(string rfid)
         {
-            if (!OfflineSyncCoordinator.Instance.CanUseOnlineOnlyFeature(out string offlineMessage))
+            if (!SupabaseSessionCoordinator.Instance.CanUseSupabaseFeature(out string connectivityMessage))
             {
-                MessageBox.Show(this, offlineMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(this, connectivityMessage, "RFID Requires Internet", MessageBoxButton.OK, MessageBoxImage.Warning);
                 Close();
                 return;
             }

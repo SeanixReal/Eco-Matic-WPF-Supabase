@@ -30,6 +30,9 @@ public partial class CustomerWindow : Window
     private decimal _totalChangeReturned;
     private int _pendingPoints;
     private int _availableEcoCredits;
+    private int _totalPointsSpent;
+    private int _sessionPointsSpent;
+    private int _savedEcoCreditsSpent;
     private string? _linkedRfid;
     private string? _linkedCustomerEmail;
     private bool _isDispensing;
@@ -288,7 +291,7 @@ public partial class CustomerWindow : Window
 
     private void InitializeLiveInventoryRefresh()
     {
-        if (OfflineSyncCoordinator.Instance.CurrentSource != SessionDataSource.Supabase)
+        if (!SupabaseSessionCoordinator.Instance.IsSupabaseAvailable)
         {
             return;
         }
@@ -339,7 +342,7 @@ public partial class CustomerWindow : Window
     {
         if (_isRefreshingInventory ||
             _isDispensing ||
-            OfflineSyncCoordinator.Instance.CurrentSource != SessionDataSource.Supabase)
+            !SupabaseSessionCoordinator.Instance.IsSupabaseAvailable)
         {
             return false;
         }
@@ -610,6 +613,9 @@ public partial class CustomerWindow : Window
         _totalChangeReturned = 0m;
         _pendingPoints = 0;
         _availableEcoCredits = 0;
+        _totalPointsSpent = 0;
+        _sessionPointsSpent = 0;
+        _savedEcoCreditsSpent = 0;
         _linkedRfid = null;
         _linkedCustomerEmail = null;
         _payWithPoints = false;
@@ -625,7 +631,7 @@ public partial class CustomerWindow : Window
             SessionStartedAt = now,
             SessionEndedAt = now,
             Date = now,
-            Source = DataStore.IsOffline ? "offline" : "online"
+            Source = "online"
         };
     }
 
@@ -709,12 +715,18 @@ public partial class CustomerWindow : Window
         };
     }
 
-    private void AddProductToActiveSession(VendingItem product)
+    private void AddProductToActiveSession(
+        VendingItem product,
+        string paymentMethod,
+        decimal cashPaid,
+        int pointsSpent)
     {
         string slotId = product.Id.ToString(CultureInfo.InvariantCulture);
         TransactionItem? existingLine = _activeSession.Items.FirstOrDefault(item =>
             item.ProductId == product.DbInventoryId &&
-            string.Equals(item.SlotId, slotId, StringComparison.Ordinal));
+            string.Equals(item.SlotId, slotId, StringComparison.Ordinal) &&
+            string.Equals(item.PaymentMethod, paymentMethod, StringComparison.OrdinalIgnoreCase) &&
+            item.WasPaidWithPoints == (pointsSpent > 0));
 
         if (existingLine == null)
         {
@@ -724,17 +736,27 @@ public partial class CustomerWindow : Window
                 SlotId = slotId,
                 ProductName = product.Name,
                 Quantity = 1,
-                UnitPrice = product.Price
+                UnitPrice = product.Price,
+                PaymentMethod = paymentMethod,
+                CashPaid = cashPaid,
+                PointsSpent = pointsSpent
             });
         }
         else
         {
             existingLine.Quantity++;
+            existingLine.CashPaid += cashPaid;
+            existingLine.PointsSpent += pointsSpent;
         }
 
         _activeSession.TotalAmount = _activeSession.Items.Sum(item => item.LineTotal);
         _activeSession.AmountPaid = _totalMoneyInserted;
         _activeSession.Change = _totalChangeReturned + _insertedMoney;
+        _activeSession.EcoPointsSpent = _totalPointsSpent;
+        _activeSession.SessionPointsSpent = _sessionPointsSpent;
+        _activeSession.SavedEcoCreditsSpent = _savedEcoCreditsSpent;
+        _activeSession.UnsavedSessionPointsRemaining = _pendingPoints;
+        _activeSession.EcoCreditBalanceAfter = string.IsNullOrWhiteSpace(_linkedRfid) ? null : _availableEcoCredits;
     }
 
     private SessionPurchaseHistoryRecord AddSessionPurchaseHistory(
@@ -808,9 +830,14 @@ public partial class CustomerWindow : Window
         _activeSession.TotalAmount = _activeSession.Items.Sum(item => item.LineTotal);
         _activeSession.AmountPaid = _totalMoneyInserted;
         _activeSession.Change = _totalChangeReturned + _insertedMoney;
+        _activeSession.EcoPointsSpent = _totalPointsSpent;
+        _activeSession.SessionPointsSpent = _sessionPointsSpent;
+        _activeSession.SavedEcoCreditsSpent = _savedEcoCreditsSpent;
+        _activeSession.UnsavedSessionPointsRemaining = _pendingPoints;
+        _activeSession.EcoCreditBalanceAfter = string.IsNullOrWhiteSpace(_linkedRfid) ? null : _availableEcoCredits;
         _activeSession.SessionEndedAt = DateTime.Now;
         _activeSession.Date = _activeSession.SessionEndedAt;
-        _activeSession.Source = DataStore.IsOffline ? "offline" : "online";
+        _activeSession.Source = "online";
         return _activeSession;
     }
 
@@ -1026,7 +1053,7 @@ public partial class CustomerWindow : Window
             return;
         }
 
-        if (OfflineSyncCoordinator.Instance.CurrentSource == SessionDataSource.Supabase)
+        if (SupabaseSessionCoordinator.Instance.IsSupabaseAvailable)
         {
             bool refreshed = await RefreshInventoryFromSourceAsync();
             if (!refreshed)
@@ -1062,7 +1089,7 @@ public partial class CustomerWindow : Window
 
         _insertedMoney -= product.Price;
         product.Stock--;
-        AddProductToActiveSession(product);
+        AddProductToActiveSession(product, "Cash", product.Price, 0);
 
         int inventoryId = product.DbInventoryId;
         int updatedStock = product.Stock;
@@ -1125,10 +1152,12 @@ public partial class CustomerWindow : Window
         _pendingPoints -= pendingPointsSpent;
         DataStore.PendingPoints = _pendingPoints;
         _availableEcoCredits -= savedPointsSpent;
-        _totalMoneyInserted += product.Price;
+        _totalPointsSpent += pointsCost;
+        _sessionPointsSpent += pendingPointsSpent;
+        _savedEcoCreditsSpent += savedPointsSpent;
 
         product.Stock--;
-        AddProductToActiveSession(product);
+        AddProductToActiveSession(product, "Eco Points", 0m, pointsCost);
 
         int inventoryId = product.DbInventoryId;
         int updatedStock = product.Stock;

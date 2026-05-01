@@ -10,9 +10,10 @@ This is the single canonical documentation folder for the current Eco-Matic code
 4. `sql/README.md`
 5. `DIAGRAMS.md`
 6. `MAINTAINER_GUIDE.md`
-7. `PROFESSOR_ARCHITECTURE_GUIDE.md`
-8. `PROFESSOR_CLASS_DATABASE_QA.md`
-9. `USER_MANUAL.md`
+7. `DEMO_CRUD_READINESS.md`
+8. `PROFESSOR_ARCHITECTURE_GUIDE.md`
+9. `PROFESSOR_CLASS_DATABASE_QA.md`
+10. `USER_MANUAL.md`
 
 ## Main Contents
 
@@ -20,6 +21,7 @@ This is the single canonical documentation folder for the current Eco-Matic code
 - separated Mermaid diagrams under `diagrams/`
 - professor-facing class/database explanation and Q&A
 - review and maintenance docs
+- demo CRUD readiness checklist
 - database setup, migration, and seed SQL under `sql/`
 - user manual
 - archived proposal material in `archive/`
@@ -59,7 +61,6 @@ Use this folder as the source of truth for the current implementation. The runni
 
 ### Installed NuGet Packages
 - **`Microsoft.Web.WebView2`**: Used for rendering interactive maps to pick vending machine locations.
-- **`MySqlConnector`**: Used for the local offline cache capability during customer vending mode.
 - **`QRCoder`**: Used to generate QR codes for customer payment / registration links.
 - **`System.IO.Ports`**: Enables serial communication with the Arduino hardware (RFID, LCD, Servos).
 - **`System.Speech`**: Powers the Eco-Matic voice assistant (Text-to-Speech) for customer interactions.

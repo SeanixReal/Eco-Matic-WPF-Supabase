@@ -27,8 +27,8 @@ Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty syste
 Eco-Matic now requires a repo-root `.env` file before startup.
 
 1. Copy `.env.example` to `.env`
-2. Fill in your real Supabase URL/key and local MySQL password if it differs
-3. Make sure local MySQL is running before launching the app
+2. Fill in your real Supabase URL/key
+3. Launch the app after the Supabase project is reachable
 
 Important notes:
 
@@ -37,19 +37,13 @@ Important notes:
 - if you also set the same variables in Windows, those OS values win over `.env`
 - optional hardware settings are `ECOMATIC_ARDUINO_PORT` and `ECOMATIC_ARDUINO_BAUD`
 
-## Offline Behavior
+## Connectivity Behavior
 
-The current system now supports **customer-mode offline caching and replay** after one successful online sync.
+The current system is Supabase-first and requires live Supabase connectivity for customer and admin data.
 
-- customer vending mode reads machine lists and inventory from a local MySQL cache
-- offline purchases update that local cache first and queue sales/logs for later replay
-- when internet returns, queued writes replay to Supabase and the local cache refreshes again
-
-Important limits:
-
-- admin mode is still online-only
-- RFID registration and RFID credit saving are still online-only
-- the very first offline demo still requires one earlier successful online sync
+- customer vending mode reads machine lists and inventory from Supabase
+- purchases, stock updates, event logs, receipts, RFID registration, and credit updates write to Supabase
+- if Supabase is unreachable, customer/admin data features show a connectivity message instead of using a local database fallback
 
 ## Migration Note
 
@@ -57,7 +51,7 @@ If your Supabase database was created before the per-machine price override refa
 
 That migration adds `machine_inventory.slot_price` and normalizes legacy slot IDs like `S1` into canonical values like `1`.
 
-If you want offline replay safety for customer mode, also run `docs/sql/migrations/supabase/migration_increment4.sql`.
+If your live schema is older and does not have `client_sync_id` support on sales/event tables, run `docs/sql/migrations/supabase/migration_increment4.sql`.
 
 For the live schema audit and the current authentication/RLS findings, see `docs/SUPABASE_AUDIT.md`.
 

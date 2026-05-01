@@ -81,51 +81,51 @@ Code anchor:
 
 - Data/SupabaseStore.cs (TryValidateSlotForMachine, TryValidateStockValues)
 
-## 6) Explain your customer-mode offline behavior clearly.
+## 6) Explain your customer-mode Supabase connectivity behavior clearly.
 
 Short answer:
 
-Customer mode can run from local MySQL cache when Supabase is unreachable, then replay queued writes later.
+Customer mode is Supabase-only. If Supabase is unreachable, the app shows a connectivity message instead of using a local database fallback.
 
 Deep follow-up:
 
-OfflineSyncCoordinator decides source at startup: Supabase, LocalMySql, or Unavailable. In local mode, inventory and machine lookups come from cached tables. Sales, event logs, and receipt sessions are queued in sync_queue and local receipt tables with client_sync_id for replay safety.
+SupabaseSessionCoordinator checks Supabase availability, loads machine lookup and inventory through SupabaseStore, and routes inventory, sale, event-log, and receipt writes directly to Supabase.
 
 Code anchor:
 
-- Data/OfflineSyncCoordinator.cs
-- Data/OfflineMySqlStore.cs
+- Data/SupabaseSessionCoordinator.cs
+- Data/SupabaseStore.cs
 
 ## 7) Is your app fully offline?
 
 Short answer:
 
-No. Customer mode has offline-aware behavior, but admin mode and RFID account persistence are online-oriented.
+No. The current build requires live Supabase connectivity for customer mode, admin mode, and RFID account persistence.
 
 Deep follow-up:
 
-CanUseOnlineOnlyFeature gate is used before RFID account actions. If session source is LocalMySql or unavailable, RFID-specific workflows return an online-required message.
+SupabaseSessionCoordinator gates customer mode and RFID account actions. If Supabase is unavailable, those workflows return a clear online-required message.
 
 Code anchor:
 
-- Data/OfflineSyncCoordinator.cs (CanUseOnlineOnlyFeature)
+- Data/SupabaseSessionCoordinator.cs (CanUseSupabaseFeature)
 - MainWindow.xaml.cs
 
 ## 8) How does a purchase become persistent data?
 
 Short answer:
 
-Purchase updates inventory stock and queues or writes sale and event records, then stores receipt session details.
+Purchase updates inventory stock, writes sale and event records, then stores receipt session details.
 
 Deep follow-up:
 
-In CustomerWindow item selection flow, stock is reduced in-memory, then DataStore.SaveInventory, DataStore.LogEvent, and DataStore.RecordSale run via background action. Receipt completion calls DataStore.SaveCompletedReceipt, which routes to cloud insert or local queue depending on source.
+In CustomerWindow item selection flow, stock is reduced in memory, then DataStore.SaveInventory, DataStore.LogEvent, and DataStore.RecordSale run via background action. Receipt completion calls DataStore.SaveCompletedReceipt, which routes to Supabase through SupabaseSessionCoordinator.
 
 Code anchor:
 
 - CustomerWindow.xaml.cs (SelectButton_Click, BtnBack_Click)
 - Data/DataStore.cs
-- Data/OfflineSyncCoordinator.cs
+- Data/SupabaseSessionCoordinator.cs
 
 ## 9) How does QR payment flow work?
 
