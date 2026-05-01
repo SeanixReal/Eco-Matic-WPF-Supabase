@@ -197,7 +197,7 @@ public static class EscPosReceiptFormatter
             yield return TwoColumn("RFID Balance", $"{transaction.EcoCreditBalanceAfter.Value} pts");
             if (transaction.UnsavedSessionPointsRemaining > 0)
             {
-                yield return TwoColumn("Points Pending", $"{transaction.UnsavedSessionPointsRemaining} pts");
+                yield return TwoColumn("Points Not Saved", $"{transaction.UnsavedSessionPointsRemaining} pts");
             }
 
             yield break;
@@ -205,7 +205,7 @@ public static class EscPosReceiptFormatter
 
         if (transaction.UnsavedSessionPointsRemaining > 0)
         {
-            yield return TwoColumn("Points To Save", $"{transaction.UnsavedSessionPointsRemaining} pts");
+            yield return TwoColumn("No RFID Save", $"{transaction.UnsavedSessionPointsRemaining} pts");
         }
     }
 

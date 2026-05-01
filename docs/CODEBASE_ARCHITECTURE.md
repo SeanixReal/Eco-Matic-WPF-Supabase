@@ -43,7 +43,7 @@ This is the WPF user interface.
   - `CustomerRegistrationWindow`
   - `CustomerDashboardWindow`
   - `ReceiptWindow`
-    - displays sale lines, recycle lines, cash/QR paid amount, eco-points used, eco-points earned, points still needing RFID save for guest sessions, and RFID balance when available
+    - displays sale lines, recycle lines, cash/QR paid amount, eco-points used, eco-points earned, RFID balance when available, or a clear not-saved note for guest recycle points
 
 ### B. Application and Session Layer
 

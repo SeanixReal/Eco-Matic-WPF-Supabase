@@ -78,7 +78,9 @@ public partial class ReceiptWindow : Window
         lblPointsEarned.Text = $"Points Earned: {transaction.RecyclePointsTotal}";
         lblPointBalance.Text = transaction.EcoCreditBalanceAfter.HasValue
             ? $"RFID Balance After: {transaction.EcoCreditBalanceAfter.Value} pts"
-            : $"Points To Save: {transaction.UnsavedSessionPointsRemaining} pts";
+            : transaction.UnsavedSessionPointsRemaining > 0
+                ? $"No RFID: {transaction.UnsavedSessionPointsRemaining} pts not saved"
+                : "RFID Balance After: -";
         lblChange.Text = $"Change: PHP {transaction.Change:F2}";
     }
 

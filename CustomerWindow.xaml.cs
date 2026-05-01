@@ -1398,7 +1398,7 @@ public partial class CustomerWindow : Window
             "2. Press SELECT below a product slot.\n" +
             "3. Use RECYCLE FOR ECO POINTS to earn points.\n" +
             "4. Toggle PAY WITH POINTS when you want points instead of cash.\n" +
-            "5. Tap RFID to link your account; recycle points save automatically once linked.\n" +
+            "5. Tap RFID to link your account; recycle points save automatically once linked. Points are not saved if you finish as guest.\n" +
             "6. Your remaining cash balance is returned when you click DONE.",
             "Help - ECO-MATIC",
             MessageBoxButton.OK,
@@ -1435,6 +1435,13 @@ public partial class CustomerWindow : Window
                 Owner = this
             };
             receipt.ShowDialog();
+
+            if (string.IsNullOrWhiteSpace(_linkedRfid))
+            {
+                _pendingPoints = 0;
+                DataStore.PendingPoints = 0;
+                RefreshActiveSessionPointState();
+            }
         }
 
         _allowWindowClose = true;

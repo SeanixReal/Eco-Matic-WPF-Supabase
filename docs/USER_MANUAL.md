@@ -38,7 +38,7 @@ The customer flow is centered on the vending machine UI.
 - receipts show cash/QR paid, eco-points used, recycle points earned, and remaining point balances instead of mixing point purchases into the PHP paid total
 - receipts combine the same purchased product into one quantity line even when it was bought from different vending slots; point-paid purchases stay separate from cash/QR-paid purchases
 - RFID is used for customer identity, saving recycle points, showing transaction history, and spending saved eco-points when the customer chooses point payment
-- after an RFID is linked, new recycle points save to that RFID automatically; without RFID, the receipt shows points that still need to be saved
+- after an RFID is linked, new recycle points save to that RFID automatically; without RFID, guest recycle points are not saved after the session ends
 - QR payment uses a Supabase Edge Function to mark the scanned payment intent as paid; the phone shows a simple confirmation message after scanning
 
 ## 3. RFID Customer Flow
