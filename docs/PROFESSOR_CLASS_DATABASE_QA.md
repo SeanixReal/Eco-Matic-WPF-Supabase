@@ -187,6 +187,8 @@ Professor explanation:
 
 > A transaction is not just one row of sales. For receipts, the app needs the full session: purchased item lines, recycled item lines, totals, amount paid, change, machine name, and receipt number.
 
+Receipt sale lines are grouped by product, unit price, and payment mode rather than by slot. This keeps receipts customer-friendly when the same product is stocked in multiple slots, while still keeping point-paid purchases separate from cash/QR-paid purchases.
+
 Important mapping:
 
 - `Transaction` maps conceptually to `receipt_sessions`
@@ -251,7 +253,7 @@ HTTP mapping:
 - `user_machine_assignments`: stores one or more vending machines assigned to each inventory manager.
 - `vending_machines`: stores machine name, status, address, and optional coordinates.
 - `items`: stores the global catalog of products.
-- `machine_inventory`: stores machine-specific slot assignments, stock, capacity, and optional slot price.
+- `machine_inventory`: stores machine-specific slot assignments, stock, capacity, and optional machine item price.
 
 ### Transaction and reporting tables
 

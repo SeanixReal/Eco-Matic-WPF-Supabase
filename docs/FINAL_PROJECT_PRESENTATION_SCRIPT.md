@@ -36,7 +36,7 @@ Delivery style: Clear, calm, confident, persuasive, and technically grounded
 
 ### Slide 7 - Reliability: How the Database Works (5:55-7:20)
 
-"The backend is Supabase PostgreSQL, accessed through REST. The UI does not call the database directly. Instead, UI windows call SupabaseStore, then SupabaseStore uses SupabaseClient to call PostgREST endpoints. The normalized design is important: items stores global product definitions, while machine_inventory stores per-machine slot stock and optional slot-specific price. This is why the same item can exist in multiple machines with different stock and pricing."
+"The backend is Supabase PostgreSQL, accessed through REST. The UI does not call the database directly. Instead, UI windows call SupabaseStore, then SupabaseStore uses SupabaseClient to call PostgREST endpoints. The normalized design is important: items stores global product definitions, while machine_inventory stores per-machine slot stock and optional machine-item price. This is why the same item can exist in multiple machines with different stock and pricing."
 
 ### Slide 8 - Why Clients Can Trust This Build (7:20-8:20)
 
@@ -70,7 +70,7 @@ Answer:
 
 Answer:
 
-"Because product identity and machine stock are different concerns. items is the global catalog, while machine_inventory stores slot assignment, stock, capacity, and slot-specific price per machine. This supports one item across many machines without duplication."
+"Because product identity and machine stock are different concerns. items is the global catalog, while machine_inventory stores slot assignment, stock, capacity, and machine-specific item price. This supports one item across many machines without duplication."
 
 ### Q4: How do you enforce machine-specific staff access?
 

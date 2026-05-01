@@ -45,8 +45,7 @@ public partial class ReceiptWindow : Window
 
         foreach (var item in transaction.Items)
         {
-            string slotLabel = string.IsNullOrWhiteSpace(item.SlotId) ? "" : $"[S{item.SlotId}] ";
-            string line = $"{item.Quantity}x  {slotLabel}{item.ProductName,-16} PHP {item.LineTotal:F2}";
+            string line = $"{item.Quantity}x  {item.ProductName,-16} PHP {item.LineTotal:F2}";
             itemsList.Items.Add(line);
 
             if (item.WasPaidWithPoints)

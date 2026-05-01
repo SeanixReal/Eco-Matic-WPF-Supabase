@@ -66,7 +66,8 @@ For current architecture and review status, use:
 - the customer UI only has 12 visible product slots
 - `machine_inventory` should stay aligned with those 12 visible slots
 - shared item identity belongs in `items`
-- machine-specific stock and optional price override belong in `machine_inventory`
+- machine-specific stock and optional item price belong in `machine_inventory`
+- when editing a machine item price, keep every row with the same `machine_id` and `item_id` synchronized so duplicate slots for the same product do not show conflicting prices
 - catalog delete must clear matching `machine_inventory` rows before removing the item from active use
 - deleted catalog items should stay physically present in `items` with `is_active = false`, `deleted_at`, and `deleted_reason` so sales reports keep their historical item names/types
 - machine identity belongs in `vending_machines.location_name`
@@ -74,6 +75,7 @@ For current architecture and review status, use:
 - purchases can use inserted cash/QR-paid balance or eco-points when point payment is toggled
 - RFID is currently for identity, recycle-credit saving, point payment, and purchase-history attribution
 - point purchases must stay separate from PHP paid totals; receipts use `Transaction.EcoPointsSpent`, `SessionPointsSpent`, and `SavedEcoCreditsSpent` for the point side of the payment
+- receipt sale lines intentionally group by catalog item, unit price, and payment mode instead of slot ID; do not reintroduce slot labels into customer receipts
 - `DataStore` is the in-memory customer session state, so changes there affect the vending UX directly
 - customer account transaction history is purchase-log based because the current schema does not foreign-key customers to sales records
 - customer mode, admin mode, and RFID persistence require live Supabase connectivity

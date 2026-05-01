@@ -60,7 +60,7 @@ Because product definition and machine slot stock are different concerns.
 
 Deep follow-up:
 
-items is the global catalog. machine_inventory stores machine_id, slot_id, stock_level, max_capacity, and optional slot_price. This supports one item reused across many machines while preserving machine-specific stock and pricing.
+items is the global catalog. machine_inventory stores machine_id, slot_id, stock_level, max_capacity, and optional slot_price. The app treats slot_price as a machine-item price: if the same item appears in multiple slots in one machine, setting the override on one slot propagates it to every matching item slot in that machine.
 
 Code anchor:
 

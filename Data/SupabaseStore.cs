@@ -134,6 +134,16 @@ public partial class SupabaseStore
         return value.HasValue ? value.Value : null;
     }
 
+    private void ApplyMachineItemPriceOverride(int machineId, int itemId, decimal? slotPrice)
+    {
+        var payload = new JsonObject
+        {
+            ["slot_price"] = slotPrice.HasValue ? JsonValue.Create(slotPrice.Value) : null
+        };
+
+        Run(_client.PatchAsync("machine_inventory", $"machine_id=eq.{machineId}&item_id=eq.{itemId}", payload));
+    }
+
     private static string BuildQuery(params string[] parts)
     {
         return string.Join("&", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
@@ -1203,9 +1213,11 @@ public partial class SupabaseStore
                     max_capacity = 15,
                     slot_price = ToDbNumber(slotPrice)
                 }));
+                ApplyMachineItemPriceOverride(machineId, itemId, slotPrice);
                 string itemName = GetItemName(itemId);
                 string machineName = GetMachineName(machineId);
-                LogEvent("SLOT_ASSIGNED", $"Assigned '{itemName}' to {machineName} slot {normalizedSlotId} with stock {stock}/15.", machineId: machineId);
+                string priceNote = slotPrice.HasValue ? $" Machine item price set to ₱{slotPrice.Value:0.00} for all matching slots." : " Machine item price uses the catalog default for all matching slots.";
+                LogEvent("SLOT_ASSIGNED", $"Assigned '{itemName}' to {machineName} slot {normalizedSlotId} with stock {stock}/15.{priceNote}", machineId: machineId);
             }
             catch when (!slotPrice.HasValue)
             {
@@ -1217,9 +1229,10 @@ public partial class SupabaseStore
                     stock_level = stock,
                     max_capacity = 15
                 }));
+                ApplyMachineItemPriceOverride(machineId, itemId, slotPrice);
                 string itemName = GetItemName(itemId);
                 string machineName = GetMachineName(machineId);
-                LogEvent("SLOT_ASSIGNED", $"Assigned '{itemName}' to {machineName} slot {normalizedSlotId} with stock {stock}/15.", machineId: machineId);
+                LogEvent("SLOT_ASSIGNED", $"Assigned '{itemName}' to {machineName} slot {normalizedSlotId} with stock {stock}/15. Machine item price uses the catalog default for all matching slots.", machineId: machineId);
             }
             return true;
         }
@@ -1290,6 +1303,7 @@ public partial class SupabaseStore
                         max_capacity = maxCap,
                         slot_price = ToDbNumber(slotPrice)
                     }));
+                    ApplyMachineItemPriceOverride(machineId, itemId, slotPrice);
                     LogEvent("SLOT_ASSIGNED", $"Created catalog item '{name}' and assigned it to {GetMachineName(machineId)} slot {normalizedSlotId} with stock {stock}/{maxCap}.", machineId: machineId);
                 }
                 catch when (!slotPrice.HasValue)
@@ -1302,6 +1316,7 @@ public partial class SupabaseStore
                         stock_level = stock,
                         max_capacity = maxCap
                     }));
+                    ApplyMachineItemPriceOverride(machineId, itemId, slotPrice);
                     LogEvent("SLOT_ASSIGNED", $"Created catalog item '{name}' and assigned it to {GetMachineName(machineId)} slot {normalizedSlotId} with stock {stock}/{maxCap}.", machineId: machineId);
                 }
             }
@@ -1437,6 +1452,8 @@ public partial class SupabaseStore
                 }));
             }
 
+            ApplyMachineItemPriceOverride(machineId, itemId, slotPrice);
+
             InventoryAuditContext? after = GetInventoryAuditContext(inventoryId);
             string oldLabel = before == null
                 ? $"slot {normalizedSlotId}"
@@ -1444,7 +1461,8 @@ public partial class SupabaseStore
             string newLabel = after == null
                 ? $"item #{itemId} on slot {normalizedSlotId} ({stock}/{maxCap})"
                 : $"'{after.ItemName}' on slot {after.SlotId} ({after.Stock}/{after.MaxCapacity})";
-            LogEvent("SLOT_UPDATED", $"Updated {GetMachineName(machineId)} inventory: {oldLabel} -> {newLabel}.", machineId: machineId);
+            string priceNote = slotPrice.HasValue ? $" Machine item price is ₱{slotPrice.Value:0.00} for all matching slots." : " Machine item price uses the catalog default for all matching slots.";
+            LogEvent("SLOT_UPDATED", $"Updated {GetMachineName(machineId)} inventory: {oldLabel} -> {newLabel}.{priceNote}", machineId: machineId);
             return true;
         }
         catch (Exception ex)
@@ -1772,7 +1790,7 @@ public partial class SupabaseStore
                 receipt_session_id = receiptSessionId,
                 line_order = lineOrder++,
                 entry_type = "sale",
-                slot_id = item.SlotId,
+                slot_id = string.IsNullOrWhiteSpace(item.SlotId) ? null : item.SlotId,
                 item_name = item.ProductName,
                 quantity = item.Quantity,
                 unit_price = item.UnitPrice,

@@ -37,7 +37,7 @@ The following core logic issues are now addressed:
 - strict 12-slot validation is enforced for machine inventory writes
 - customer slot mapping uses the real normalized `slot_id`
 - the inventory model is split between a global `items` catalog and machine-specific `machine_inventory`
-- machine inventory supports optional per-slot price override
+- machine inventory supports optional machine-item price override stored in `slot_price`; edits are propagated to every matching item slot in the selected machine
 - images remain local-first for reliable classroom/demo behavior
 
 ## Highest-Priority Remaining Findings
@@ -171,7 +171,7 @@ This review pass updated the main docs to reflect the actual implementation.
    - `DataStore.SaveInventory()` updates Supabase stock
    - `DataStore.LogEvent()` writes a Supabase event log
    - `DataStore.RecordSale()` writes a Supabase sales record
-5. price shown to the customer comes from the machine slot override when present, otherwise the global item default
+5. price shown to the customer comes from the machine item override when present, otherwise the global item default
 
 ## RFID mode
 

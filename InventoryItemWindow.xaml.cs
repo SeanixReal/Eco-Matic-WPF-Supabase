@@ -165,7 +165,7 @@ namespace Eco_Matic
             if (!string.IsNullOrWhiteSpace(txtSlotPrice.Text) &&
                 !decimal.TryParse(txtSlotPrice.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
             {
-                MessageBox.Show("Machine price override must be a valid number or left blank.", "Invalid Price", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Machine item price must be a valid number or left blank.", "Invalid Price", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

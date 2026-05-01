@@ -73,9 +73,9 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Machine Price Override (₱)" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
+                        <TextBlock Text="Machine Item Price (₱)" FontWeight="SemiBold" Margin="0,0,0,5" Foreground="#64748B"/>
                         <TextBox x:Name="txtSlotPrice" Height="35" Padding="5,8" BorderBrush="#CBD5E1"/>
-                        <TextBlock Text="Leave blank to use the global default price." FontSize="11" Foreground="#94A3B8" Margin="0,5,0,0"/>
+                        <TextBlock Text="Applies to every slot for this item in this machine. Leave blank for default." FontSize="11" Foreground="#94A3B8" Margin="0,5,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2">

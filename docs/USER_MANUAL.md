@@ -36,6 +36,7 @@ The customer flow is centered on the vending machine UI.
 - purchases can use cash buttons or the QR payment modal
 - recycle points are tracked separately from inserted cash
 - receipts show cash/QR paid, eco-points used, recycle points earned, and remaining point balances instead of mixing point purchases into the PHP paid total
+- receipts combine the same purchased product into one quantity line even when it was bought from different vending slots; point-paid purchases stay separate from cash/QR-paid purchases
 - RFID is used for customer identity, saving recycle points, showing transaction history, and spending saved eco-points when the customer chooses point payment
 - QR payment uses a Supabase Edge Function to mark the scanned payment intent as paid; the phone shows a simple confirmation message after scanning
 
@@ -122,7 +123,7 @@ The current code marks low-stock alerts when stock is `3` or below.
 - the app is designed around a fixed 12-slot customer UI
 - images are intentionally local-first rather than cloud-dependent for reliable classroom demos
 - customer mode, admin mode, and RFID account updates require internet access and live Supabase connectivity
-- if your live Supabase schema is older, run `docs/sql/migrations/supabase/migration_increment3.sql` before expecting per-machine price overrides to work
+- if your live Supabase schema is older, run `docs/sql/migrations/supabase/migration_increment3.sql` before expecting per-machine item price overrides to work
 - run `docs/sql/migrations/supabase/migration_increment4.sql` if your live schema is older and missing `client_sync_id` columns on activity tables
 - see `docs/SUPABASE_AUDIT.md` for the latest live schema and security findings
 

@@ -69,7 +69,7 @@ erDiagram
         string slot_id
         int stock_level
         int max_capacity
-        decimal slot_price
+        decimal slot_price "machine item price override"
     }
 
     SALES_TRANSACTIONS {
@@ -162,7 +162,7 @@ erDiagram
 ## How to Explain It
 
 - `items` is the global product catalog.
-- `machine_inventory` is the per-machine slot table for stock, capacity, and optional slot price.
+- `machine_inventory` is the per-machine slot table for stock, capacity, and optional machine item price override.
 - Catalog deletion clears matching `machine_inventory` rows, then soft-deletes the `items` row by setting `is_active = false`, `deleted_at`, and `deleted_reason`. This keeps `sales_transactions` historical joins intact.
 - `vending_machines` is the parent for inventory, staff machine assignments, sales, event logs, and receipt sessions.
 - `receipt_sessions` and `receipt_session_lines` store complete receipt history.

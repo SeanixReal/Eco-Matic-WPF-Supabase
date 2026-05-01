@@ -135,7 +135,7 @@ Database Design (Supabase PostgreSQL)
 On-slide bullets:
 
 - items = global product catalog
-- machine_inventory = per-machine slot stock and slot price
+- machine_inventory = per-machine slot stock and machine item price
 - sales_transactions and event_logs support reporting/auditing
 - customers stores RFID accounts and eco-credit balances
 

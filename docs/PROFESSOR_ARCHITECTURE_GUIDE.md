@@ -62,7 +62,7 @@ When you show the ERD, focus on the meaning of each table and the reason the rel
 - `users` stores admin and inventory manager accounts.
 - `vending_machines` stores each physical machine, including its machine name, editable address, and optional map coordinates.
 - `items` is the master catalog of products.
-- `machine_inventory` is the most important bridge table because it tells us which machine contains which item in which slot, at what stock level, and at what machine-specific override price if needed.
+- `machine_inventory` is the most important bridge table because it tells us which machine contains which item in which slot, at what stock level, and at what machine-specific item price if needed.
 - `sales_transactions` stores every purchase.
 - `event_logs` stores activity history for auditing, dashboard reporting, restock/slot changes, and RFID account history.
 - `customers` stores RFID users and their eco-credit balances.
@@ -77,7 +77,7 @@ For catalog deletion, the app clears `machine_inventory` assignments first so th
 
 You can extend it with:
 
-> I also allow an optional machine-specific price override, so one global item can still be sold at different prices depending on the machine location.
+> I also allow an optional machine-specific item price, so one global item can still be sold at different prices depending on the machine location. If the same item appears in several slots in the same machine, the app keeps that item price consistent across those slots.
 
 You can also say:
 
@@ -152,6 +152,7 @@ The easiest runtime flow to defend is the vending flow:
 9. `DataStore.RecordSale()` stores the sale through Supabase
 10. `ReceiptWindow` can show the selected machine name and address on-screen
 11. the printed receipt can include the selected machine name and address
+12. receipt item lines are grouped by product, unit price, and payment mode, so buying the same product from two slots produces one quantity line unless one purchase used eco-points
 
 This flow shows UI, application state, backend, and business logic all working together.
 
@@ -159,7 +160,7 @@ You can also explain the admin inventory flow:
 
 1. admin creates or edits a shared product in the `Items` tab
 2. admin assigns that product to a specific machine slot in the `Inventory` tab
-3. that slot stores machine-specific stock and optional price override
+3. that slot stores machine-specific stock and optional machine item price
 4. restock and slot changes write audit entries into `event_logs`
 5. customer mode reads the configured slot and shows the correct item for that machine
 

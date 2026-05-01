@@ -332,7 +332,7 @@
                                         <DataGridTextColumn Header="Item Name" Binding="{Binding Item}" Width="*"/>
                                         <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="100"/>
                                         <DataGridTextColumn Header="Default Price (₱)" Binding="{Binding Path='Default Price', StringFormat={}{0:F2}}" Width="110"/>
-                                        <DataGridTextColumn Header="Slot Price (₱)" Binding="{Binding Path='Slot Price', StringFormat={}{0:F2}}" Width="100"/>
+                                        <DataGridTextColumn Header="Item Price (₱)" Binding="{Binding Path='Slot Price', StringFormat={}{0:F2}}" Width="100"/>
                                         <DataGridTextColumn Header="Effective Price (₱)" Binding="{Binding Price, StringFormat={}{0:F2}}" Width="110"/>
                                         <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" Width="60">
                                             <DataGridTextColumn.ElementStyle>

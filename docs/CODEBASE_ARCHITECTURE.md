@@ -108,6 +108,7 @@ This layer contains the main business objects used inside the application.
   - `RecycleEntry`
   - `EventLogEntry`
   - point-payment receipt fields are kept on `Transaction` and `TransactionItem` so the customer-facing receipt can distinguish cash/QR payment from eco-credit usage
+  - receipt sale lines group the same catalog item and unit price together across different slots, while cash/QR and eco-point purchases remain separate lines
 
 ## 3. Main Runtime Flows
 
@@ -127,11 +128,13 @@ This layer contains the main business objects used inside the application.
    - a receipt can be shown through `ReceiptWindow`
    - the on-screen receipt can show the selected machine name and address
    - the on-screen and printed receipt include cash/QR paid amount, point usage, recycle points earned, and remaining point balances
+   - receipt item lines show quantity and product name, not vending slot labels
 
 Important current behavior:
 
 - products are placed into customer slots using the real normalized `slot_id`
-- effective price comes from the machine slot override when present, otherwise the global default item price
+- effective price comes from the machine item override when present, otherwise the global default item price
+- if the same catalog item is assigned to multiple slots in one machine, editing the machine item price on any one of those slots updates every matching slot in that machine
 
 ### 3.2 RFID and Eco-Credit Flow
 
@@ -151,6 +154,7 @@ Important implementation note:
 - the customer window keeps a session RFID lock once purchases exist, so a later scan from another RFID can view that account but cannot steal the current session's transaction history
 - purchases can use cash, QR-paid balance, or available eco-points; RFID identifies the account used for saved points and customer transaction history
 - point purchases no longer inflate the PHP paid amount on the receipt; the session records points spent separately from cash/QR value
+- if a customer buys the same product from multiple slots, the receipt combines those purchases by product, unit price, and payment mode
 
 ### 3.3 Admin Flow
 
@@ -168,7 +172,7 @@ Important implementation note:
 Important admin split:
 
 - the `Items` tab manages the shared global catalog in `items`
-- the `Inventory` tab manages per-machine slot assignment, stock, and optional slot-specific price override in `machine_inventory`
+- the `Inventory` tab manages per-machine slot assignment, stock, and optional machine item price override in `machine_inventory`
 - deleting a catalog item first clears matching `machine_inventory` slot assignments so the customer vending machine refreshes with those slots empty
 - catalog delete is a soft delete on `items`: `is_active = false`, `deleted_at`, and `deleted_reason`; active catalog and inventory assignment screens filter on `is_active = true`
 - the `Inventory` tab has a selected-row quick action that restocks only the chosen item to its max capacity
@@ -201,7 +205,7 @@ The store internally calls async HTTP methods through `SupabaseClient`, but expo
 This is a strong database design choice:
 
 - `items` stores the master catalog
-- `machine_inventory` stores which machine has which item in which slot, with stock, capacity, and optional machine-specific price
+- `machine_inventory` stores which machine has which item in which slot, with stock, capacity, and optional machine-specific item price
 
 That separation avoids duplicated product definitions across machines.
 

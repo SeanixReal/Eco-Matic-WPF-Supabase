@@ -721,10 +721,10 @@ public partial class CustomerWindow : Window
         decimal cashPaid,
         int pointsSpent)
     {
-        string slotId = product.Id.ToString(CultureInfo.InvariantCulture);
+        int productId = product.CatalogItemId > 0 ? product.CatalogItemId : product.DbInventoryId;
         TransactionItem? existingLine = _activeSession.Items.FirstOrDefault(item =>
-            item.ProductId == product.DbInventoryId &&
-            string.Equals(item.SlotId, slotId, StringComparison.Ordinal) &&
+            item.ProductId == productId &&
+            item.UnitPrice == product.Price &&
             string.Equals(item.PaymentMethod, paymentMethod, StringComparison.OrdinalIgnoreCase) &&
             item.WasPaidWithPoints == (pointsSpent > 0));
 
@@ -732,8 +732,8 @@ public partial class CustomerWindow : Window
         {
             _activeSession.Items.Add(new TransactionItem
             {
-                ProductId = product.DbInventoryId,
-                SlotId = slotId,
+                ProductId = productId,
+                SlotId = string.Empty,
                 ProductName = product.Name,
                 Quantity = 1,
                 UnitPrice = product.Price,

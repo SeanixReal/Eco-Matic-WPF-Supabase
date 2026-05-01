@@ -106,7 +106,7 @@ Strong answer line:
 - WPF windows call SupabaseStore methods (service layer), not raw SQL in UI code.
 - SupabaseStore uses SupabaseClient to call PostgREST endpoints at /rest/v1.
 - Environment variables in .env provide the Supabase URL and key.
-- Core normalized design: items is global catalog, machine_inventory is per-machine slot stock and optional slot price.
+- Core normalized design: items is global catalog, machine_inventory is per-machine slot stock and optional machine item price.
 
 Strong answer line:
 
