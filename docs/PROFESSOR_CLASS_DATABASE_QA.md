@@ -202,7 +202,7 @@ These classes are smaller dialogs or support screens:
 - `MachineSelectionWindow`: lets the customer choose the active vending machine.
 - `LoginWindow`: collects admin username/password.
 - `CustomerRegistrationWindow`: registers a new RFID customer.
-- `CustomerDashboardWindow`: shows RFID customer information and saves pending recycle points.
+- `CustomerDashboardWindow`: shows RFID customer information and saves pending recycle points. After an RFID is linked to the active vending session, later recycle points are saved to that RFID automatically.
 - `CatalogItemWindow`: creates or edits global product catalog rows in `items`.
 - `InventoryItemWindow`: assigns catalog items to machine slots in `machine_inventory`.
 - `RecyclableItemWindow`: creates or edits recyclable item definitions.

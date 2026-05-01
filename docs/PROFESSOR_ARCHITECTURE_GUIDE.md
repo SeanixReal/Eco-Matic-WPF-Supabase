@@ -89,6 +89,8 @@ If your professor asks why `customers` is not connected to sales by foreign key,
 
 > In the current implementation, RFID customers are mainly used for registration and saving recycle credits. Sales are recorded independently, and the connection between vending activity and customer RFID is handled at application level instead of a direct foreign key relationship.
 
+Once an RFID is linked to the active vending session, new recycle points are saved to that RFID immediately. A second scan is only needed for guest sessions that earned points before linking an RFID.
+
 The customer dashboard history follows that same rule: it reads RFID-tagged purchase entries from `event_logs` and displays item, quantity, and paid cash/points rather than joining customers directly to sales.
 
 That answer is honest and technically correct.

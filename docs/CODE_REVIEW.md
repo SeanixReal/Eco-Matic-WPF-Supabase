@@ -179,7 +179,7 @@ This review pass updated the main docs to reflect the actual implementation.
 2. `MainWindow` checks `CustomerExists(rfid)` on a background task
 3. `MainWindow` sends `VALID` or `INVALID` back to Arduino before opening dashboard/registration UI
 4. registration or dashboard flow opens on the UI thread
-5. pending recycle points are saved into the `customers` table from a background task
+5. pending recycle points are saved into the `customers` table from a background task, and linked RFID sessions auto-save newly recycled points immediately
 
 RFID implementation rule:
 

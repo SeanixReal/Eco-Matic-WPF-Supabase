@@ -43,7 +43,7 @@ This is the WPF user interface.
   - `CustomerRegistrationWindow`
   - `CustomerDashboardWindow`
   - `ReceiptWindow`
-    - displays sale lines, recycle lines, cash/QR paid amount, eco-points used, eco-points earned, remaining unsaved points, and RFID balance when available
+    - displays sale lines, recycle lines, cash/QR paid amount, eco-points used, eco-points earned, points still needing RFID save for guest sessions, and RFID balance when available
 
 ### B. Application and Session Layer
 
@@ -150,7 +150,7 @@ Important current behavior:
 
 Important implementation note:
 
-- recycle points are persisted to the customer account
+- recycle points are persisted to the customer account; if RFID is already linked, new recycle points are saved immediately instead of waiting for another scan
 - the customer window keeps a session RFID lock once purchases exist, so a later scan from another RFID can view that account but cannot steal the current session's transaction history
 - purchases can use cash, QR-paid balance, or available eco-points; RFID identifies the account used for saved points and customer transaction history
 - point purchases no longer inflate the PHP paid amount on the receipt; the session records points spent separately from cash/QR value

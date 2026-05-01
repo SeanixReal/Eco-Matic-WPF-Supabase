@@ -512,6 +512,7 @@ public partial class CustomerWindow : Window
         int pointsToClear = Math.Clamp(savedPoints, 0, _pendingPoints);
         _pendingPoints -= pointsToClear;
         DataStore.PendingPoints = _pendingPoints;
+        RefreshActiveSessionPointState();
         UpdateMoneyDisplay();
         SetDispenseStatus(pointsToClear > 0 ? "POINTS SAVED TO RFID" : "NO POINTS SAVED", pointsToClear > 0 ? Brushes.MediumSeaGreen : StatusIdle);
         UpdateDoneButtonState();
@@ -528,6 +529,7 @@ public partial class CustomerWindow : Window
         _linkedCustomerEmail = email;
         _availableEcoCredits = Math.Max(0, ecoCredits);
         _payWithPoints = false;
+        RefreshActiveSessionPointState();
         UpdateMoneyDisplay();
 
         SetDispenseStatus($"{GetLinkedCustomerLabel()} {_availableEcoCredits} PTS", Brushes.MediumSeaGreen);
@@ -755,6 +757,11 @@ public partial class CustomerWindow : Window
         _activeSession.EcoPointsSpent = _totalPointsSpent;
         _activeSession.SessionPointsSpent = _sessionPointsSpent;
         _activeSession.SavedEcoCreditsSpent = _savedEcoCreditsSpent;
+        RefreshActiveSessionPointState();
+    }
+
+    private void RefreshActiveSessionPointState()
+    {
         _activeSession.UnsavedSessionPointsRemaining = _pendingPoints;
         _activeSession.EcoCreditBalanceAfter = string.IsNullOrWhiteSpace(_linkedRfid) ? null : _availableEcoCredits;
     }
@@ -833,8 +840,7 @@ public partial class CustomerWindow : Window
         _activeSession.EcoPointsSpent = _totalPointsSpent;
         _activeSession.SessionPointsSpent = _sessionPointsSpent;
         _activeSession.SavedEcoCreditsSpent = _savedEcoCreditsSpent;
-        _activeSession.UnsavedSessionPointsRemaining = _pendingPoints;
-        _activeSession.EcoCreditBalanceAfter = string.IsNullOrWhiteSpace(_linkedRfid) ? null : _availableEcoCredits;
+        RefreshActiveSessionPointState();
         _activeSession.SessionEndedAt = DateTime.Now;
         _activeSession.Date = _activeSession.SessionEndedAt;
         _activeSession.Source = "online";
@@ -918,6 +924,36 @@ public partial class CustomerWindow : Window
         });
     }
 
+    private async Task<bool> SavePendingPointsToLinkedRfidAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_linkedRfid) || _pendingPoints <= 0)
+        {
+            return false;
+        }
+
+        int pointsToSave = _pendingPoints;
+        int newBalance = _availableEcoCredits + pointsToSave;
+        bool saved = await UpdateLinkedCustomerCreditsAsync(newBalance);
+        if (!saved)
+        {
+            return false;
+        }
+
+        _availableEcoCredits = newBalance;
+        _pendingPoints -= pointsToSave;
+        DataStore.PendingPoints = _pendingPoints;
+        RefreshActiveSessionPointState();
+
+        string savedRfid = _linkedRfid;
+        QueueBackgroundStoreAction(() =>
+        {
+            var store = new Data.SupabaseStore();
+            store.LogEvent("POINTS_SAVED", $"{pointsToSave} points auto-saved via linked RFID ({savedRfid})");
+        });
+
+        return true;
+    }
+
     private decimal GetSuggestedQrPaymentAmount()
     {
         decimal cheapestAvailablePrice = _products
@@ -965,7 +1001,7 @@ public partial class CustomerWindow : Window
         return true;
     }
 
-    private void BtnRecycle_Click(object sender, RoutedEventArgs e)
+    private async void BtnRecycle_Click(object sender, RoutedEventArgs e)
     {
         if (cboRecycleType.SelectedItem is not RecyclableItemDefinition recyclableItem)
         {
@@ -986,6 +1022,7 @@ public partial class CustomerWindow : Window
         int points = recyclableItem.PointsPerUnit * pieces;
         _pendingPoints += points;
         DataStore.PendingPoints = _pendingPoints;
+        RefreshActiveSessionPointState();
 
         var existing = _recycleEntries.FirstOrDefault(x => x.RecyclableItemId == recyclableItem.Id);
         if (existing == null)
@@ -1009,7 +1046,25 @@ public partial class CustomerWindow : Window
         string recycleLogDetails = $"{pieces} {recyclableItem.UnitLabel}(s) {recyclableItem.DisplayName}";
         QueueBackgroundStoreAction(() => DataStore.LogEvent(_machineId, "RECYCLE", recycleLogDetails, points));
         txtRecycleQty.Text = "1";
-        SetDispenseStatus($"+{points} POINTS ADDED", Brushes.MediumSeaGreen);
+
+        bool autoSaved = false;
+        if (!string.IsNullOrWhiteSpace(_linkedRfid))
+        {
+            SetDispenseStatus($"+{points} POINTS SAVING", Brushes.Khaki);
+            autoSaved = await SavePendingPointsToLinkedRfidAsync();
+        }
+
+        if (autoSaved)
+        {
+            SetDispenseStatus($"+{points} POINTS SAVED TO RFID", Brushes.MediumSeaGreen);
+        }
+        else
+        {
+            SetDispenseStatus(
+                string.IsNullOrWhiteSpace(_linkedRfid) ? $"+{points} POINTS ADDED" : $"+{points} POINTS PENDING",
+                string.IsNullOrWhiteSpace(_linkedRfid) ? Brushes.MediumSeaGreen : Brushes.Khaki);
+        }
+
         UpdateMoneyDisplay();
         UpdateAllButtonStates();
         UpdateDoneButtonState();
@@ -1141,7 +1196,7 @@ public partial class CustomerWindow : Window
             {
                 SetDispenseStatus("POINT PAY ERROR", SoldOutRed);
                 MessageBox.Show(this,
-                    "Eco-Matic could not deduct saved RFID points. You can still spend unsaved session points.",
+                    "Eco-Matic could not deduct saved RFID points. You can still spend current session points.",
                     "Point Payment",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -1343,7 +1398,7 @@ public partial class CustomerWindow : Window
             "2. Press SELECT below a product slot.\n" +
             "3. Use RECYCLE FOR ECO POINTS to earn points.\n" +
             "4. Toggle PAY WITH POINTS when you want points instead of cash.\n" +
-            "5. Tap RFID only if you want to save unused points.\n" +
+            "5. Tap RFID to link your account; recycle points save automatically once linked.\n" +
             "6. Your remaining cash balance is returned when you click DONE.",
             "Help - ECO-MATIC",
             MessageBoxButton.OK,

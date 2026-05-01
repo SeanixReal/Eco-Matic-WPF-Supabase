@@ -56,7 +56,7 @@ For current architecture and review status, use:
 - Arduino scans RFID
 - `MainWindow` checks whether the customer exists
 - the app opens registration or customer dashboard
-- pending recycle points are saved into the customer account
+- pending recycle points are saved into the customer account; after an RFID is linked, later recycle points auto-save to that RFID immediately
 - before the dashboard opens, the active `CustomerWindow` attaches any unlinked current-session purchases to the first valid RFID for that session
 - after a session has purchases attached to one RFID, a different RFID can view its dashboard but cannot take over the active session's transaction history or pending point save
 - the dashboard shows recent transaction history by filtering purchase-related `event_logs` for the exact scanned RFID value, plus current-session rows that may still be writing in the background
