@@ -115,6 +115,7 @@ The application requires live Supabase connectivity for customer and admin data 
 
 - `docs/README.md` - documentation index
 - `docs/FINAL_PROJECT_DOCUMENTATION.md` - formal final project documentation
+- `docs/Eco-Matic-Final-Project-Documentation.docx` - Word version of the final documentation
 - `docs/CODEBASE_ARCHITECTURE.md` - architecture overview
 - `docs/DIAGRAMS.md` - diagram index
 - `docs/CODE_REVIEW.md` - implementation review notes

@@ -20,6 +20,7 @@ This folder contains the main documentation for the current Eco-Matic WPF, Supab
 
 - Architecture overview and runtime flow notes
 - Formal final project documentation
+- Word version of the final project documentation
 - Mermaid diagrams under `diagrams/`
 - Class/database explanation and Q&A notes
 - Code review and maintenance notes
@@ -31,6 +32,7 @@ This folder contains the main documentation for the current Eco-Matic WPF, Supab
 ## Presentation Materials
 
 - `FINAL_PROJECT_DOCUMENTATION.md`
+- `Eco-Matic-Final-Project-Documentation.docx`
 - `PRESENTATION_READY_MASTER_INDEX.md`
 - `FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md`
 - `FINAL_PROJECT_POWERPOINT_CONTENTS.md`
