@@ -1,64 +1,125 @@
-# Eco-Matic Vending & Recycling System
+# Eco-Matic Vending and Recycling System
 
-## Overview
-Eco-Matic is a complete C# WPF point-of-sale and "Trash-to-Credit" loyalty system integrated with a physical Arduino RFID/LCD hardware module. The project allows users to purchase items, while simultaneously dropping off recyclables (bottles, cans) to earn Eco-Credits.
+Eco-Matic is a WPF desktop application for a smart vending machine with recycling rewards. It combines a customer vending interface, RFID-linked eco-credit accounts, inventory management, sales reporting, QR payment support, and Arduino hardware feedback in one project.
 
-## Features
-- **Vending & Inventory Management**: Full WPF graphical interface for managing machines, stock, and purchasing catalog items.
-- **Hardware Integration (Arduino)**:
-  - Uses an Arduino Uno/Nano, RC522 RFID reader, 16x2 I2C LCD display, and green/red LEDs.
-  - Bidirectional USB Serial communication defaults to `COM5` at `9600` baud to handle physical hardware states, LCD messages, RFID scans, and LED feedback.
-- **Eco-Credits Loyalty Program**: 
-  - Scan physical RFID cards to register/login.
-  - E-Wallet dashboard for tracking accumulated points.
-  - Save recycle points to an RFID-linked customer account.
-- **Admin CRM**: 
-  - Role-Based Access Control (RBAC).
-  - Customer relation management backed by Supabase to modify or view registered users and point balances.
-- **Event Logging**: Time-based filtering (Day, Week, Month) of all machine, sales, and user events for auditing.
+## Demo Preview
+
+### Customer Vending
+
+![Customer vending flow](Assets/Gifs/EcoMatic-Customer.gif)
+
+### Admin Dashboard
+
+![Admin dashboard and management](Assets/Gifs/EcoMatic-Admin.gif)
+
+### Inventory Management
+
+![Inventory management flow](Assets/Gifs/EcoMatic-Inventory.gif)
+
+## Main Features
+
+- Customer vending screen with a 12-slot machine layout
+- Cash and QR-paid balance purchasing flow
+- RFID customer registration and eco-credit saving
+- Recyclable item tracking for bottle/can credit values
+- Admin dashboard for machines, users, sales, logs, and customers
+- Global item catalog separated from per-machine inventory slots
+- Machine-specific stock, capacity, and optional item price overrides
+- Receipt display and receipt printing support
+- Arduino serial integration for RFID scans, LCD text, and LED feedback
+- Supabase PostgreSQL backend through REST-based data access
+
+## Tech Stack
+
+- .NET 10.0 WPF
+- C#
+- Supabase PostgreSQL and PostgREST
+- Supabase Edge Function for QR payment simulation
+- Arduino Uno/Nano with RC522 RFID reader and I2C LCD
+- QRCoder, WebView2, System.IO.Ports, and System.Speech
+
+## Project Structure
+
+- `Data/` - Supabase access, session coordination, Arduino communication, QR payment, receipt printing, and environment loading
+- `Models/` - vending products, transactions, recyclable item definitions, and receipt data
+- `Utilities/` - image loading, slot helpers, audio, and ESC/POS receipt formatting
+- `Arduino/` - RFID scanner firmware and hardware setup notes
+- `Assets/Images/` - local product images used by the vending UI
+- `Assets/Gifs/` - demo recordings used in this README
+- `docs/` - architecture notes, diagrams, SQL references, review notes, and user documentation
 
 ## Setup
-- **Database**: The current application uses Supabase via `Data/SupabaseStore.cs` and `Data/SupabaseClient.cs`. SQL reference files are organized under `docs/sql/`.
-- **Hardware**: Wire the Arduino hardware per `Arduino/README.md` and flash `Arduino/RFID_Scanner/RFID_Scanner.ino`.
-- **Application**: Open the project in Visual Studio and build it, or run `dotnet run` in the root folder.
 
-## Environment Setup
+### 1. Configure Environment Variables
 
-Eco-Matic now requires a repo-root `.env` file before startup.
+Create a repo-root `.env` file by copying `.env.example`.
 
-1. Copy `.env.example` to `.env`
-2. Fill in your real Supabase URL/key
-3. Launch the app after the Supabase project is reachable
+Required values:
 
-Important notes:
+```env
+ECOMATIC_SUPABASE_URL=...
+ECOMATIC_SUPABASE_ANON_KEY=...
+```
 
-- the app will fail fast on startup if `.env` is missing or still contains placeholder values
-- `.env.example` is the tracked template, while `.env` stays local and ignored
-- if you also set the same variables in Windows, those OS values win over `.env`
-- optional hardware settings are `ECOMATIC_ARDUINO_PORT` and `ECOMATIC_ARDUINO_BAUD`
+Optional hardware settings:
 
-## Connectivity Behavior
+```env
+ECOMATIC_ARDUINO_PORT=COM5
+ECOMATIC_ARDUINO_BAUD=9600
+```
 
-The current system is Supabase-first and requires live Supabase connectivity for customer and admin data.
+The app stops during startup if `.env` is missing or still contains placeholder Supabase values. If the same variables are also defined in Windows, the Windows environment values take priority.
 
-- customer vending mode reads machine lists and inventory from Supabase
-- purchases, stock updates, event logs, receipts, RFID registration, and credit updates write to Supabase
-- if Supabase is unreachable, customer/admin data features show a connectivity message instead of using a local database fallback
+### 2. Prepare Supabase
 
-## Migration Note
+SQL setup files are under `docs/sql/`.
 
-If your Supabase database was created before the per-machine price override refactor, run `docs/sql/migrations/supabase/migration_increment3.sql`.
+For a fresh Supabase project, apply the migrations in numeric order from:
 
-That migration adds `machine_inventory.slot_price` and normalizes legacy slot IDs like `S1` into canonical values like `1`.
+```text
+docs/sql/migrations/supabase/
+```
 
-If your live schema is older and does not have `client_sync_id` support on sales/event tables, run `docs/sql/migrations/supabase/migration_increment4.sql`.
+Then apply seed data if a starting inventory is needed:
 
-For the live schema audit and the current authentication/RLS findings, see `docs/SUPABASE_AUDIT.md`.
+```text
+docs/sql/seeds/seed_inventory.sql
+```
+
+The current inventory model uses:
+
+- `items` for the shared global catalog
+- `machine_inventory` for machine-specific slots, stock, capacity, and optional item price overrides
+- soft delete fields on `items` so removed catalog items disappear from active screens while old sales reports keep their history
+
+### 3. Prepare Arduino Hardware
+
+Follow `Arduino/README.md`, then flash:
+
+```text
+Arduino/RFID_Scanner/RFID_Scanner.ino
+```
+
+The default serial connection is `COM5` at `9600` baud unless overridden in `.env`.
+
+### 4. Build and Run
+
+```bash
+dotnet build
+dotnet run --project Eco-Matic.csproj
+```
+
+The application requires live Supabase connectivity for customer and admin data features.
 
 ## Documentation
 
-Project documentation now lives in `docs/`.
+- `docs/README.md` - documentation index
+- `docs/CODEBASE_ARCHITECTURE.md` - architecture overview
+- `docs/DIAGRAMS.md` - diagram index
+- `docs/CODE_REVIEW.md` - implementation review notes
+- `docs/SUPABASE_AUDIT.md` - database audit notes
+- `docs/USER_MANUAL.md` - user operation guide
 
-- `docs/CODEBASE_ARCHITECTURE.md`
-- `docs/DIAGRAMS.md`
-- `docs/PROFESSOR_ARCHITECTURE_GUIDE.md`
+## Current Scope
+
+Eco-Matic is ready as a classroom/demo smart vending system. The current build focuses on Supabase-backed vending, admin management, RFID registration and eco-credit saving, QR payment simulation, sales reporting, and Arduino hardware feedback.

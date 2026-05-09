@@ -6,15 +6,15 @@ Target format: 15 minutes total (10 minutes pitch + 5 minutes Q&A)
 
 ## 1. Required Deliverables Checklist
 
-Use this as your final pre-defense checklist:
+Final project checklist:
 
 - [ ] Running system is prepared and tested.
 - [ ] Hard copy of ERD is printed.
 - [ ] Hard copy of class diagram is printed.
 - [ ] PowerPoint follows rubric categories and client-pitch structure.
-- [ ] You can explain PC-to-Arduino communication clearly.
-- [ ] You can explain database design and flow clearly.
-- [ ] You can explain business value for potential clients clearly.
+- [ ] PC-to-Arduino communication can be explained clearly.
+- [ ] Database design and flow can be explained clearly.
+- [ ] Business value for potential clients can be explained clearly.
 
 Recommended printable diagrams:
 
@@ -62,9 +62,9 @@ Business-facing value to emphasize:
 - 8:30 - 9:20: Limitations and roadmap
 - 9:20 - 10:00: Client-facing close and Q&A transition
 
-## 5. Live Demo Sequence (Safe, Fast, and Client-Focused)
+## 5. Live Demo Sequence
 
-Use this exact order to avoid confusion:
+Recommended order:
 
 1. Launch app from MainWindow.
 2. Show Customer flow:
@@ -85,7 +85,7 @@ Fallback line if internet is unstable:
 
 "Customer mode, admin mode, and RFID persistence now use the live Supabase path. If Supabase is unavailable, the app shows a connectivity message instead of using a local database fallback."
 
-## 6. Technical Trust Points You Must Memorize
+## 6. Technical Trust Points
 
 ### A. How PC communicates with Arduino
 
@@ -112,18 +112,18 @@ Strong answer line:
 
 "The data flow is UI -> SupabaseStore -> SupabaseClient -> Supabase PostgREST -> PostgreSQL tables. This keeps networking and table details out of the UI layer."
 
-## 7. Client Value Lines You Can Reuse
+## 7. Client Value Lines
 
-Use these short lines throughout your pitch:
+Short lines for the pitch:
 
 - "Eco-Matic helps operators reduce manual inventory guesswork."
 - "Eco-Matic improves customer engagement by rewarding recycling behavior."
 - "Eco-Matic supports multi-machine operations through machine-specific slot and stock control."
 - "Eco-Matic is built on a modular architecture, so enhancements can be added without rewriting the whole system."
 
-## 8. Important Corrections vs Your Old Deck
+## 8. Earlier Console Deck Corrections
 
-Your previous deck is readable, but it is based on the old console/file-handling version. For final defense, remove or replace:
+Earlier presentation material was based on the old console/file-handling version. For the final WPF build, remove or replace:
 
 - Old "console app" framing
 - CSV/file-handling mechanics as the main data architecture

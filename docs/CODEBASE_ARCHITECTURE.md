@@ -256,7 +256,7 @@ Important vending-machine detail:
 - `vending_machines.address_text` stores the human-readable address
 - `vending_machines.latitude` and `vending_machines.longitude` store optional map-selected coordinates
 
-That means your ERD should show `customers` as an independent table in the current implementation.
+The ERD should show `customers` as an independent table in the current implementation.
 
 Current staff-role detail:
 
@@ -267,7 +267,7 @@ Current staff-role detail:
 - `users.assigned_machine_id` remains as a compatibility primary assignment
 - demo sales data exists in `sales_transactions` across roughly one year so Day, Week, Month, Year, All Time, and machine-scoped sales reports can be demonstrated
 
-## 7. What to Emphasize During Defense
+## 7. Project Strengths
 
 - The project is not just a UI. It integrates desktop software, a relational backend, and external hardware.
 - The design separates user interface logic from database and hardware services.
@@ -275,9 +275,9 @@ Current staff-role detail:
 - The architecture uses inheritance in the product model and event-driven programming in the Arduino integration.
 - The schema supports multiple vending machines, not just one machine.
 
-## 8. Known Documentation Mismatch in the Repository
+## 8. Historical Documentation Note
 
-Some older archived or non-canonical files in the repository may still describe a previous local database direction.
+Some older archived files in the repository describe an earlier local-database direction.
 
 For the current codebase, the accurate implementation is:
 
@@ -288,7 +288,7 @@ For the current codebase, the accurate implementation is:
 
 Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed and the live schema now also includes receipt history, QR payment intents, recyclable item definitions, and multi-machine staff assignments.
 
-For the live Supabase audit status, migrations, and current auth/RLS findings, see `docs/SUPABASE_AUDIT.md` and `docs/SUPABASE_MCP_ANALYSIS.md`.
+For the live Supabase audit status, migrations, and current auth/RLS findings, see `docs/SUPABASE_AUDIT.md`.
 
 ## 9. Current Review Notes
 

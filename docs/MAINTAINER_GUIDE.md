@@ -1,6 +1,6 @@
 # Eco-Matic Maintainer Guide
 
-This guide is for you as the project owner and maintainer.
+This guide is for maintaining the current Eco-Matic project.
 
 ## What This Project Is Right Now
 
@@ -13,7 +13,7 @@ Eco-Matic is a WPF desktop system with:
 - Arduino serial communication for RFID and status display
 - map-assisted vending machine address capture with manual override
 
-## Source of Truth
+## Primary Reference Docs
 
 For current architecture and review status, use:
 
@@ -80,20 +80,20 @@ For current architecture and review status, use:
 - customer account transaction history is purchase-log based because the current schema does not foreign-key customers to sales records
 - customer mode, admin mode, and RFID persistence require live Supabase connectivity
 
-## Things To Be Careful About Before Demoing
+## Pre-Demo Checks
 
-- make sure the selected machine does not exceed 12 active inventory entries
+- confirm the selected machine does not exceed 12 active inventory entries
 - check the lower-left Supabase connectivity badge on the main menu before beginning the live demo
-- make sure slot IDs are kept consistent and simple
-- make sure the live Supabase project has already applied `sql/migrations/supabase/migration_increment3.sql` and `sql/migrations/supabase/migration_increment4.sql`
-- make sure the live Supabase project has also applied `sql/migrations/supabase/migration_increment5.sql`
-- make sure the live Supabase project has also applied `sql/migrations/supabase/migration_increment6.sql`
-- make sure the COM port for Arduino matches the machine you are using
-- make sure images referenced in the database actually exist in runtime-accessible paths
-- make sure each demo machine has a readable machine name and address because both are now surfaced to the customer and available on receipts
-- make sure any newly registered demo machine has inventory assigned before opening it in Customer Mode; registration itself no longer forces initial stock
-- make sure the live `roles` table has `Admin` and `Inventory Manager`; staff creation expects `Inventory Manager`
-- make sure `user_machine_assignments` exists when using multiple assigned vending machines
+- confirm slot IDs are kept consistent and simple
+- confirm the live Supabase project has applied `sql/migrations/supabase/migration_increment3.sql` and `sql/migrations/supabase/migration_increment4.sql`
+- confirm the live Supabase project has also applied `sql/migrations/supabase/migration_increment5.sql`
+- confirm the live Supabase project has also applied `sql/migrations/supabase/migration_increment6.sql`
+- confirm the COM port for Arduino matches the demo machine
+- confirm images referenced in the database exist in runtime-accessible paths
+- confirm each demo machine has a readable machine name and address because both are surfaced to the customer and available on receipts
+- confirm any newly registered demo machine has inventory assigned before opening it in Customer Mode; registration itself no longer forces initial stock
+- confirm the live `roles` table has `Admin` and `Inventory Manager`; staff creation expects `Inventory Manager`
+- confirm `user_machine_assignments` exists when using multiple assigned vending machines
 - demo sales rows use deterministic `client_sync_id` values and can be reseeded without stacking duplicates
 - Supabase migration `add_missing_foreign_key_indexes` adds indexes on existing foreign-key columns only; it does not add or remove tables
 

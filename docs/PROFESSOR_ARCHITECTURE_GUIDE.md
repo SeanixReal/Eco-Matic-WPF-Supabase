@@ -1,26 +1,26 @@
 # Professor Architecture Guide
 
-This document is written for presentation and defense. You can use it as your speaking guide when explaining the architecture of Eco-Matic.
+This document summarizes the architecture of Eco-Matic for project discussion and review.
 
 For a deeper class-by-class explanation and database Q&A script, use `docs/PROFESSOR_CLASS_DATABASE_QA.md` together with the separated diagrams linked from `docs/DIAGRAMS.md`.
 
-## 1. Short Opening Script
+## 1. Short Opening
 
-You can start with this:
+Suggested opening:
 
 > Eco-Matic is a WPF desktop application for a smart vending machine with recycling incentives. Architecturally, it combines a presentation layer, a service layer, a relational backend accessed through Supabase REST, and an Arduino hardware integration layer for RFID scanning and LCD feedback.
 
-That opening already tells your professor that the project is not only a UI, but a complete integrated system.
+That opening frames the project as a complete integrated system, not only a UI.
 
-## 2. Best Order for Explaining the Project
+## 2. Recommended Explanation Order
 
-Use this order during your discussion:
+Use this order for a clear technical walkthrough:
 
 1. explain the high-level architecture
 2. explain the ERD
 3. explain the class diagram
 4. explain one end-to-end runtime flow
-5. end with your design decisions
+5. end with the major design decisions
 
 This order works well because it moves from broad structure to implementation detail.
 
@@ -54,7 +54,7 @@ Say that the project is divided into four parts:
 
 ## 4. How to Explain the ERD
 
-When you show the ERD, focus on the meaning of each table and the reason the relationship exists.
+When showing the ERD, focus on the meaning of each table and the reason each relationship exists.
 
 ### Core explanation
 
@@ -67,7 +67,7 @@ When you show the ERD, focus on the meaning of each table and the reason the rel
 - `event_logs` stores activity history for auditing, dashboard reporting, restock/slot changes, and RFID account history.
 - `customers` stores RFID users and their eco-credit balances.
 
-### Strong point to say
+### Strong design point
 
 > I separated `items` from `machine_inventory` because the same product definition can be reused by different machines, while each machine still has its own slot and stock values.
 
@@ -75,17 +75,17 @@ That is a good database normalization argument.
 
 For catalog deletion, the app clears `machine_inventory` assignments first so the vending machine becomes empty in those slots. Then it soft-deletes the `items` row by setting `is_active = false`, `deleted_at`, and `deleted_reason`. Active catalog and inventory screens filter to `is_active = true`, while historical sales reports can still join old sales to the original item name and type.
 
-You can extend it with:
+The same explanation can be extended with:
 
 > I also allow an optional machine-specific item price, so one global item can still be sold at different prices depending on the machine location. If the same item appears in several slots in the same machine, the app keeps that item price consistent across those slots.
 
-You can also say:
+Machine location support can be explained this way:
 
 > I extended the machine table so the admin can save both a readable machine name and a physical address. The address can be typed manually or selected from a map and reverse-geocoded into text.
 
 ### Important clarification
 
-If your professor asks why `customers` is not connected to sales by foreign key, say:
+If asked why `customers` is not connected to sales by foreign key:
 
 > In the current implementation, RFID customers are mainly used for registration and saving recycle credits. Sales are recorded independently, and the connection between vending activity and customer RFID is handled at application level instead of a direct foreign key relationship.
 
@@ -93,11 +93,11 @@ Once an RFID is linked to the active vending session, new recycle points are sav
 
 The customer dashboard history follows that same rule: it reads RFID-tagged purchase entries from `event_logs` and displays item, quantity, and paid cash/points rather than joining customers directly to sales.
 
-That answer is honest and technically correct.
+This keeps the explanation aligned with the current implementation.
 
 ## 5. How to Explain the Class Diagram
 
-When you switch from ERD to class diagram, say this:
+When switching from ERD to class diagram, this line helps connect the two views:
 
 > The ERD shows stored data, but the class diagram shows how the software behaves at runtime.
 
@@ -139,9 +139,9 @@ Then explain the classes in groups instead of one by one.
 - polymorphism: each item type can override `Examine()`
 - encapsulation: UI classes do not directly perform REST calls; they go through `SupabaseStore`
 
-## 6. One End-to-End Flow You Can Explain
+## 6. End-to-End Flow Example
 
-The easiest runtime flow to defend is the vending flow:
+The vending flow is the simplest end-to-end runtime path:
 
 1. `MainWindow` opens machine selection
 2. the machine selection screen shows the machine name and address so the user can identify the correct kiosk
@@ -156,9 +156,9 @@ The easiest runtime flow to defend is the vending flow:
 11. the printed receipt can include the selected machine name and address
 12. receipt item lines are grouped by product, unit price, and payment mode, so buying the same product from two slots produces one quantity line unless one purchase used eco-points
 
-This flow shows UI, application state, backend, and business logic all working together.
+This flow shows UI, application state, backend persistence, and business logic working together.
 
-You can also explain the admin inventory flow:
+Admin inventory flow:
 
 1. admin creates or edits a shared product in the `Items` tab
 2. admin assigns that product to a specific machine slot in the `Inventory` tab
@@ -166,14 +166,14 @@ You can also explain the admin inventory flow:
 4. restock and slot changes write audit entries into `event_logs`
 5. customer mode reads the configured slot and shows the correct item for that machine
 
-You can also explain the sales analytics flow:
+Sales analytics flow:
 
 1. admin opens the Sales Report, which defaults to Week
 2. `SupabaseStore.GetFilteredSales()` loads the selected date range and optional machine scope
 3. `AdminWindow.UpdateSalesReportVisuals()` groups the rows by item, machine, category, and period
 4. the UI shows KPI cards, trend bars, product mix, best-selling items, machine revenue, category revenue, peak periods, and transaction details
 
-You can also explain the machine-location setup flow:
+Machine-location setup flow:
 
 1. admin opens `AddMachineWindow` or `EditMachineWindow`
 2. admin enters a machine name
@@ -183,20 +183,20 @@ You can also explain the machine-location setup flow:
 6. `SupabaseStore` saves the machine name, address, and coordinates into `vending_machines`
 7. inventory assignment is handled afterward in the Inventory view, so a new machine can be registered empty and stocked later
 
-## 6.1 Honest Current Limitations
+## 6.1 Current Limitations
 
-If your professor asks what still needs improvement, you can answer honestly with these points:
+Current limitations worth noting:
 
 - the customer UI currently supports 12 visible vending slots, so backend inventory should stay aligned with that limit
 - the inventory model is now intentionally split between a shared item catalog and machine-specific slot assignment
 - RFID account history is application-layer event-log matching because customers are not foreign-keyed to sales records
 - the project uses a practical MVVM-lite approach rather than a full MVVM architecture
 
-That answer is strong because it shows you understand both the design and the remaining technical debt.
+These points show the current scope clearly and leave room for future improvement.
 
-## 7. Questions Your Professor Might Ask
+## 7. Common Technical Questions
 
-### Why did you use code-behind instead of full MVVM?
+### Why use code-behind instead of full MVVM?
 
 Suggested answer:
 
@@ -250,9 +250,9 @@ Suggested answer:
 
 > The text field keeps the feature practical because the address can always be edited manually, while the map improves speed and accuracy by letting the admin point to the actual machine site and auto-fill the nearest address.
 
-## 8. Files to Open During Defense
+## 8. Useful Files for Live Walkthrough
 
-If you want a strong live walkthrough, open these files:
+These files give a compact walkthrough of the system:
 
 - `docs/DIAGRAMS.md`
 - `docs/PROFESSOR_CLASS_DATABASE_QA.md`
@@ -270,10 +270,10 @@ If you want a strong live walkthrough, open these files:
 - `Models/Product.cs`
 - `Models/Transaction.cs`
 
-## 9. Best Final Closing Statement
+## 9. Closing Statement
 
-You can end with:
+Suggested closing:
 
 > The main architectural strength of Eco-Matic is that it separates UI behavior, backend access, domain modeling, and hardware communication while still keeping the project simple enough to maintain as a student system.
 
-That gives a clean and confident ending to your explanation.
+This closing summarizes the main architectural strength of the system.

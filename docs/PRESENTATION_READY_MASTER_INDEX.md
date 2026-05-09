@@ -1,59 +1,59 @@
-# Presentation Ready Master Index
+# Presentation Preparation Index
 
-Use this as your command center before defense day.
+This page groups the project files most useful for the final presentation and technical review.
 
-## A) Start Here (Order)
+## A) Recommended Order
 
-1. FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md
-2. FINAL_PROJECT_POWERPOINT_CONTENTS.md
-3. PITCH_TIMED_SCRIPT_10_MIN_STRICT.md
-4. PITCH_ONE_PAGE_CUE_CARD.md
-5. ADVANCED_QA_COMPLEX_FUNCTIONS.md
-6. CODEBASE_ATLAS_EVERY_FILE.md
+1. `FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md`
+2. `FINAL_PROJECT_POWERPOINT_CONTENTS.md`
+3. `PITCH_TIMED_SCRIPT_10_MIN_STRICT.md`
+4. `PITCH_ONE_PAGE_CUE_CARD.md`
+5. `ADVANCED_QA_COMPLEX_FUNCTIONS.md`
+6. `CODEBASE_ATLAS_EVERY_FILE.md`
 
-## B) Print These for Hard-Copy Requirement
+## B) Printable Diagrams
 
-- diagrams/ERD.md
-- diagrams/FOUNDATIONAL_CLASS_DIAGRAM.md
+- `diagrams/ERD.md`
+- `diagrams/FOUNDATIONAL_CLASS_DIAGRAM.md`
 
-Optional backup print:
+Optional backup:
 
-- diagrams/FULL_CLASS_DIAGRAM.md
+- `diagrams/FULL_CLASS_DIAGRAM.md`
 
-## C) Rehearsal Plan (90 Minutes)
+## C) 90-Minute Rehearsal Plan
 
 ### 0-20 min
 
-- finalize slides using FINAL_PROJECT_POWERPOINT_CONTENTS.md
+- Finalize slides using `FINAL_PROJECT_POWERPOINT_CONTENTS.md`.
 
 ### 20-45 min
 
-- rehearse strict 10-minute flow using PITCH_TIMED_SCRIPT_10_MIN_STRICT.md
+- Rehearse the strict 10-minute flow using `PITCH_TIMED_SCRIPT_10_MIN_STRICT.md`.
 
 ### 45-60 min
 
-- rehearse from memory using PITCH_ONE_PAGE_CUE_CARD.md only
+- Practice from the one-page cue card only.
 
 ### 60-80 min
 
-- answer database/Arduino/offline questions from ADVANCED_QA_COMPLEX_FUNCTIONS.md
+- Review database, Arduino, and connectivity questions from `ADVANCED_QA_COMPLEX_FUNCTIONS.md`.
 
 ### 80-90 min
 
-- skim CODEBASE_ATLAS_EVERY_FILE.md and mark weak spots
+- Skim `CODEBASE_ATLAS_EVERY_FILE.md` and mark files that need one more look.
 
-## D) Last-10-Minute Before Presenting
+## D) Final Setup Check
 
-- Open PITCH_ONE_PAGE_CUE_CARD.md
-- Open ADVANCED_QA_COMPLEX_FUNCTIONS.md
-- Keep one live demo fallback line ready:
+- Open `PITCH_ONE_PAGE_CUE_CARD.md`.
+- Open `ADVANCED_QA_COMPLEX_FUNCTIONS.md`.
+- Keep this fallback line ready for live-demo delays:
   - "I will continue with architecture flow while the app reloads."
 
-## E) Confidence Rule
+## E) Answer Structure
 
-When asked any technical question:
+For technical questions:
 
-1. name the layer
-2. explain flow in one sentence
-3. cite one method/class
-4. state design reason/tradeoff
+1. Name the layer.
+2. Explain the flow in one sentence.
+3. Cite one method or class.
+4. State the design reason or tradeoff.

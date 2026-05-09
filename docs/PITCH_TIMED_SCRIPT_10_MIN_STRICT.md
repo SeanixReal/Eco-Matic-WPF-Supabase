@@ -1,7 +1,7 @@
 # Eco-Matic Client Pitch Script (Strict 10-Minute Timing)
 
-Use this script exactly for the 10-minute presentation block.
-Goal: client-style pitch with technical confidence for professor Q and A.
+This script targets a 10-minute presentation block.
+Goal: client-style pitch with clear technical support for Q and A.
 
 ## Time Map
 
@@ -56,13 +56,13 @@ Goal: client-style pitch with technical confidence for professor Q and A.
 
 "Eco-Matic is a practical smart-vending platform that combines customer experience, machine operations, and technical scalability. It is already structured for pilot-style deployment and iterative expansion. Thank you. I am ready for questions on communication flow, database design, and implementation details."
 
-## Safety Buffer Notes
+## Timing Buffer Notes
 
-If you are running late:
+If time is running short:
 
 - shorten Slide 8 to two sentences
 - shorten Slide 9 to one current scope sentence plus one roadmap sentence
 
-If demo stalls:
+If the demo stalls:
 
 "I will continue with architecture and sequence flow while the app reloads."

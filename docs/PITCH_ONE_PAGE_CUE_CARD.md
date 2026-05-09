@@ -1,6 +1,6 @@
 # Eco-Matic One-Page Cue Card
 
-Use this during rehearsal. Memorize ideas, not exact words.
+Use this during rehearsal. The goal is to remember ideas, not exact wording.
 
 ## 10-Slide Memory Anchors
 
@@ -44,7 +44,7 @@ Example:
 - "items and machine_inventory are separated to support multi-machine scaling."
 - "Known limitations are documented and planned, not hidden."
 
-## If You Forget a Detail Mid-Pitch
+## If a Detail Slips Mid-Pitch
 
 Say:
 

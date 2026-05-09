@@ -78,7 +78,7 @@ The admin side is controlled through `AdminWindow`.
 - `Admin`: full access
 - `Inventory Manager`: inventory-only access for the vending machines assigned by an admin
 
-## 5. Inventory Rules You Should Follow
+## 5. Inventory Rules
 
 The frontend customer vending screen only shows 12 product slots.
 
@@ -124,8 +124,8 @@ The current code marks low-stock alerts when stock is `3` or below.
 - the app is designed around a fixed 12-slot customer UI
 - images are intentionally local-first rather than cloud-dependent for reliable classroom demos
 - customer mode, admin mode, and RFID account updates require internet access and live Supabase connectivity
-- if your live Supabase schema is older, run `docs/sql/migrations/supabase/migration_increment3.sql` before expecting per-machine item price overrides to work
-- run `docs/sql/migrations/supabase/migration_increment4.sql` if your live schema is older and missing `client_sync_id` columns on activity tables
+- older Supabase schemas need `docs/sql/migrations/supabase/migration_increment3.sql` before per-machine item price overrides work
+- older Supabase schemas missing `client_sync_id` columns on activity tables need `docs/sql/migrations/supabase/migration_increment4.sql`
 - see `docs/SUPABASE_AUDIT.md` for the latest live schema and security findings
 
 ## 8. Where To Read More

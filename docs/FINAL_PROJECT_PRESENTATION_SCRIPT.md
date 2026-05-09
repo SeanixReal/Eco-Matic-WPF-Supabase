@@ -50,17 +50,17 @@ Delivery style: Clear, calm, confident, persuasive, and technically grounded
 
 "To conclude, Eco-Matic is a credible smart-vending platform that balances customer experience, operator control, and technical feasibility. It is designed to support multi-machine growth and incremental upgrades. Thank you, and I am ready for your questions."
 
-## 2. Q&A Defense Script (5 Minutes)
+## 2. Technical Q&A Script (5 Minutes)
 
-Use this section to answer confidently.
+This section gives concise answers for common technical questions.
 
-### Q1: How did your PC communicate with Arduino?
+### Q1: How does the PC communicate with Arduino?
 
 Answer:
 
 "The app uses SerialPort over USB serial, with configurable COM port and baud rate. Arduino sends RFID events as RFID:<UID>. ArduinoService parses that input and raises OnCardScanned. MainWindow validates the RFID using SupabaseStore and sends immediate response commands back to Arduino, such as VALID, INVALID, and LCD/status messages using MSG and STATE commands."
 
-### Q2: How does your database architecture work?
+### Q2: How does the database architecture work?
 
 Answer:
 
@@ -72,13 +72,13 @@ Answer:
 
 "Because product identity and machine stock are different concerns. items is the global catalog, while machine_inventory stores slot assignment, stock, capacity, and machine-specific item price. This supports one item across many machines without duplication."
 
-### Q4: How do you enforce machine-specific staff access?
+### Q4: How is machine-specific staff access enforced?
 
 Answer:
 
 "Authentication checks role and assigned machine IDs. AdminWindow then restricts inventory managers to assigned machines and hides non-allowed pages."
 
-### Q5: Is your app fully offline-capable?
+### Q5: Is the app fully offline-capable?
 
 Answer:
 
@@ -90,7 +90,7 @@ Answer:
 
 "Given project scope and timeline, I used MVVM-lite for practicality. However, critical reusable logic is still separated into services to preserve maintainability and clear responsibilities."
 
-### Q7: What are your current known limitations?
+### Q7: What are the current known limitations?
 
 Answer:
 
@@ -102,7 +102,7 @@ Answer:
 
 "Eco-Matic improves operational visibility and customer engagement in one system. Operators can manage machine-specific inventory with better traceability, while customers get a smoother vending and recycling experience. The architecture also supports phased improvements, so adoption can start small and scale."
 
-### Q9: What is your realistic rollout strategy?
+### Q9: What is the realistic rollout strategy?
 
 Answer:
 
@@ -114,19 +114,19 @@ Answer:
 
 "We can trace each major feature from UI flow to service layer to data schema and hardware behavior. PC-to-Arduino communication is explicit and event-driven, and database interactions are isolated through service classes for maintainability."
 
-## 3. Emergency Recovery Lines During Defense
+## 3. Recovery Lines
 
 If demo stalls:
 
 "I will continue with the architecture and sequence diagrams while the app reloads. The core flow is documented and matches the implementation."
 
-If asked something you cannot recall exactly:
+If an exact detail needs checking:
 
 "I want to answer precisely, so I will refer to the corresponding architecture file and then give the exact implementation detail."
 
-## 4. Quick Confidence Formula (Before You Start)
+## 4. Quick Answer Formula
 
-Use this mental structure for every answer:
+General structure for technical answers:
 
 1. State the layer or component.
 2. Explain the runtime flow in one sentence.

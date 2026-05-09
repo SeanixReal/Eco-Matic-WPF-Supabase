@@ -1,8 +1,8 @@
 # Professor Class and Database Q&A Guide
 
-This document is a defense guide for explaining the Eco-Matic classes, database connection design, and likely professor questions.
+This document explains the Eco-Matic classes, database connection design, and common technical questions.
 
-Use it together with `docs/DIAGRAMS.md`. The diagrams are separated under `docs/diagrams/`, while this guide is the speaking script.
+Use it together with `docs/DIAGRAMS.md`. The diagrams are separated under `docs/diagrams/`, while this guide provides the supporting explanations.
 
 ## 1. One-Minute Overview
 
@@ -21,7 +21,7 @@ The live cloud database is Supabase PostgreSQL. The WPF app does not connect to 
 
 `MainWindow` is the entry window. It routes users into customer mode or admin mode and listens for RFID scans from `ArduinoService`.
 
-Professor explanation:
+Explanation:
 
 > `MainWindow` is the traffic controller. It decides whether the user goes to customer flow, admin login, RFID registration, or the customer dashboard.
 
@@ -35,7 +35,7 @@ Important connections:
 
 `CustomerWindow` is the vending screen. It displays the 12 visible vending slots, handles money, QR payment, recycle points, selected products, stock reduction, dispense feedback, and receipts.
 
-Professor explanation:
+Explanation:
 
 > `CustomerWindow` is where the business flow happens from the customer's perspective. It does not own the database directly; it uses `DataStore` for the active session and services for payment, hardware messages, and receipt output.
 
@@ -52,7 +52,7 @@ Important connections:
 
 `AdminWindow` is the management console. Admin users can access dashboard, catalog, inventory, machine, user, recyclable item, sales, stock monitoring, customer, and event log workflows. Inventory managers are restricted to inventory management for their assigned vending machines.
 
-Professor explanation:
+Explanation:
 
 > `AdminWindow` is the main back-office console. It calls `SupabaseStore` methods instead of writing SQL directly in the UI.
 
@@ -68,7 +68,7 @@ Important connections:
 
 `DataStore` is a static in-memory session state holder for customer mode.
 
-Professor explanation:
+Explanation:
 
 > `DataStore` stores the current selected machine, active product list, pending recycle points, and current transaction history for the vending session. It keeps the customer UI responsive and prevents every button click from directly querying Supabase.
 
@@ -84,7 +84,7 @@ Important responsibilities:
 
 `SupabaseStore` is the main application database service.
 
-Professor explanation:
+Explanation:
 
 > `SupabaseStore` is a service layer. It translates app-level operations like "get inventory", "record sale", or "register RFID customer" into Supabase REST calls.
 
@@ -104,7 +104,7 @@ Important responsibilities:
 
 `SupabaseClient` is the low-level HTTP wrapper for Supabase.
 
-Professor explanation:
+Explanation:
 
 > `SupabaseClient` is the only class that knows the Supabase URL, API key, PostgREST base URL, and HTTP methods. This keeps networking details out of the UI.
 
@@ -120,7 +120,7 @@ Important responsibilities:
 
 `SupabaseSessionCoordinator` centralizes Supabase availability checks and customer-session persistence.
 
-Professor explanation:
+Explanation:
 
 > The coordinator keeps customer-mode data access Supabase-only. It checks whether Supabase is reachable, loads machine lookup and inventory, and routes inventory, sale, log, and receipt writes to `SupabaseStore`.
 
@@ -132,7 +132,7 @@ Customer mode, admin mode, and RFID account persistence all require live Supabas
 
 `ArduinoService` isolates serial hardware communication.
 
-Professor explanation:
+Explanation:
 
 > The app does not mix serial-port code throughout the windows. `ArduinoService` starts and stops the serial listener, raises events when a card is scanned, and sends responses or LCD messages back to the Arduino.
 
@@ -146,7 +146,7 @@ Important responsibilities:
 
 `QrPaymentService` handles QR payment integration through the Supabase Edge Function.
 
-Professor explanation:
+Explanation:
 
 > QR payment is modeled as an intent. The WPF app asks the Edge Function to create a payment reference and token, displays the QR URL, and then checks whether the intent status changed to paid.
 
@@ -160,7 +160,7 @@ Important responsibilities:
 
 These classes handle physical receipt printing.
 
-Professor explanation:
+Explanation:
 
 > Receipt formatting is separated from receipt printing. `EscPosReceiptFormatter` builds the ESC/POS-style receipt content, while `ReceiptPrinterService` decides how to send it to the configured printer.
 
@@ -168,7 +168,7 @@ Professor explanation:
 
 `VendingItem` is the abstract base class for vending products. `Product` is the concrete base product class, and `SnackItem`, `DrinkItem`, and `MiscItem` specialize it.
 
-Professor explanation:
+Explanation:
 
 > This is where the project demonstrates OOP. `VendingItem` defines the shared structure, `Product` adds product type behavior, and specialized product classes implement category-specific details like calories and volume.
 
@@ -183,7 +183,7 @@ OOP terms to mention:
 
 `Transaction`, `TransactionItem`, and `RecycleEntry` represent a completed vending session.
 
-Professor explanation:
+Explanation:
 
 > A transaction is not just one row of sales. For receipts, the app needs the full session: purchased item lines, recycled item lines, totals, amount paid, change, machine name, and receipt number.
 
@@ -277,41 +277,41 @@ HTTP mapping:
 
 ### Why separate `items` and `machine_inventory`?
 
-Use this answer:
+Answer:
 
 > `items` is the global product catalog, while `machine_inventory` is the stock inside a specific machine slot. If stock were stored in `items`, the system could not correctly support the same product in multiple machines with different quantities or prices.
 
 ### What happens when a catalog item is deleted?
 
-Use this answer:
+Answer:
 
 > The app first deletes any `machine_inventory` rows for that item, so the affected vending slots become empty. Then it soft-deletes the `items` row with `is_active = false`, `deleted_at`, and `deleted_reason`. Active catalog screens hide it, but sales reports can still join old transactions to the product name/type.
 
 ### Why is slot ID in `machine_inventory`?
 
-Use this answer:
+Answer:
 
 > Slot ID is physical placement, not product identity. The same item can be assigned to different slots in different machines, so the slot belongs to the machine inventory row.
 
 ### Why are receipts separate from sales?
 
-Use this answer:
+Answer:
 
 > `sales_transactions` is useful for dashboard reporting, but receipts need richer information. A receipt can include multiple product lines and recycle lines, so it uses `receipt_sessions` and `receipt_session_lines`.
 
 ### Why is `customers` not connected to `sales_transactions`?
 
-Use this answer:
+Answer:
 
 > In the current implementation, RFID is used for registration and saving recycle credits. Purchases are currently cash or QR based, so sales are recorded independently from customer RFID identity.
 
 ### Why use Supabase instead of direct PostgreSQL?
 
-Use this answer:
+Answer:
 
 > Supabase gives the app a hosted PostgreSQL database, REST API, Edge Functions, and security controls. The desktop app can use HTTP requests instead of shipping raw database connection details throughout the code.
 
-## 7. Likely Professor Questions and Suggested Answers
+## 7. Likely Technical Questions and Suggested Answers
 
 ### Q: Where is the database connection code?
 
@@ -349,7 +349,7 @@ Answer:
 
 > `LoginWindow` collects credentials, and `SupabaseStore.AuthenticateUserAccess` queries `users` joined with `roles` plus machine assignments. Admin users can access the management console. Inventory managers are routed to Inventory only and can only see vending machines assigned by the admin.
 
-Important honesty note:
+Important note:
 
 > Passwords are stored and compared directly in the current implementation even though the column is named `password_hash`. A production system should hash and salt passwords or use Supabase Auth.
 
@@ -423,6 +423,6 @@ Answer:
 
 ## 9. Strong Closing Statement
 
-Use this:
+Suggested closing:
 
 > The strongest part of Eco-Matic's architecture is that it separates responsibilities. WPF windows handle user interaction, service classes handle database, hardware, payment, and printing, model classes represent vending concepts, and Supabase stores normalized persistent data.

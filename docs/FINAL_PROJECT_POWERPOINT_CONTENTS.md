@@ -1,6 +1,6 @@
 # Final Project PowerPoint Contents (Client Pitch Version)
 
-Use this as direct copy material for your slides.
+Slide copy and speaker cues for the final presentation.
 Target: 10 slides total, around 55-65 seconds per slide.
 
 ## Slide 1 - Title and Client Promise
@@ -20,7 +20,7 @@ On-slide bullets:
 Visuals to place:
 
 - System screenshot collage (MainWindow, CustomerWindow, AdminWindow)
-- Your name, section, and date
+- Presenter name, section, and date
 
 Speaker cue:
 
@@ -81,7 +81,7 @@ On-slide bullets:
 
 Visuals to place:
 
-- 4-step flow images from your running app
+- 4-step flow images from the running app
 
 Speaker cue:
 

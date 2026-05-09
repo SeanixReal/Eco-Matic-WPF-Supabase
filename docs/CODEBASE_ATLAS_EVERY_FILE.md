@@ -1,8 +1,8 @@
 # Eco-Matic Codebase Atlas (Every Meaningful File)
 
-This is your complete study map of the repository (excluding generated folders like bin, obj, .git, .vs, artifacts).
+This atlas maps the main project files used by the Eco-Matic WPF, Supabase, and Arduino implementation. Generated folders such as `bin`, `obj`, `.git`, `.vs`, and `artifacts` are intentionally excluded.
 
-Use this to build full confidence before presentation and Q and A.
+It is meant as a practical reference for maintenance, walkthroughs, and final project review.
 
 ## 1) System Mental Model in 30 Seconds
 
@@ -129,18 +129,17 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 - docs/CODE_REVIEW.md - findings, limitations, and review notes
 - docs/DIAGRAMS.md - diagram index and order guidance
 - docs/MAINTAINER_GUIDE.md - maintenance workflow notes
-- docs/PROFESSOR_ARCHITECTURE_GUIDE.md - defense-ready architecture narrative
+- docs/PROFESSOR_ARCHITECTURE_GUIDE.md - architecture explanation guide
 - docs/PROFESSOR_CLASS_DATABASE_QA.md - class/database Q and A guide
 - docs/SUPABASE_AUDIT.md - Supabase audit snapshots and findings
 - docs/Supabase_Migration.md - migration background
 - docs/USER_MANUAL.md - end-user operation guide
 
-### Presentation docs created for your defense
+### Presentation and project review docs
 
 - docs/FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md - full presentation planning guide
 - docs/FINAL_PROJECT_POWERPOINT_CONTENTS.md - slide content copy
 - docs/FINAL_PROJECT_PRESENTATION_SCRIPT.md - client-pitch script with Q and A
-- docs/PREVIOUS_PPT_REVIEW.md - old deck gap analysis
 - docs/PITCH_TIMED_SCRIPT_10_MIN_STRICT.md - strict timed script
 - docs/PITCH_ONE_PAGE_CUE_CARD.md - one-page memory card
 - docs/ADVANCED_QA_COMPLEX_FUNCTIONS.md - advanced technical Q and A bank
@@ -167,18 +166,14 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 - docs/sql/migrations/supabase/migration_increment7.sql - Supabase schema migration
 - docs/sql/migrations/supabase/migration_increment8_qr_payments.sql - QR payments schema migration
 - docs/sql/migrations/supabase/migration_increment9_user_machine_assignments.sql - user-machine scope migration
+- docs/sql/migrations/supabase/migration_increment10_catalog_soft_delete.sql - catalog soft-delete migration
 - docs/sql/seeds/seed_inventory.sql - seed data script
 
 ### Archive
 
 - docs/archive/OOP2_Project-Proposal.pdf - archived proposal document
 
-## 10) VS Code Workspace Files
-
-- .vscode/arduino.json - Arduino extension/workspace settings
-- .vscode/c_cpp_properties.json - C/C++ tooling settings
-
-## 11) Asset Files
+## 10) Asset Files
 
 ### Audio assets
 
@@ -186,6 +181,12 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 - Assets/Audio/coins.mp3 - coin insert effect
 - Assets/Audio/lobby.mp3 - background/lobby audio
 - Assets/Audio/success.mp3 - success/confirmation effect
+
+### GIF demo assets
+
+- Assets/Gifs/EcoMatic-Admin.gif - admin management demo recording
+- Assets/Gifs/EcoMatic-Customer.gif - customer vending demo recording
+- Assets/Gifs/EcoMatic-Inventory.gif - inventory management demo recording
 
 ### Image assets
 
@@ -206,9 +207,9 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 - Assets/Images/Sting.png - product image
 - Assets/Images/ZestOOrange.png - product image
 
-## 12) High-Value Study Path (Know It In and Out)
+## 11) Suggested Review Path
 
-### Pass 1 (30 minutes) - Flow confidence
+### Pass 1 - Runtime flow
 
 Read in this order:
 
@@ -218,7 +219,7 @@ Read in this order:
 4. Data/DataStore.cs
 5. Data/SupabaseSessionCoordinator.cs
 
-### Pass 2 (40 minutes) - Data and hardware confidence
+### Pass 2 - Data and hardware
 
 Read in this order:
 
@@ -228,7 +229,7 @@ Read in this order:
 4. Data/ArduinoService.cs
 5. Data/ReceiptPrinterService.cs
 
-### Pass 3 (30 minutes) - Diagram + defense confidence
+### Pass 3 - Diagrams and explanation notes
 
 Read in this order:
 
@@ -237,7 +238,7 @@ Read in this order:
 3. docs/PROFESSOR_ARCHITECTURE_GUIDE.md
 4. docs/ADVANCED_QA_COMPLEX_FUNCTIONS.md
 
-## 13) The 12 Functions You Must Be Able to Explain
+## 12) Important Runtime Functions
 
 - MainWindow Arduino_OnCardScanned
 - SupabaseSessionCoordinator PrepareCustomerModeAsync
@@ -252,4 +253,4 @@ Read in this order:
 - SupabaseStore InsertQueuedReceiptSession
 - ArduinoService SerialPort_DataReceived
 
-If you can explain those 12 clearly, you can defend almost every major runtime behavior of this codebase.
+These methods cover the main customer, admin, database, receipt, and hardware behaviors in the project.

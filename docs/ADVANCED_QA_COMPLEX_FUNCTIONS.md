@@ -1,9 +1,9 @@
 # Advanced Q and A Bank (Complex Functions and Architecture)
 
-Use this for the 5-minute Q and A and defense practice.
+This bank supports the 5-minute Q and A and technical review.
 Each answer has:
-- short answer (what to say live)
-- deep follow-up (if professor asks deeper)
+- short answer
+- deeper explanation
 - code anchor (where it happens)
 
 ## 1) How exactly does the app communicate with Arduino?
@@ -22,7 +22,7 @@ Code anchor:
 - MainWindow.xaml.cs
 - Data/SupabaseStore_Customers.cs
 
-## 2) Why is your RFID handling asynchronous?
+## 2) Why is RFID handling asynchronous?
 
 Short answer:
 
@@ -36,7 +36,7 @@ Code anchor:
 
 - MainWindow.xaml.cs (Arduino_OnCardScanned)
 
-## 3) How does your database connection really work without raw PostgreSQL driver code?
+## 3) How does the database connection work without raw PostgreSQL driver code?
 
 Short answer:
 
@@ -52,7 +52,7 @@ Code anchor:
 - Data/SupabaseStore.cs
 - Data/AppEnvironment.cs
 
-## 4) Why separate items and machine_inventory in your schema?
+## 4) Why separate items and machine_inventory in the schema?
 
 Short answer:
 
@@ -67,7 +67,7 @@ Code anchor:
 - docs/diagrams/ERD.md
 - Data/SupabaseStore.cs (GetMachineInventory, AddItemToMachineSlot, UpdateMachineInventoryAssignment)
 
-## 5) How do you prevent invalid inventory slot assignments?
+## 5) How are invalid inventory slot assignments prevented?
 
 Short answer:
 
@@ -81,7 +81,7 @@ Code anchor:
 
 - Data/SupabaseStore.cs (TryValidateSlotForMachine, TryValidateStockValues)
 
-## 6) Explain your customer-mode Supabase connectivity behavior clearly.
+## 6) What is the customer-mode Supabase connectivity behavior?
 
 Short answer:
 
@@ -96,7 +96,7 @@ Code anchor:
 - Data/SupabaseSessionCoordinator.cs
 - Data/SupabaseStore.cs
 
-## 7) Is your app fully offline?
+## 7) Is the app fully offline?
 
 Short answer:
 
@@ -174,7 +174,7 @@ Code anchor:
 - Data/SupabaseStore.cs (AuthenticateUserAccess)
 - AdminWindow.xaml.cs (SetupUIForRole, SetActiveViewAsync, BuildAssignedMachineRowFilter)
 
-## 12) How do you handle map-based machine location?
+## 12) How is map-based machine location handled?
 
 Short answer:
 
@@ -191,7 +191,7 @@ Code anchor:
 - AddMachineWindow.xaml.cs
 - EditMachineWindow.xaml.cs
 
-## 13) What are your biggest technical risks right now?
+## 13) What are the biggest technical risks right now?
 
 Short answer:
 
@@ -208,7 +208,7 @@ Code anchor:
 - docs/CODE_REVIEW.md
 - docs/SUPABASE_AUDIT.md
 
-## 14) If a client asks why they should trust this as a pilot platform, what do you say?
+## 14) Why is this credible as a pilot platform?
 
 Short answer:
 
@@ -226,7 +226,7 @@ Code anchor:
 - Data/SupabaseStore.cs
 - Data/ArduinoService.cs
 
-## 15) Defense line when you need a precise pause
+## 15) Precise Pause Line
 
 "I will answer this in implementation order: layer, runtime flow, code anchor, and design reason."
 

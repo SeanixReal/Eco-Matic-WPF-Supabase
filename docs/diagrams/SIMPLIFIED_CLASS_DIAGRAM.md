@@ -1,6 +1,6 @@
 # Simplified Grouped Class Diagram
 
-Use this version for presentation slides. It keeps only the core classes your audience needs to understand the system.
+This version keeps only the core classes needed to understand the system at a high level.
 
 ```mermaid
 classDiagram
