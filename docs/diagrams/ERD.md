@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-This ERD reflects the live Supabase public schema verified through the Supabase MCP tool on 2026-04-30 and rechecked during the final presentation audit. It was updated on 2026-05-01 for the application-level receipt point-accounting update and the `items` soft-delete catalog design in migration increment 10.
+This ERD reflects the live Supabase public schema verified on 2026-04-30 and rechecked during the final presentation audit. It was updated on 2026-05-01 for the application-level receipt point-accounting update and the `items` soft-delete catalog design in migration increment 10.
 
 ```mermaid
 erDiagram

@@ -57,7 +57,7 @@ flowchart TD
     J -- RFID scan --> AN[ArduinoService raises card scanned event]
     AN --> AO[MainWindow checks customers table through SupabaseStore]
     AO --> AP{RFID registered?}
-    AP -- No --> AQ[Send prompt and open CustomerRegistrationWindow]
+    AP -- No --> AQ[Show registration message and open CustomerRegistrationWindow]
     AQ --> AR[Register customer in customers table]
     AR --> J
     AP -- Yes --> AS[Send valid response and open CustomerDashboardWindow]

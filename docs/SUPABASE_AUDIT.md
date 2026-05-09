@@ -2,7 +2,7 @@
 
 Audit date: `2026-04-23`
 
-This document records the live Supabase state verified through Supabase MCP against:
+This document records the live Supabase state verified against:
 
 - project URL: `https://woyadcahjkutrowkzryv.supabase.co`
 
@@ -50,7 +50,7 @@ Live machine data observed:
 
 ## Live Migrations
 
-Current live migrations reported by Supabase MCP:
+Current live migrations reported by Supabase:
 
 1. `20260419131253 create_ecomatic_schema`
 2. `20260419131307 enable_rls_policies`

@@ -117,9 +117,7 @@ For current architecture and review status, use:
 7. redesign backend/auth before attempting strict RLS on live Supabase tables
 8. monitor Supabase advisor results after demo traffic; newly created indexes can appear unused until queries hit them
 
-## If You Ask AI To Help
-
-Tell the AI these facts up front:
+## Project Facts To Keep Consistent
 
 - backend is Supabase
 - docs live in `docs/`

@@ -176,7 +176,7 @@ What We Can Deploy Now and Improve Next
 On-slide bullets:
 
 - Current-ready value: customer vending, admin machine control, and reporting
-- Documentation-ready handoff: ERD, class diagram, architecture flow
+- Submission-ready documentation: ERD, class diagram, architecture flow
 - Known limits are transparent and manageable
 - Next upgrades: stronger security, broader offline support, deeper telemetry integration
 

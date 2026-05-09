@@ -32,12 +32,6 @@ Use this to build full confidence before presentation and Q and A.
 - App.xaml - WPF application resources/startup declaration
 - App.xaml.cs - app startup bootstrapping code
 
-### Project Process Docs (Non-runtime)
-
-- AGENTS.md - agent workflow notes
-- AI_HANDOFF.md - handoff notes for AI-assisted maintenance
-- CLAUDE.md - additional process notes
-
 ## 3) UI Window Files (Presentation and Flow Layer)
 
 Each screen is split into .xaml (layout) and .xaml.cs (logic).
@@ -138,7 +132,6 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 - docs/PROFESSOR_ARCHITECTURE_GUIDE.md - defense-ready architecture narrative
 - docs/PROFESSOR_CLASS_DATABASE_QA.md - class/database Q and A guide
 - docs/SUPABASE_AUDIT.md - Supabase audit snapshots and findings
-- docs/SUPABASE_MCP_ANALYSIS.md - Supabase MCP analysis notes
 - docs/Supabase_Migration.md - migration background
 - docs/USER_MANUAL.md - end-user operation guide
 

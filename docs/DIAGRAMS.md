@@ -2,7 +2,7 @@
 
 This is the diagram index for the current WPF + Supabase codebase.
 
-Database details were verified against the live Supabase project through the Supabase MCP tool on 2026-04-30. The live public schema currently exposes the Supabase-backed vending, inventory, sales, event log, customer, receipt, recyclable item, QR payment, and staff-assignment tables used by the app.
+Database details were verified against the live Supabase project on 2026-04-30. The live public schema currently exposes the Supabase-backed vending, inventory, sales, event log, customer, receipt, recyclable item, QR payment, and staff-assignment tables used by the app.
 
 ## Diagram Files
 
