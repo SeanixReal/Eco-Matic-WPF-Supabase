@@ -114,6 +114,7 @@ The application requires live Supabase connectivity for customer and admin data 
 ## Documentation
 
 - `docs/README.md` - documentation index
+- `docs/FINAL_PROJECT_DOCUMENTATION.md` - formal final project documentation
 - `docs/CODEBASE_ARCHITECTURE.md` - architecture overview
 - `docs/DIAGRAMS.md` - diagram index
 - `docs/CODE_REVIEW.md` - implementation review notes

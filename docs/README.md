@@ -5,19 +5,21 @@ This folder contains the main documentation for the current Eco-Matic WPF, Supab
 ## Suggested Reading Order
 
 1. `CODEBASE_ARCHITECTURE.md`
-2. `CODE_REVIEW.md`
-3. `SUPABASE_AUDIT.md`
-4. `sql/README.md`
-5. `DIAGRAMS.md`
-6. `MAINTAINER_GUIDE.md`
-7. `DEMO_CRUD_READINESS.md`
-8. `PROFESSOR_ARCHITECTURE_GUIDE.md`
-9. `PROFESSOR_CLASS_DATABASE_QA.md`
-10. `USER_MANUAL.md`
+2. `FINAL_PROJECT_DOCUMENTATION.md`
+3. `CODE_REVIEW.md`
+4. `SUPABASE_AUDIT.md`
+5. `sql/README.md`
+6. `DIAGRAMS.md`
+7. `MAINTAINER_GUIDE.md`
+8. `DEMO_CRUD_READINESS.md`
+9. `PROFESSOR_ARCHITECTURE_GUIDE.md`
+10. `PROFESSOR_CLASS_DATABASE_QA.md`
+11. `USER_MANUAL.md`
 
 ## Main Contents
 
 - Architecture overview and runtime flow notes
+- Formal final project documentation
 - Mermaid diagrams under `diagrams/`
 - Class/database explanation and Q&A notes
 - Code review and maintenance notes
@@ -28,6 +30,7 @@ This folder contains the main documentation for the current Eco-Matic WPF, Supab
 
 ## Presentation Materials
 
+- `FINAL_PROJECT_DOCUMENTATION.md`
 - `PRESENTATION_READY_MASTER_INDEX.md`
 - `FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md`
 - `FINAL_PROJECT_POWERPOINT_CONTENTS.md`

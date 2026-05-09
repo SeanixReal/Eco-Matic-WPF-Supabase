@@ -125,6 +125,7 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 ### Main docs
 
 - docs/README.md - docs index
+- docs/FINAL_PROJECT_DOCUMENTATION.md - formal final project documentation
 - docs/CODEBASE_ARCHITECTURE.md - architecture-level breakdown
 - docs/CODE_REVIEW.md - findings, limitations, and review notes
 - docs/DIAGRAMS.md - diagram index and order guidance
@@ -138,6 +139,7 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 ### Presentation and project review docs
 
 - docs/FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md - full presentation planning guide
+- docs/FINAL_PROJECT_DOCUMENTATION.md - formal project documentation in report format
 - docs/FINAL_PROJECT_POWERPOINT_CONTENTS.md - slide content copy
 - docs/FINAL_PROJECT_PRESENTATION_SCRIPT.md - client-pitch script with Q and A
 - docs/PITCH_TIMED_SCRIPT_10_MIN_STRICT.md - strict timed script
