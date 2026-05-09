@@ -126,7 +126,7 @@ Each screen is split into .xaml (layout) and .xaml.cs (logic).
 
 - docs/README.md - docs index
 - docs/FINAL_PROJECT_DOCUMENTATION.md - formal final project documentation
-- docs/Eco-Matic-Final-Project-Documentation.docx - Word version of the final project documentation
+- docs/Eco-Matic-Final-Project-Documentation-Formatted.docx - formatted Word version of the final project documentation
 - docs/CODEBASE_ARCHITECTURE.md - architecture-level breakdown
 - docs/CODE_REVIEW.md - findings, limitations, and review notes
 - docs/DIAGRAMS.md - diagram index and order guidance

@@ -6,6 +6,12 @@
 
 Eco-Matic is a smart vending machine system that combines product purchasing, recycling rewards, admin inventory management, sales reporting, and RFID-assisted customer accounts. The project is designed to show how a desktop application can coordinate user interface logic, cloud database access, and physical hardware feedback in one working system.
 
+The project is also motivated by a local environmental concern. In busy urban areas such as Cebu City, improper waste disposal and visible litter remain common problems in public spaces. Eco-Matic responds to that issue by turning recycling into a simple incentive: customers can recycle eligible items, earn eco-credits, and use those credits toward vending purchases. This connects everyday buying behavior with responsible waste handling.
+
+### Sustainability Motivation
+
+Eco-Matic supports the idea behind Sustainable Development Goal 12: Responsible Consumption and Production. Instead of treating bottles and cans only as trash, the system encourages users to return recyclable materials by giving them practical value through eco-credits. The goal is not only to sell items, but also to promote cleaner surroundings and more responsible consumption habits.
+
 ### Features
 
 - Customer vending screen with 12 visible product slots
@@ -13,6 +19,7 @@ Eco-Matic is a smart vending machine system that combines product purchasing, re
 - Cash and QR-paid balance purchasing flow
 - RFID customer registration and eco-credit saving
 - Eco-point payment support for registered RFID customers
+- Recycling incentive flow aligned with SDG 12: Responsible Consumption and Production
 - Global item catalog management
 - Per-machine slot inventory, stock, capacity, and optional item price overrides
 - Admin dashboard with machines, users, customers, logs, inventory, and sales reports
@@ -26,6 +33,7 @@ The system is intended for:
 
 - vending machine operators who need inventory and sales visibility
 - customers who want a simple vending flow with optional recycling rewards
+- students and community users who can be encouraged to recycle through small purchase incentives
 - administrators who manage machines, items, users, customers, and reports
 - classroom evaluators reviewing object-oriented design, database design, and hardware integration
 
@@ -272,6 +280,7 @@ The system provides feedback for:
 - Keeping the customer 12-slot UI aligned with normalized database slot IDs
 - Separating global catalog data from machine-specific inventory data
 - Preserving sales report history after a catalog item is deleted
+- Designing the recycling reward flow so it encourages proper disposal without making the vending process complicated
 - Keeping duplicate slots for the same item consistent within one machine
 - Preventing slow Supabase/RFID operations from freezing the WPF UI
 - Handling hardware responses quickly enough for Arduino feedback
@@ -281,6 +290,7 @@ The system provides feedback for:
 
 - `items` stores the shared product catalog, while `machine_inventory` stores per-machine slot state.
 - Catalog deletion uses soft delete so active screens hide removed items while historical reports remain readable.
+- Recyclable item definitions make eco-credit values configurable instead of hard-coded.
 - Inventory validation enforces slots `1` through `12` and blocks duplicate slot assignment.
 - Machine item price overrides are synchronized for the same item within the same machine.
 - RFID lookup and registration operations run asynchronously before updating UI controls.
@@ -340,6 +350,7 @@ The tested flows confirm that the system supports its main demo requirements:
 - Stricter Supabase Row Level Security policies
 - More complete offline mode for temporary disconnected operation
 - Better telemetry support for ESP32 or vending machine sensors
+- Clearer sustainability analytics, such as recycled item counts and estimated waste diverted
 - Expanded reporting for sales forecasting and restock planning
 - More automated test coverage for inventory, receipts, and RFID flows
 
@@ -355,7 +366,7 @@ The tested flows confirm that the system supports its main demo requirements:
 
 ### Reflection
 
-Eco-Matic demonstrates how a desktop application can connect user interface workflows, relational data design, cloud services, and physical hardware. The project moved beyond a simple CRUD application by adding machine-specific inventory, RFID customer accounts, QR payment simulation, receipts, sales reporting, and Arduino feedback.
+Eco-Matic demonstrates how a desktop application can connect user interface workflows, relational data design, cloud services, and physical hardware. The project moved beyond a simple CRUD application by adding machine-specific inventory, RFID customer accounts, QR payment simulation, receipts, sales reporting, and Arduino feedback. It also connects the system design to a community issue by encouraging recycling through credits that can be used for purchases.
 
 ### Takeaways
 
@@ -365,6 +376,7 @@ The most important technical takeaways are:
 - normalized database design matters when the same product can exist in many machines
 - hardware integration needs fast and clear response handling
 - good documentation helps connect the running app, code structure, ERD, and class diagrams
+- SDG-based design can make a software project more meaningful by connecting technical features to real environmental behavior
 - known limitations should be documented clearly so future improvements have a realistic direction
 
 ## Appendix
@@ -393,6 +405,7 @@ https://github.com/SeanixReal/Eco-Matic-WPF-Supabase
 ### References
 
 - Microsoft .NET and WPF documentation
+- United Nations Sustainable Development Goal 12: Responsible Consumption and Production
 - Supabase PostgreSQL, PostgREST, and Edge Function documentation
 - Arduino serial communication documentation
 - RC522 RFID reader references
