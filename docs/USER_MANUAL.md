@@ -126,11 +126,11 @@ The current code marks low-stock alerts when stock is `3` or below.
 - customer mode, admin mode, and RFID account updates require internet access and live Supabase connectivity
 - older Supabase schemas need `docs/sql/migrations/supabase/migration_increment3.sql` before per-machine item price overrides work
 - older Supabase schemas missing `client_sync_id` columns on activity tables need `docs/sql/migrations/supabase/migration_increment4.sql`
-- see `docs/SUPABASE_AUDIT.md` for the latest live schema and security findings
 
 ## 8. Where To Read More
 
 - architecture: `docs/CODEBASE_ARCHITECTURE.md`
 - diagrams: `docs/DIAGRAMS.md`
-- maintainer notes: `docs/MAINTAINER_GUIDE.md`
 - professor guide: `docs/PROFESSOR_ARCHITECTURE_GUIDE.md`
+- class and database guide: `docs/PROFESSOR_CLASS_DATABASE_QA.md`
+- Supabase migration guide: `docs/Supabase_Migration.md`

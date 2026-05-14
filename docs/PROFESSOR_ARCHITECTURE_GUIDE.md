@@ -2,11 +2,11 @@
 
 This document summarizes the architecture of Eco-Matic for project discussion and review.
 
-For a deeper class-by-class explanation and database Q&A script, use `docs/PROFESSOR_CLASS_DATABASE_QA.md` together with the separated diagrams linked from `docs/DIAGRAMS.md`.
+For a deeper class-by-class explanation and database Q&A guide, use `docs/PROFESSOR_CLASS_DATABASE_QA.md` together with the separated diagrams linked from `docs/DIAGRAMS.md`.
 
-## 1. Short Opening
+## 1. Short Overview
 
-Suggested opening:
+Summary:
 
 > Eco-Matic is a WPF desktop application for a smart vending machine with recycling incentives. Architecturally, it combines a presentation layer, a service layer, a relational backend accessed through Supabase REST, and an Arduino hardware integration layer for RFID scanning and LCD feedback.
 
@@ -198,49 +198,49 @@ These points show the current scope clearly and leave room for future improvemen
 
 ### Why use code-behind instead of full MVVM?
 
-Suggested answer:
+Answer:
 
 > I used an MVVM-lite approach because it kept the project manageable for the scope and deadline. I still separated reusable logic into service classes like `SupabaseStore`, `ArduinoService`, and `ImageLoader` so the UI code is not directly coupled to backend or hardware implementation details.
 
 ### Why is `DataStore` static?
 
-Suggested answer:
+Answer:
 
 > I used `DataStore` as a shared session state container for customer mode. It simplifies passing the active inventory and transaction state across the customer-facing workflow without repeatedly querying the backend.
 
 ### Why use `machine_inventory` instead of putting stock directly in `items`?
 
-Suggested answer:
+Answer:
 
 > Stock belongs to a machine slot, not to the global product definition. A product like Coca Cola can exist in many machines, but each machine can have a different stock level and slot assignment.
 
 ### Why not always physically delete sold catalog items?
 
-Suggested answer:
+Answer:
 
 > Sales reports still need the old product name and type. I use soft delete on `items`, so deleted products disappear from active catalog and vending workflows but remain available for historical joins from `sales_transactions`.
 
 ### How is role-based access control enforced?
 
-Suggested answer:
+Answer:
 
 > Authentication happens in `SupabaseStore.AuthenticateUserAccess()`, and then `AdminWindow` checks the returned role and assigned machine IDs. Based on that role, it hides restricted views and limits machine access for inventory managers.
 
 ### How does hardware interact with the desktop app?
 
-Suggested answer:
+Answer:
 
 > `ArduinoService` communicates with the Arduino over serial. When an RFID is scanned, the service raises an event. `MainWindow` listens to that event and decides whether to open customer registration or the customer dashboard. The app also sends LCD messages and validation responses back to the Arduino.
 
 ### Why is there both a database service and a `DataStore`?
 
-Suggested answer:
+Answer:
 
 > `SupabaseStore` handles cloud persistence, `SupabaseSessionCoordinator` centralizes customer-mode Supabase availability and session writes, and `DataStore` holds temporary in-memory state for the active vending session. That lets the customer UI react quickly while still keeping backend access in service classes.
 
 ### Does the app support disconnected operation?
 
-Suggested answer:
+Answer:
 
 > No. The current build is intentionally Supabase-only. If Supabase is unreachable, customer/admin data features show a connectivity message instead of using a local database fallback.
 
@@ -270,9 +270,9 @@ These files give a compact walkthrough of the system:
 - `Models/Product.cs`
 - `Models/Transaction.cs`
 
-## 9. Closing Statement
+## 9. Closing Summary
 
-Suggested closing:
+Summary:
 
 > The main architectural strength of Eco-Matic is that it separates UI behavior, backend access, domain modeling, and hardware communication while still keeping the project simple enough to maintain as a student system.
 

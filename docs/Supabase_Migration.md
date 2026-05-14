@@ -15,7 +15,7 @@ Instead of maintaining a persistent database socket connection, the application 
 - `Data/SupabaseStore.cs` and `Data/SupabaseStore_Customers.cs`: the application-level replacement for the old `MySqlStore`. The store exposes mostly synchronous methods so the existing WPF event-handler structure can continue to work while the lower-level HTTP calls remain asynchronous.
 
 ## Database Schema
-The database uses Row-Level Security (RLS) to ensure security while allowing the application to read and write data using the public `publishable` key.
+The database uses Row-Level Security (RLS) with project/demo policies that allow the application to read and write data using the configured Supabase API key.
 
 The following tables exist in the `public` schema:
 - `roles`
@@ -36,4 +36,4 @@ Because the system now relies on Supabase's REST API, ESP32 integration can use 
 The code to operate the ESP32 has been moved to a dedicated file: `Data/Esp32SupabaseClient.ino`.
 
 ## Security Note
-The app currently uses a Supabase anon/publishable key from environment configuration. The live policies are permissive for project/demo use, so a production version should rotate exposed keys and tighten Row Level Security policies before deployment.
+The app currently uses a Supabase anon/publishable key from environment configuration. The live policies are permissive for project/demo use, so a production version should use fresh environment-specific keys and tighten Row Level Security policies before deployment.

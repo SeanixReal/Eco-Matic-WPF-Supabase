@@ -1,46 +1,41 @@
 # Eco-Matic Documentation Index
 
-This folder contains the main documentation for the current Eco-Matic WPF, Supabase, and Arduino implementation.
+This folder contains the professor-facing documentation for the current Eco-Matic WPF, Supabase, and Arduino implementation.
 
 ## Suggested Reading Order
 
-1. `CODEBASE_ARCHITECTURE.md`
-2. `FINAL_PROJECT_DOCUMENTATION.md`
-3. `CODE_REVIEW.md`
-4. `SUPABASE_AUDIT.md`
-5. `sql/README.md`
-6. `DIAGRAMS.md`
-7. `MAINTAINER_GUIDE.md`
-8. `DEMO_CRUD_READINESS.md`
-9. `PROFESSOR_ARCHITECTURE_GUIDE.md`
-10. `PROFESSOR_CLASS_DATABASE_QA.md`
-11. `USER_MANUAL.md`
+1. `FINAL_PROJECT_DOCUMENTATION.md`
+2. `Eco-Matic-Final-Project-Documentation-Formatted.docx`
+3. `Eco-Matic-Final-Project-Documentation.pdf`
+4. `CODEBASE_ARCHITECTURE.md`
+5. `DIAGRAMS.md`
+6. `PROFESSOR_ARCHITECTURE_GUIDE.md`
+7. `PROFESSOR_CLASS_DATABASE_QA.md`
+8. `USER_MANUAL.md`
+9. `Supabase_Migration.md`
+10. `sql/README.md`
 
 ## Main Contents
 
 - Architecture overview and runtime flow notes
 - Formal final project documentation
-- Formatted Word version of the final project documentation
+- Formatted Word and PDF versions of the final project documentation
 - Mermaid diagrams under `diagrams/`
 - Class/database explanation and Q&A notes
-- Code review and maintenance notes
-- Demo CRUD readiness checklist
 - Database setup, migration, and seed SQL under `sql/`
 - User manual
-- Archived proposal material in `archive/`
 
-## Presentation Materials
+## Submission Documents
 
 - `FINAL_PROJECT_DOCUMENTATION.md`
 - `Eco-Matic-Final-Project-Documentation-Formatted.docx`
-- `PRESENTATION_READY_MASTER_INDEX.md`
-- `FINAL_PROJECT_PRESENTATION_DOCUMENTATION.md`
-- `FINAL_PROJECT_POWERPOINT_CONTENTS.md`
-- `FINAL_PROJECT_PRESENTATION_SCRIPT.md`
-- `PITCH_TIMED_SCRIPT_10_MIN_STRICT.md`
-- `PITCH_ONE_PAGE_CUE_CARD.md`
-- `ADVANCED_QA_COMPLEX_FUNCTIONS.md`
-- `CODEBASE_ATLAS_EVERY_FILE.md`
+- `Eco-Matic-Final-Project-Documentation.pdf`
+- `CODEBASE_ARCHITECTURE.md`
+- `DIAGRAMS.md`
+- `PROFESSOR_ARCHITECTURE_GUIDE.md`
+- `PROFESSOR_CLASS_DATABASE_QA.md`
+- `USER_MANUAL.md`
+- `Supabase_Migration.md`
 
 ## SQL References
 
@@ -55,7 +50,7 @@ This folder contains the main documentation for the current Eco-Matic WPF, Supab
 - `sql/migrations/supabase/migration_increment9_user_machine_assignments.sql`
 - `sql/migrations/supabase/migration_increment10_catalog_soft_delete.sql`
 
-Historical MySQL scripts remain under `sql/archive/mysql/` for reference only. The running application uses Supabase.
+Only the Supabase migration path is included in the submission. The running application uses Supabase.
 
 ## Current Stack
 

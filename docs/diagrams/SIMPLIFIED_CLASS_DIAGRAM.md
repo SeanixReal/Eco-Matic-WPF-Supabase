@@ -152,6 +152,6 @@ classDiagram
 - `Models` are the product, recycle, and receipt objects used at runtime.
 - `Services` isolate hardware, QR payment, and receipt printing.
 - `Infrastructure` is the Supabase-backed data path.
-- `ArduinoService` owns the customer `STATE:ACTIVE` and main-screen `STATE:AFK` hardware commands shown in the README hardware GIFs.
+- `ArduinoService` owns the customer `STATE:ACTIVE` and main-screen `STATE:AFK` hardware commands.
 - The app now uses Supabase directly; the old local database fallback path has been removed.
 - Catalog delete lives in `SupabaseStore`: clear vending slots first, then soft-delete the catalog row for report-safe history.

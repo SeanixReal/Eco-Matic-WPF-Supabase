@@ -6,8 +6,8 @@ const char* password = "YOUR_WIFI_PASSWORD";
 
 // Supabase Configuration
 // You can find your URL and Anon Key in your Supabase Dashboard under Settings > API
-const char* supabase_url_telemetry = "https://woyadcahjkutrowkzryv.supabase.co/rest/v1/esp32_telemetry";
-const char* supabase_url_commands = "https://woyadcahjkutrowkzryv.supabase.co/rest/v1/esp32_commands";
+const char* supabase_url_telemetry = "https://your-project-ref.supabase.co/rest/v1/esp32_telemetry";
+const char* supabase_url_commands = "https://your-project-ref.supabase.co/rest/v1/esp32_commands";
 const char* supabase_anon_key = "YOUR_SUPABASE_ANON_KEY"; 
 
 void setup() {

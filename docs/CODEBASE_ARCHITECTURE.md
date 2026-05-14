@@ -275,9 +275,7 @@ Current staff-role detail:
 - The architecture uses inheritance in the product model and event-driven programming in the Arduino integration.
 - The schema supports multiple vending machines, not just one machine.
 
-## 8. Historical Documentation Note
-
-Some older archived files in the repository describe an earlier local-database direction.
+## 8. Current Implementation Notes
 
 For the current codebase, the accurate implementation is:
 
@@ -288,11 +286,11 @@ For the current codebase, the accurate implementation is:
 
 Conceptually, the schema is still relational, so the ERD explanation remains valid, but the access technology has changed and the live schema now also includes receipt history, QR payment intents, recyclable item definitions, and multi-machine staff assignments.
 
-For the live Supabase audit status, migrations, and current auth/RLS findings, see `docs/SUPABASE_AUDIT.md`.
+For database setup and migration details, see `docs/Supabase_Migration.md` and `docs/sql/README.md`.
 
-## 9. Current Review Notes
+## 9. Current Scope Notes
 
-The latest review found these implementation caveats:
+Current implementation caveats:
 
 - the customer UI has 12 visible slots, and the backend now enforces that limit for machine inventory
 - `DataStore.Initialize()` now maps products to customer slots using the real normalized `slot_id`
@@ -300,5 +298,3 @@ The latest review found these implementation caveats:
 - password fields are currently stored and compared directly even though some field names still say `password_hash`
 - the image strategy is local-first rather than Supabase Storage-first to keep classroom/demo behavior reliable
 - customer mode, admin mode, and RFID persistence require live Supabase connectivity
-
-See `docs/CODE_REVIEW.md` for the detailed review.

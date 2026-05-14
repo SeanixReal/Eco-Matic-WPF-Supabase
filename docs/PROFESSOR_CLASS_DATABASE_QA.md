@@ -423,6 +423,6 @@ Answer:
 
 ## 9. Strong Closing Statement
 
-Suggested closing:
+Closing summary:
 
 > The strongest part of Eco-Matic's architecture is that it separates responsibilities. WPF windows handle user interaction, service classes handle database, hardware, payment, and printing, model classes represent vending concepts, and Supabase stores normalized persistent data.

@@ -54,7 +54,7 @@ Eco-Matic is a WPF desktop application for a smart vending machine with recyclin
 - `Arduino/` - RFID scanner firmware and hardware setup notes
 - `Assets/Images/` - local product images used by the vending UI
 - `Assets/Gifs/` - UI and hardware demo recordings used in this README
-- `docs/` - architecture notes, diagrams, SQL references, review notes, and user documentation
+- `docs/` - final project documentation, architecture notes, diagrams, SQL references, and user documentation
 
 ## Setup
 
@@ -124,10 +124,11 @@ The application requires live Supabase connectivity for customer and admin data 
 - `docs/README.md` - documentation index
 - `docs/FINAL_PROJECT_DOCUMENTATION.md` - formal final project documentation
 - `docs/Eco-Matic-Final-Project-Documentation-Formatted.docx` - formatted Word version of the final documentation
+- `docs/Eco-Matic-Final-Project-Documentation.pdf` - PDF export of the final documentation
 - `docs/CODEBASE_ARCHITECTURE.md` - architecture overview
 - `docs/DIAGRAMS.md` - diagram index
-- `docs/CODE_REVIEW.md` - implementation review notes
-- `docs/SUPABASE_AUDIT.md` - database audit notes
+- `docs/PROFESSOR_ARCHITECTURE_GUIDE.md` - architecture discussion guide
+- `docs/PROFESSOR_CLASS_DATABASE_QA.md` - class and database explanation guide
 - `docs/USER_MANUAL.md` - user operation guide
 
 ## Current Scope

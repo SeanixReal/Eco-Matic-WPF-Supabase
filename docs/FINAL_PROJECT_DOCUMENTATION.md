@@ -398,9 +398,10 @@ https://github.com/SeanixReal/Eco-Matic-WPF-Supabase
 - `docs/diagrams/ERD.md`
 - `docs/diagrams/SIMPLIFIED_CLASS_DIAGRAM.md`
 - `docs/diagrams/FULL_CLASS_DIAGRAM.md`
+- `docs/PROFESSOR_ARCHITECTURE_GUIDE.md`
+- `docs/PROFESSOR_CLASS_DATABASE_QA.md`
 - `docs/USER_MANUAL.md`
-- `docs/SUPABASE_AUDIT.md`
-- `docs/CODE_REVIEW.md`
+- `docs/Supabase_Migration.md`
 
 ### References
 

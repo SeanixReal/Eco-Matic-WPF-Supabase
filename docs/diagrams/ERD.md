@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-This ERD reflects the live Supabase public schema verified on 2026-04-30 and rechecked during the final presentation audit. It was updated on 2026-05-01 for the application-level receipt point-accounting update and the `items` soft-delete catalog design in migration increment 10. The 2026-05-14 README hardware GIF update documents customer/AFK Arduino states only and does not add database entities or relationships.
+This ERD reflects the live Supabase public schema verified on 2026-04-30. It was updated on 2026-05-01 for the application-level receipt point-accounting update and the `items` soft-delete catalog design in migration increment 10.
 
 ```mermaid
 erDiagram
@@ -173,7 +173,6 @@ erDiagram
 - `user_machine_assignments` lets one inventory manager manage multiple assigned vending machines. `users.assigned_machine_id` remains as a legacy primary assignment for compatibility.
 - `qr_payment_intents` supports QR payment through the `qr-payment-confirm` Edge Function. Its `machine_id` is a nullable logical reference in the current live schema, not an enforced foreign key.
 - The 2026-05-01 foreground warning dialog and receipt point-usage fixes are application/UI changes and do not add database relationships shown here.
-- The 2026-05-14 customer hardware view and AFK mode GIF additions are documentation/media updates for serial-driven hardware states, so the ERD remains unchanged.
 - The `add_missing_foreign_key_indexes` migration adds indexes to existing foreign-key columns only. It improves lookup/delete performance but does not add entities or relationships to the ERD.
 
 Use this defense line:
