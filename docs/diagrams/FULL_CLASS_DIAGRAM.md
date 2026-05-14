@@ -224,6 +224,9 @@ classDiagram
             +event OnCardScanned
             +Start()
             +Stop()
+            +SendStateCommand()
+            +SendCustomerSessionActive()
+            +SendCustomerSessionAfk()
             +SendMessage()
             +SendResponse()
         }
@@ -414,6 +417,7 @@ classDiagram
 - `UI_Windows` contains the WPF screens and modal dialogs.
 - `Models` contains vending products, recyclable definitions, receipt/session models, and event-log models.
 - `Services_And_Utilities` isolates hardware, QR payment, receipt printing, audio, images, slot parsing, and owned message dialogs.
+- `ArduinoService` drives the README hardware-demo states: active customer mode sends `STATE:ACTIVE`, while returning to the main screen sends `STATE:AFK`.
 - `Supabase_Infrastructure` is now the only data path. `DataStore` keeps temporary customer-session state, while `SupabaseSessionCoordinator`, `SupabaseStore`, and `SupabaseClient` send all persistence to Supabase.
 - The old local database fallback classes were removed from the runtime architecture.
 - `SupabaseStore.DeleteCatalogItem()` owns history-safe catalog removal: it clears machine slot assignments, then soft-deletes the `items` row so sales reports continue to resolve product labels.

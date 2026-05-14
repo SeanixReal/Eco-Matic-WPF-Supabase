@@ -4,7 +4,8 @@
 flowchart TD
     A[Start customer session] --> B[Select vending machine]
     B --> C[DataStore initializes active machine inventory]
-    C --> D[Customer inserts cash, scans QR payment, or earns recycle points]
+    C --> C1[Send STATE:ACTIVE to Arduino customer hardware]
+    C1 --> D[Customer inserts cash, scans QR payment, or earns recycle points]
     D --> E{Enough balance for item?}
     E -- No --> D
     E -- Yes --> F[Customer selects product]
@@ -16,11 +17,14 @@ flowchart TD
     J --> K[Show dispense feedback and receipt]
     K --> L[Return remaining change]
     L --> M[End session]
+    M --> N[Return hardware to STATE:AFK attract mode]
 ```
 
 ## How to Explain It
 
 - `DataStore.Initialize()` loads the chosen machine inventory.
 - `CustomerWindow` handles balance checking, product selection, stock validation, and receipt display.
+- `CustomerWindow` sends the active customer hardware state when the vending screen opens.
+- Returning to the main screen sends the AFK hardware state so the Arduino can show rotating eco-facts and idle LED feedback.
 - `DataStore.SaveInventory()`, `DataStore.RecordSale()`, and `DataStore.SaveCompletedReceipt()` persist the customer action through the Supabase session layer.
 - Customer-mode writes go directly to Supabase; there is no local database fallback in the current build.

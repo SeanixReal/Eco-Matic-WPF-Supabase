@@ -16,6 +16,14 @@ Eco-Matic is a WPF desktop application for a smart vending machine with recyclin
 
 ![Inventory management flow](Assets/Gifs/EcoMatic-Inventory.gif)
 
+### Customer Hardware View
+
+![Customer mode hardware view](Assets/Gifs/CustomerMode-Hardware.gif)
+
+### AFK Hardware Mode
+
+![AFK mode hardware view](Assets/Gifs/AFKMode-Hardware.gif)
+
 ## Main Features
 
 - Customer vending screen with a 12-slot machine layout
@@ -26,7 +34,7 @@ Eco-Matic is a WPF desktop application for a smart vending machine with recyclin
 - Global item catalog separated from per-machine inventory slots
 - Machine-specific stock, capacity, and optional item price overrides
 - Receipt display and receipt printing support
-- Arduino serial integration for RFID scans, LCD text, and LED feedback
+- Arduino serial integration for RFID scans, LCD text, LED feedback, AFK mode, and active customer-mode hardware feedback
 - Supabase PostgreSQL backend through REST-based data access
 
 ## Tech Stack
@@ -45,7 +53,7 @@ Eco-Matic is a WPF desktop application for a smart vending machine with recyclin
 - `Utilities/` - image loading, slot helpers, audio, and ESC/POS receipt formatting
 - `Arduino/` - RFID scanner firmware and hardware setup notes
 - `Assets/Images/` - local product images used by the vending UI
-- `Assets/Gifs/` - demo recordings used in this README
+- `Assets/Gifs/` - UI and hardware demo recordings used in this README
 - `docs/` - architecture notes, diagrams, SQL references, review notes, and user documentation
 
 ## Setup
@@ -124,4 +132,4 @@ The application requires live Supabase connectivity for customer and admin data 
 
 ## Current Scope
 
-Eco-Matic is ready as a classroom/demo smart vending system. The current build focuses on Supabase-backed vending, admin management, RFID registration and eco-credit saving, QR payment simulation, sales reporting, and Arduino hardware feedback.
+Eco-Matic is ready as a classroom/demo smart vending system. The current build focuses on Supabase-backed vending, admin management, RFID registration and eco-credit saving, QR payment simulation, sales reporting, customer/AFK hardware states, and Arduino hardware feedback.
